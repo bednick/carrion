@@ -1,16 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
   <rect width="40" height="40" rx="4" fill="#180828"/>
-  <!-- шнурок -->
   <line x1="20" y1="3" x2="20" y2="10" stroke="#a08020" stroke-width="2" stroke-linecap="round"/>
-  <!-- внешний ободок амулета -->
   <circle cx="20" cy="24" r="13" fill="#c09018" stroke="#e0b030" stroke-width="1.5"/>
-  <!-- внутренний камень -->
   <circle cx="20" cy="24" r="9" fill="#1e1060" stroke="#4030a0" stroke-width="0.5"/>
-  <!-- свечение камня -->
   <circle cx="20" cy="24" r="5" fill="#3020a0" opacity="0.7"/>
   <circle cx="17" cy="21" r="2" fill="#7060d0" opacity="0.5"/>
-  <!-- трещина (тёмная) -->
   <polyline points="17,12 19,18 15,24 19,31 17,36" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <!-- трещина (золотой блик) -->
   <polyline points="17,12 19,18 15,24 19,31 17,36" stroke="#e8d050" stroke-width="0.7" fill="none" stroke-linecap="round" opacity="0.6"/>
 </svg>

@@ -1,10 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
   <rect width="40" height="40" rx="4" fill="#181c24"/>
-  <!-- тонкий прямой клинок -->
   <line x1="12" y1="32" x2="33" y2="8" stroke="#c0c8d4" stroke-width="1.8" stroke-linecap="round"/>
   <line x1="14" y1="31" x2="31" y2="11" stroke="#eef2f7" stroke-width="0.6" opacity="0.6"/>
-  <!-- чашеобразная гарда -->
   <path d="M9 30 C8 27 10 24 13 24 C16 24 18 27 17 30" fill="none" stroke="#8a929c" stroke-width="1.8"/>
-  <!-- рукоять -->
   <line x1="7" y1="35" x2="12" y2="30" stroke="#5a3010" stroke-width="4" stroke-linecap="round"/>
 </svg>

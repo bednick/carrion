@@ -1,10 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
   <rect width="40" height="40" rx="4" fill="#181c24"/>
-  <!-- рукоять -->
   <line x1="9" y1="35" x2="24" y2="14" stroke="#5a3010" stroke-width="4" stroke-linecap="round"/>
-  <!-- широкое лезвие секиры -->
   <path d="M22 18 C28 10 34 7 37 9 C36 14 33 20 27 25 C24 27 22 26 21 24 Z"
         fill="#c0c8d4" stroke="#eef2f7" stroke-width="0.5"/>
-  <!-- блик лезвия -->
   <path d="M25 17 C29 12 33 10 35 10.5" fill="none" stroke="#eef2f7" stroke-width="1" opacity="0.6"/>
 </svg>

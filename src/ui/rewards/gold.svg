@@ -1,17 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <!-- задний столбик монет -->
   <ellipse cx="24" cy="46" rx="17" ry="7" fill="#8a6410"/>
   <ellipse cx="24" cy="43" rx="17" ry="7" fill="#c8971c" stroke="#e8c040" stroke-width="1"/>
   <ellipse cx="24" cy="43" rx="12" ry="4.5" fill="#a87814" opacity="0.7"/>
-  <!-- крупная лицевая монета -->
   <circle cx="38" cy="30" r="18" fill="#c8971c" stroke="#e8c040" stroke-width="2"/>
   <circle cx="38" cy="30" r="13" fill="#e0b428" stroke="#a87814" stroke-width="1"/>
-  <!-- знак ¤ -->
   <circle cx="38" cy="30" r="6.5" fill="none" stroke="#7a560c" stroke-width="2"/>
   <line x1="38" y1="19" x2="38" y2="24.5" stroke="#7a560c" stroke-width="2" stroke-linecap="round"/>
   <line x1="38" y1="35.5" x2="38" y2="41" stroke="#7a560c" stroke-width="2" stroke-linecap="round"/>
   <line x1="27" y1="30" x2="32.5" y2="30" stroke="#7a560c" stroke-width="2" stroke-linecap="round"/>
   <line x1="43.5" y1="30" x2="49" y2="30" stroke="#7a560c" stroke-width="2" stroke-linecap="round"/>
-  <!-- блик -->
   <circle cx="32" cy="24" r="3" fill="#fff3c0" opacity="0.7"/>
 </svg>
