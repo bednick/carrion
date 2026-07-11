@@ -3,9 +3,9 @@
   "name": "Волчица-мать",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 2.5 }
+    { "damage": 5, "interval": 1.25 }
   ],
   "summons": [
-    { "mob_id": "dire_wolf", "trigger": { "type": "interval", "every": 6.0 } }
+    { "mob_id": "dire_wolf", "trigger": { "type": "interval", "every": 3.0 } }
   ]
 }

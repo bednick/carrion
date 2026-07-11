@@ -3,6 +3,6 @@
   "name": "Вооружённый мародёр",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 2.0 }
+    { "damage": 5, "interval": 1.0 }
   ]
 }

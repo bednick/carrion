@@ -8,7 +8,7 @@ import { getItemBehavior } from '../items/registry';
 import { HANDLER_ORDER, MAX_CASCADE, runPass, stampOrigin } from './dispatcher';
 
 const UNARMED_DAMAGE = 1;
-const UNARMED_INTERVAL = 3000;
+const UNARMED_INTERVAL = 1500;
 
 // Упреждение анимации удара (мс реального времени): анимацию замаха надо стартовать
 // раньше применения урона, чтобы кадр «контакта» меча совпал с цифрой/вспышкой/звуком.
@@ -22,6 +22,11 @@ export interface CombatCallbacks {
   onBlock: (target: 'hero' | 'enemy', enemyIdx: number) => void;
   // Враг уклонился — входящий удар погашен (enemyIdx — кто уклонился).
   onDodge?: (enemyIdx: number) => void;
+  // Герой вылечен (heal с target=hero); amount уже округлён и не выходит за maxHp-прирост.
+  onHeal?: (amount: number) => void;
+  // Контрудар героя: damage(enemy) порождён событием, целью которого был герой (блок/удар) —
+  // отличает ответный удар от обычной атаки по расписанию стамины.
+  onCounterAttack?: () => void;
   // willReuseSlot=true — противник переходит в следующую форму, графику слота надо сохранить.
   onEnemyDied: (enemy: EnemyState, enemyIdx: number, willReuseSlot: boolean) => void;
   onHeroDied: () => void;
@@ -224,7 +229,7 @@ export class CombatEngine {
     return {
       heroHp: hero.hp,
       heroMaxHp: hero.maxHp,
-      enemies: enemies.map(e => ({ id: e.id, hp: e.hp, maxHp: e.maxHp, isBoss: e.isBoss })),
+      enemies: enemies.map(e => ({ id: e.id, hp: e.hp, maxHp: e.maxHp, slot: e.slot, isBoss: e.isBoss })),
       equipment: hero.equipment,
     };
   }
@@ -312,8 +317,13 @@ export class CombatEngine {
       case 'attack':
         return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, origin: e.origin }];
 
-      case 'damage':
-        return this.applyDamage(e.source, e.target, e.amount);
+      case 'damage': {
+        // Контрудар: урон героя по врагу, порождённый событием, чьей целью был герой
+        // (входящий удар/блок) — а не обычной атакой по расписанию стамины.
+        const isCounter = e.source.side === 'hero' && e.target.side === 'enemy'
+          && !!e.cause && 'target' in e.cause && e.cause.target.side === 'hero';
+        return this.applyDamage(e.source, e.target, e.amount, isCounter);
+      }
 
       case 'block':
         this.cb.onBlock(e.target.side === 'hero' ? 'hero' : 'enemy', e.target.side === 'enemy' ? e.target.idx : -1);
@@ -323,12 +333,15 @@ export class CombatEngine {
         this.cb.onDodge?.(e.target.side === 'enemy' ? e.target.idx : -1);
         return [];
 
-      case 'heal':
+      case 'heal': {
         if (e.target.side === 'hero') {
           const hero = this.state.hero;
-          hero.hp = Math.min(hero.maxHp, hero.hp + Math.max(0, Math.round(e.amount)));
+          const amount = Math.max(0, Math.round(e.amount));
+          hero.hp = Math.min(hero.maxHp, hero.hp + amount);
+          if (amount > 0) this.cb.onHeal?.(amount);
         }
         return [];
+      }
 
       case 'kill':
         return this.applyKill(e.source, e.target);
@@ -358,7 +371,7 @@ export class CombatEngine {
     return [];
   }
 
-  private applyDamage(source: Side, target: Side, rawAmount: number): GameEvent[] {
+  private applyDamage(source: Side, target: Side, rawAmount: number, isCounter = false): GameEvent[] {
     const amount = Math.max(0, Math.round(rawAmount));
 
     if (target.side === 'enemy') {
@@ -367,6 +380,7 @@ export class CombatEngine {
       if (amount > 0) {
         enemy.hp = Math.max(0, enemy.hp - amount);
         this.cb.onDamageDealt('enemy', amount, target.idx);
+        if (isCounter) this.cb.onCounterAttack?.();
       }
       if (enemy.hp <= 0) {
         return [{ type: 'kill', source, target, origin: { from: 'engine' } }];

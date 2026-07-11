@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <rect width="40" height="40" rx="4" fill="#0e0e0e"/>
+  <!-- рукоять -->
+  <line x1="9" y1="35" x2="16" y2="28" stroke="#5a3010" stroke-width="6" stroke-linecap="round"/>
+  <!-- гарда -->
+  <line x1="14" y1="30" x2="21" y2="27" stroke="#8a929c" stroke-width="3" stroke-linecap="round"/>
+  <!-- симметричный обоюдоострый клинок -->
+  <polygon points="16,27 22,21 32,10 34,12 24,23 18,29" fill="#c4ccd6" stroke="#eef2f7" stroke-width="0.5"/>
+  <!-- дол клинка -->
+  <line x1="19" y1="25" x2="30" y2="13" stroke="#eef2f7" stroke-width="0.8" opacity="0.6"/>
+</svg>

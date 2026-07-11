@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { FONT_FAMILY } from './theme';
 import { getItemConfig, getItemBehavior } from '../items/registry';
 import { salvageEssence, ESSENCE_TIERS } from '../items/craft';
 import { rewardIconKey, essenceIconKey } from './rewards';
@@ -138,7 +139,7 @@ export class Tooltip {
           let lineH = 0;
           for (const seg of line.segments) {
             const t = this.scene.add.text(sx + ICON + ICON_GAP, 8 + totalH, seg.text, {
-              fontSize: '13px', fontFamily: 'monospace', color: seg.color,
+              fontSize: '13px', fontFamily: FONT_FAMILY, color: seg.color,
             });
             this.texts.push(t);
             const img = this.scene.add.image(sx, 8 + totalH + t.height / 2, seg.icon)
@@ -155,7 +156,7 @@ export class Tooltip {
         const tx = line.icon ? 8 + ICON + ICON_GAP : 8;
         const t = this.scene.add.text(tx, 8 + totalH, line.text, {
           fontSize: '13px',
-          fontFamily: 'monospace',
+          fontFamily: FONT_FAMILY,
           color: line.color,
         });
         this.texts.push(t);

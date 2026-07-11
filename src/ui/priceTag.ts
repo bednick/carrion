@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { rewardIconKey, essenceIconKey } from './rewards';
 import type { EssenceTier } from '../items/types';
+import { FONT_FAMILY } from './theme';
 
 // Единый способ показать ресурс в UI: иконка + число вместо текстовых «10g» / «золота».
 // Возвращает контейнер (по умолчанию левый край = x, центр по вертикали = y).
@@ -26,7 +27,7 @@ export function resourceTag(
 
   const icon = scene.add.image(0, 0, iconKey).setDisplaySize(iconSize, iconSize).setOrigin(0, 0.5);
   const text = scene.add.text(iconSize + gap, 0, `${opts.prefix ?? ''}${value}`, {
-    fontSize: `${fs}px`, fontFamily: 'monospace', color,
+    fontSize: `${fs}px`, fontFamily: FONT_FAMILY, color,
   }).setOrigin(0, 0.5);
 
   const w = iconSize + gap + text.width;

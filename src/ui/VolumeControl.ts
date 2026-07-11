@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { SoundManager } from '../core/SoundManager';
+import { FONT_FAMILY } from './theme';
 
 // Геометрия: виджет прижат к правому верхнему углу логического пространства 1280×800.
 const TRACK_LEFT = 1160;
@@ -27,7 +28,7 @@ export class VolumeControl {
 
     // Динамик-кнопка (мьют). Цвет отражает состояние.
     this.icon = scene.add.text(SPEAKER_CX, CY, '♪', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#66ccff',
+      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#66ccff',
     }).setOrigin(0.5).setDepth(101).setInteractive({ useHandCursor: true });
     this.icon.on('pointerdown', () => {
       const muted = SoundManager.toggleMute();

@@ -4,7 +4,7 @@
   "description": "Прерванный погребальный ритуал. Мертвецы поднялись сами — голодные и многорукие.",
   "faction": "Магия — Нежить",
   "star": 2,
-  "fights": { "min": 5, "max": 9 },
+  "fights": { "min": 13, "max": 15 },
   "mob_pool": [
     { "mob_id": "ghoul", "weight": 100 },
     { "mob_id": "unquiet_dead", "weight": 100 },

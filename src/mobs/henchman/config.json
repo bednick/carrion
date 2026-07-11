@@ -1,9 +1,9 @@
 {
   "id": "henchman",
   "name": "Подручный",
-  "health": 13,
+  "health": 50,
   "attacks": [
-    { "damage": 4, "interval": 2.5 }
+    { "damage": 1, "interval": 1.0 }
   ],
   "defense": { "armor": 1 }
 }

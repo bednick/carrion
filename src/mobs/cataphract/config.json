@@ -3,7 +3,7 @@
   "name": "Панцирник",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 3.0 }
+    { "damage": 5, "interval": 1.5 }
   ],
   "defense": { "armor": 4 }
 }

@@ -1,11 +1,12 @@
 {
   "id": "rat",
   "name": "Крыса",
-  "health": 10,
+  "health": 8,
   "attacks": [
-    { "damage": 5, "interval": 1.5 }
+    { "damage": 1, "interval": 0.75 }
   ],
   "summons": [
     { "mob_id": "rat", "count": 1, "trigger": { "type": "start" } }
-  ]
+  ],
+  "ui": { "scale": 0.6 }
 }

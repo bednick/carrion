@@ -3,7 +3,7 @@
   "name": "Костяной боевой маг",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 2.0 },
-    { "damage": 5, "interval": 3.5 }
+    { "damage": 5, "interval": 1.0 },
+    { "damage": 5, "interval": 1.75 }
   ]
 }

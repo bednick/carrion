@@ -1,5 +1,5 @@
 import type { QuestRecord } from '../quests/definitions';
-import { hasItemConfig } from '../items/registry';
+import { getItemConfig, hasItemConfig, ITEM_CONFIGS } from '../items/registry';
 import type { EssenceTier, EssencePool } from '../items/types';
 import { EventBus } from './EventBus';
 
@@ -11,6 +11,10 @@ const CENTER_GATE_ZONES = ['crypt', 'predator-pasture', 'marauder-lair'];
 // Несовместимые изменения формата допустимы без бампа ключа — после них нужно явно
 // сбросить прогресс (MetaStore.resetAll или очистка localStorage). См. docs/meta-progression.md.
 const STORAGE_KEY = 'carrion.meta.v1';
+
+// Переживает location.reload() между «Сбросить» и следующей инициализацией: выбор игрока на
+// экране стартового оружия. Читается один раз в createDefault() и тут же стирается.
+const PENDING_START_WEAPON_KEY = 'carrion.meta.pending_start_weapon';
 
 export type SlotId = 'head' | 'body_upper' | 'body_lower' | 'legs' | 'hand_left' | 'hand_right';
 
@@ -69,10 +73,18 @@ function emptyStand(): ArmorStand {
   };
 }
 
-/** Три пустые стойки; в первой — стартовый broken_staff в правой руке. */
-function defaultStands(): ArmorStand[] {
+/** Предмет валиден как стартовое оружие: существует, оружие, носится в правой руке. */
+function isValidStartWeapon(itemId: string): boolean {
+  if (!hasItemConfig(itemId)) return false;
+  const cfg = getItemConfig(itemId);
+  return cfg.type === 'weapon' && cfg.slots.includes('hand_right');
+}
+
+/** Три пустые стойки; в первой — стартовое оружие (по умолчанию `battle_staff`) в правой руке. */
+function defaultStands(startWeaponId?: string): ArmorStand[] {
   const stands = Array.from({ length: ARMOR_STAND_COUNT }, () => emptyStand());
-  stands[0].hand_right = { item_id: 'broken_staff', rarity: 'common' };
+  const weaponId = startWeaponId && isValidStartWeapon(startWeaponId) ? startWeaponId : 'battle_staff';
+  stands[0].hand_right = { item_id: weaponId, rarity: 'common' };
   return stands;
 }
 
@@ -117,13 +129,15 @@ function emptyStats(): PlayerStats {
 }
 
 function createDefault(): MetaState {
+  const pendingStartWeapon = localStorage.getItem(PENDING_START_WEAPON_KEY) ?? undefined;
+  if (pendingStartWeapon) localStorage.removeItem(PENDING_START_WEAPON_KEY);
   return {
     gold: 0,
     essence: emptyEssence(),
     completed_areas: [],
     unlocked_areas: ['dead-fields'],
     chest: [],
-    armor_stands: defaultStands(),
+    armor_stands: defaultStands(pendingStartWeapon),
     active_stand: 0,
     run_speed: 1,
     stats: emptyStats(),
@@ -183,9 +197,16 @@ export const MetaStore = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   },
 
-  resetAll() {
+  /** startWeaponId — выбор игрока на экране стартового оружия (см. CampScene); без него — battle_staff. */
+  resetAll(startWeaponId?: string) {
+    if (startWeaponId) localStorage.setItem(PENDING_START_WEAPON_KEY, startWeaponId);
     localStorage.removeItem(STORAGE_KEY);
     location.reload();
+  },
+
+  /** Список id предметов, годных как стартовое оружие (weapon, слот hand_right). */
+  listStartWeapons(): string[] {
+    return Object.keys(ITEM_CONFIGS).filter(isValidStartWeapon);
   },
 
   get(): MetaState {

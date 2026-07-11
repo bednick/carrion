@@ -1,8 +1,0 @@
-{
-  "id": "spiked_charm",
-  "name": "Шипастый оберег",
-  "slots": ["body_lower"],
-  "type": "accessory",
-  "base_value": 10,
-  "tags": ["accessory", "thorns"]
-}

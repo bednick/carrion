@@ -2,5 +2,6 @@
   "id": "bone_wall",
   "name": "Костяная стена",
   "health": 10,
-  "attacks": []
+  "attacks": [],
+  "ui": { "scale": 1.2 }
 }

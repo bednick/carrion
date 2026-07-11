@@ -4,7 +4,7 @@
   "description": "Выжженная равнина магической фракции. Ритуалы удержали павших на ногах.",
   "faction": "Магия — Нежить",
   "star": 1,
-  "fights": { "min": 5, "max": 9 },
+  "fights": { "min": 5, "max": 7 },
   "mob_pool": [
     { "mob_id": "raised_infantry", "weight": 60 },
     { "mob_id": "skeleton", "weight": 40 }
@@ -12,10 +12,9 @@
   "mob_loot": {
     "gold": { "min": 0, "max": 0 },
     "items": [
-      { "item_id": "broken_staff", "chance": 0.10, "rarity": "common" },
-      { "item_id": "robe_scrap", "chance": 0.10, "rarity": "common" },
-      { "item_id": "cracked_amulet", "chance": 0.10, "rarity": "common" },
-      { "item_id": "leech_bead", "chance": 0.10, "rarity": "common" }
+      { "item_id": "battle_staff", "chance": 0.10, "rarity": "common" },
+      { "item_id": "war_pick", "chance": 0.10, "rarity": "common" },
+      { "item_id": "robe_scrap", "chance": 0.10, "rarity": "common" }
     ]
   },
   "boss": {
@@ -24,7 +23,9 @@
       "gold": { "min": 100, "max": 150 },
       "essence": {"uncommon":  {"min": 10, "max": 20}},
       "items": [
-        { "item_id": "cracked_amulet", "chance": 1.0, "rarity": "uncommon" }
+        { "item_id": "battle_staff", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "war_pick", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "robe_scrap", "chance": 0.10, "rarity": "uncommon" }
       ]
     }
   }

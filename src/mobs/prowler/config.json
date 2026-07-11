@@ -3,7 +3,7 @@
   "name": "Рыскун",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 1.2 },
-    { "damage": 5, "interval": 1.4 }
+    { "damage": 5, "interval": 0.6 },
+    { "damage": 5, "interval": 0.7 }
   ]
 }

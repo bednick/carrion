@@ -40,6 +40,8 @@ export interface QuestDef {
   rewards: QuestReward[];
   next?: string[];
   condition?: QuestCondition;
+  /** Зоны (id из MAP_ZONE_LAYOUT), в которых можно выполнить квест — для маркера «?» на карте. */
+  areas?: string[];
 }
 
 export const QUEST_DEFS: Record<string, QuestDef> = {
@@ -78,7 +80,7 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   // Маршрут 1: Мёртвые поля → Руины магов → Склеп
   dead_fields_clear: {
     id: 'dead_fields_clear',
-    title: 'Исследовать область: Мёртвые поля',
+    title: 'Исследовать: Мёртвые поля',
     description: 'Победите босса локации',
     target: 1,
     // ½ проходки в Руины магов (500) + бесплатное открытие двух других стартовых
@@ -92,79 +94,88 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     // (раньше они выдавались при покупке проходки — теперь покупки нет).
     next: ['mage_ruins_clear', 'trampled_meadows_clear', 'armor_dump_clear'],
     condition: { stat: 'zones_returned', id: 'dead-fields' },
+    areas: ['dead-fields'],
   },
   mage_ruins_clear: {
     id: 'mage_ruins_clear',
-    title: 'Исследовать область: Руины магов',
+    title: 'Исследовать: Руины магов',
     description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'gold', value: 2500 }], // ½ проходки в Склеп (5000)
     next: ['crypt_clear'],
     condition: { stat: 'zones_returned', id: 'mage-ruins' },
+    areas: ['mage-ruins'],
   },
   crypt_clear: {
     id: 'crypt_clear',
-    title: 'Исследовать область: Склеп',
+    title: 'Исследовать: Склеп',
     description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'gold', value: 2500 }], // конечная зона: ½ своей цены (5000)
     condition: { stat: 'zones_returned', id: 'crypt' },
+    areas: ['crypt'],
   },
 
   // Маршрут 2: Растоптанные луга → Логово зверей → Пастбище хищников
   trampled_meadows_clear: {
     id: 'trampled_meadows_clear',
-    title: 'Исследовать область: Растоптанные луга',
+    title: 'Исследовать: Растоптанные луга',
     description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'gold', value: 250 }], // ½ проходки в Логово зверей (500)
     next: ['beast_lair_clear'],
     condition: { stat: 'zones_returned', id: 'trampled-meadows' },
+    areas: ['trampled-meadows'],
   },
   beast_lair_clear: {
     id: 'beast_lair_clear',
-    title: 'Исследовать область: Логово зверей',
+    title: 'Исследовать: Логово зверей',
     description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'gold', value: 2500 }], // ½ проходки в Пастбище хищников (5000)
     next: ['predator_pasture_clear'],
     condition: { stat: 'zones_returned', id: 'beast-lair' },
+    areas: ['beast-lair'],
   },
   predator_pasture_clear: {
     id: 'predator_pasture_clear',
-    title: 'Исследовать область: Пастбище хищников',
+    title: 'Исследовать: Пастбище хищников',
     description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'gold', value: 2500 }], // конечная зона: ½ своей цены (5000)
     condition: { stat: 'zones_returned', id: 'predator-pasture' },
+    areas: ['predator-pasture'],
   },
 
   // Маршрут 3: Свалка доспехов → Брошенный лагерь → Логово мародёров
   armor_dump_clear: {
     id: 'armor_dump_clear',
-    title: 'Исследовать область: Свалка доспехов',
+    title: 'Исследовать: Свалка доспехов',
     description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'gold', value: 250 }], // ½ проходки в Брошенный лагерь (500)
     next: ['abandoned_camp_clear'],
     condition: { stat: 'zones_returned', id: 'armor-dump' },
+    areas: ['armor-dump'],
   },
   abandoned_camp_clear: {
     id: 'abandoned_camp_clear',
-    title: 'Исследовать область: Брошенный лагерь',
+    title: 'Исследовать: Брошенный лагерь',
     description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'gold', value: 2500 }], // ½ проходки в Логово мародёров (5000)
     next: ['marauder_lair_clear'],
     condition: { stat: 'zones_returned', id: 'abandoned-camp' },
+    areas: ['abandoned-camp'],
   },
   marauder_lair_clear: {
     id: 'marauder_lair_clear',
-    title: 'Исследовать область: Логово мародёров',
+    title: 'Исследовать: Логово мародёров',
     description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'gold', value: 2500 }], // конечная зона: ½ своей цены (5000)
     condition: { stat: 'zones_returned', id: 'marauder-lair' },
+    areas: ['marauder-lair'],
   },
 
   find_uncommon: {

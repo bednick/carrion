@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { FONT_FAMILY } from './theme';
 import { MetaStore } from '../core/MetaStore';
 import { EventBus } from '../core/EventBus';
 import { rewardIconKey, essenceIconKey } from './rewards';
@@ -41,7 +42,7 @@ export class ResourceHUD {
       const text = scene.add
         .text(x + ICON + GAP, y + ICON / 2, '0', {
           fontSize: '22px',
-          fontFamily: 'monospace',
+          fontFamily: FONT_FAMILY,
           color: '#ffffff',
         })
         .setOrigin(0, 0.5)

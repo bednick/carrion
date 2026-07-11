@@ -1,8 +1,0 @@
-{
-  "id": "rusty_knife",
-  "name": "Ржавый нож",
-  "slots": ["hand_right", "hand_left"],
-  "type": "weapon",
-  "base_value": 10,
-  "tags": ["weapon", "light", "fast"]
-}

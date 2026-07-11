@@ -1,8 +1,0 @@
-{
-  "id": "bent_blade",
-  "name": "Гнутый клинок",
-  "slots": ["hand_right"],
-  "type": "weapon",
-  "base_value": 10,
-  "tags": ["weapon", "balanced"]
-}

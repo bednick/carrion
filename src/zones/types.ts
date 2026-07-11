@@ -98,6 +98,8 @@ export interface PhaseOverride {
 export interface MobUi {
   /** Прозрачность спрайта 0..1 (по умолчанию 1 — непрозрачный). */
   alpha?: number;
+  /** Множитель к итоговому размеру спрайта после вписывания в бокс (по умолчанию 1). */
+  scale?: number;
 }
 
 export interface MobConfig {

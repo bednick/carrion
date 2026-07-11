@@ -4,7 +4,7 @@
   "description": "Норы и логова среди костей. Стаи не отпускают добычу, пока не разорвут.",
   "faction": "Конница — Дикие звери",
   "star": 2,
-  "fights": { "min": 5, "max": 9 },
+  "fights": { "min": 9, "max": 11 },
   "mob_pool": [
     { "mob_id": "dire_wolf", "weight": 40 },
     { "mob_id": "hyena", "weight": 25 },

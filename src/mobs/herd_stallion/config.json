@@ -5,12 +5,12 @@
   "position": 3,
   "summon_placement": "front",
   "attacks": [
-    { "damage": 5, "interval": 2.0 },
-    { "damage": 5, "interval": 2.4 },
-    { "damage": 5, "interval": 2.8 }
+    { "damage": 5, "interval": 1.0 },
+    { "damage": 5, "interval": 1.2 },
+    { "damage": 5, "interval": 1.4 }
   ],
   "summons": [
     { "mob_id": "wild_horse", "count": 2, "trigger": { "type": "start" } },
-    { "mob_id": "wild_horse", "trigger": { "type": "interval", "every": 6.0 } }
+    { "mob_id": "wild_horse", "trigger": { "type": "interval", "every": 3.0 } }
   ]
 }

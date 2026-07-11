@@ -3,6 +3,6 @@
   "name": "Спелёнутый ужас",
   "health": 20,
   "attacks": [
-    { "damage": 5, "interval": 3.5 }
+    { "damage": 5, "interval": 1.75 }
   ]
 }

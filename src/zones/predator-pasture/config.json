@@ -4,7 +4,7 @@
   "description": "Одичавшие боевые кони сбились в яростные табуны. Раненый зверь тут не отступает.",
   "faction": "Конница — Дикие звери",
   "star": 2,
-  "fights": { "min": 5, "max": 9 },
+  "fights": { "min": 9, "max": 11 },
   "mob_pool": [
     { "mob_id": "wild_horse", "weight": 35 },
     { "mob_id": "foal", "weight": 20 },

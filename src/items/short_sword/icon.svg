@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <rect width="40" height="40" rx="4" fill="#181c24"/>
+  <!-- прямой клинок -->
+  <polygon points="14,32 30,8 33,10 17,34" fill="#c0c8d4" stroke="#eef2f7" stroke-width="0.5"/>
+  <!-- блик -->
+  <line x1="16" y1="30" x2="29" y2="10" stroke="#eef2f7" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+  <!-- крестовина -->
+  <line x1="10" y1="30" x2="20" y2="24" stroke="#8a929c" stroke-width="3" stroke-linecap="round"/>
+  <!-- рукоять -->
+  <line x1="7" y1="34" x2="12" y2="29" stroke="#5a3010" stroke-width="4" stroke-linecap="round"/>
+</svg>

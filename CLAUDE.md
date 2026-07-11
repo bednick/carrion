@@ -34,6 +34,7 @@ npm run preview  # превью production-сборки
 | [`docs/content.items.hand_right.md`](docs/content.items.hand_right.md) | Оружие (слот hand_right): формы урона, архетипы, характеристики, предметы |
 | [`docs/combat-events.md`](docs/combat-events.md)                   | Событийная модель боя: типы событий, replace/spawn, диспетчер, attack_ready |
 | [`docs/roadmap.md`](docs/roadmap.md)                               | Запланированный, но не реализованный функционал (механики «на вырост»)      |
+| [`docs/roadmap.balance.md`](docs/roadmap.balance.md)               | Баланс: что сделано (3 стартовые зоны), план продолжения после предметов    |
 | [`docs/concept_map.svg`](docs/concept_map.svg)                     | Визуальная схема карты с зонами и фракциями                                 |
 | [`docs/zones/`](docs/zones/)                                       | Детальный контент каждой из 10 зон (мобы, предметы, лут)                    |
 

@@ -38,7 +38,7 @@ export function standardWeapon(opts: WeaponOpts): ItemBehavior {
     },
     stats: (rarity) => [
       { text: `Урон: ${damage(rarity)}`, color: DMG_COLOR },
-      { text: `Скорость: ${interval(rarity).toFixed(1)}s`, color: DMG_COLOR },
+      { text: `Перезарядка: ${interval(rarity).toFixed(1)}s`, color: DMG_COLOR },
     ],
   };
 }
@@ -55,10 +55,16 @@ export function standardArmor(opts: ArmorOpts): ItemBehavior {
 
   return {
     on: {
+      // Броня свела реальный удар в ноль → полное отклонение (тот же `block`, что и у брони врага —
+      // см. `enemyDefend` в CombatEngine — для единой UI-надписи «Отражено»/«Блок»).
       damage: (e, ctx) => {
         if (e.target.side !== 'hero') return {};
-        const reduced = Math.max(0, e.amount - reduction(ctx.rarity));
-        return { replace: [{ ...e, amount: reduced }] };
+        const before = e.amount;
+        const reduced = Math.max(0, before - reduction(ctx.rarity));
+        const spawn = before > 0 && reduced === 0
+          ? [{ type: 'block' as const, source: e.source, target: e.target, prevented: before, origin: e.origin }]
+          : undefined;
+        return { replace: [{ ...e, amount: reduced }], spawn };
       },
     },
     stats: (rarity) => [{ text: `Защита: ${reduction(rarity)}`, color: DEF_COLOR }],

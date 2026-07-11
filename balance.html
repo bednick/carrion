@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Carrion — балансировочный симулятор</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        background: #1a1a2e; color: #cccccc; font-family: 'Consolas', 'Menlo', monospace;
+        font-size: 13px; min-height: 100%;
+      }
+      body { padding: 24px; max-width: 1100px; margin: 0 auto; }
+      h1 { color: #ffcc44; font-size: 18px; margin-bottom: 4px; }
+      .hint { color: #8899aa; font-size: 12px; margin-bottom: 20px; }
+      .panel {
+        background: #201f33; border: 1px solid #333355; border-radius: 6px;
+        padding: 16px; margin-bottom: 16px;
+      }
+      .panel h2 { color: #aaccff; font-size: 13px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+      .row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+      .row label { width: 120px; color: #8899aa; flex-shrink: 0; }
+      select, input[type=number] {
+        background: #14141f; color: #eeeeee; border: 1px solid #444466; border-radius: 4px;
+        padding: 5px 8px; font-family: inherit; font-size: 12px;
+      }
+      select.item-select { flex: 1; min-width: 160px; }
+      select.rarity-select { width: 110px; }
+      .zone-meta { color: #77aa77; font-size: 11px; margin-top: 4px; }
+      .actions { display: flex; gap: 10px; margin-top: 14px; }
+      button {
+        background: #2244aa; color: #eeeeff; border: none; border-radius: 4px;
+        padding: 8px 16px; font-family: inherit; font-size: 12px; cursor: pointer;
+      }
+      button:hover { background: #2a55cc; }
+      button:disabled { background: #333344; color: #666677; cursor: default; }
+      button.secondary { background: #333344; }
+      button.secondary:hover { background: #3d3d55; }
+      #results { min-height: 40px; }
+      .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+      .stat { background: #14141f; border: 1px solid #333355; border-radius: 4px; padding: 10px; }
+      .stat .v { font-size: 20px; color: #ffcc44; }
+      .stat .l { color: #8899aa; font-size: 11px; margin-top: 2px; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #2a2a44; }
+      th { color: #8899aa; font-weight: normal; }
+      .progress { color: #667788; font-size: 11px; margin-top: 6px; }
+      .winrate-bar { height: 6px; background: #2a2a44; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+      .winrate-bar > div { height: 100%; background: #44aa44; }
+      .hist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+      .hist-box { background: #14141f; border: 1px solid #333355; border-radius: 4px; padding: 8px 10px 4px; }
+      .hist-title { color: #8899aa; font-size: 11px; margin-bottom: 4px; }
+      @media (max-width: 720px) { .hist-grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <h1>Балансировочный симулятор экспедиций</h1>
+    <div class="hint">
+      Гоняет Monte Carlo по реальному CombatEngine (тот же код, что и игра). Собери билд, выбери зону,
+      запусти. Та же логика доступна из консоли: <code>npm run balance -- &lt;zoneId&gt;</code>.
+    </div>
+
+    <div class="panel">
+      <h2>Зона</h2>
+      <div class="row">
+        <label for="zone">Зона</label>
+        <select id="zone" class="item-select"></select>
+      </div>
+      <div id="zoneMeta" class="zone-meta"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Билд героя</h2>
+      <div id="slots"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Прогон</h2>
+      <div class="row">
+        <label for="trials">Прогонов</label>
+        <input id="trials" type="number" value="3000" min="100" max="200000" step="100" />
+      </div>
+      <div class="actions">
+        <button id="runOne">Запустить на зоне</button>
+        <button id="runAll" class="secondary">Сравнить по всем зонам</button>
+      </div>
+      <div id="progress" class="progress"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Результат</h2>
+      <div id="results"></div>
+    </div>
+
+    <script type="module" src="/src/balance/main.ts"></script>
+  </body>
+</html>

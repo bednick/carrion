@@ -1,76 +1,60 @@
 import type { ItemConfig } from './types';
 import type { ItemBehavior } from './behavior';
 
-import brokenStaffCfg from './broken_staff/config.json';
+import battleStaffCfg from './battle_staff/config.json';
 import robeScrapCfg from './robe_scrap/config.json';
 import crackedAmuletCfg from './cracked_amulet/config.json';
-import shaftCfg from './shaft/config.json';
-import dentedHelmetCfg from './dented_helmet/config.json';
-import leatherGreavesCfg from './leather_greaves/config.json';
-import rustyKnifeCfg from './rusty_knife/config.json';
+import shortSpearCfg from './short_spear/config.json';
+import daggerCfg from './dagger/config.json';
 import plankShieldCfg from './plank_shield/config.json';
-import bentBladeCfg from './bent_blade/config.json';
+import shortSwordCfg from './short_sword/config.json';
 import leechBeadCfg from './leech_bead/config.json';
 import bucklerCfg from './buckler/config.json';
-import spikedCharmCfg from './spiked_charm/config.json';
-import scavengerLensCfg from './scavenger_lens/config.json';
-import deserterBootsCfg from './deserter_boots/config.json';
-import marauderBootsCfg from './marauder_boots/config.json';
-import wornPouchCfg from './worn_pouch/config.json';
+import broadaxeCfg from './broadaxe/config.json';
+import rapierCfg from './rapier/config.json';
+import warPickCfg from './war_pick/config.json';
 
-import brokenStaffBeh from './broken_staff/behavior';
+import battleStaffBeh from './battle_staff/behavior';
 import robeScrapBeh from './robe_scrap/behavior';
 import crackedAmuletBeh from './cracked_amulet/behavior';
-import shaftBeh from './shaft/behavior';
-import dentedHelmetBeh from './dented_helmet/behavior';
-import leatherGreavesBeh from './leather_greaves/behavior';
-import rustyKnifeBeh from './rusty_knife/behavior';
+import shortSpearBeh from './short_spear/behavior';
+import daggerBeh from './dagger/behavior';
 import plankShieldBeh from './plank_shield/behavior';
-import bentBladeBeh from './bent_blade/behavior';
+import shortSwordBeh from './short_sword/behavior';
 import leechBeadBeh from './leech_bead/behavior';
 import bucklerBeh from './buckler/behavior';
-import spikedCharmBeh from './spiked_charm/behavior';
-import scavengerLensBeh from './scavenger_lens/behavior';
-import deserterBootsBeh from './deserter_boots/behavior';
-import marauderBootsBeh from './marauder_boots/behavior';
-import wornPouchBeh from './worn_pouch/behavior';
+import broadaxeBeh from './broadaxe/behavior';
+import rapierBeh from './rapier/behavior';
+import warPickBeh from './war_pick/behavior';
 
 export const ITEM_CONFIGS: Record<string, ItemConfig> = {
-  broken_staff: brokenStaffCfg as ItemConfig,
+  battle_staff: battleStaffCfg as ItemConfig,
   robe_scrap: robeScrapCfg as ItemConfig,
   cracked_amulet: crackedAmuletCfg as ItemConfig,
-  shaft: shaftCfg as ItemConfig,
-  dented_helmet: dentedHelmetCfg as ItemConfig,
-  leather_greaves: leatherGreavesCfg as ItemConfig,
-  rusty_knife: rustyKnifeCfg as ItemConfig,
+  short_spear: shortSpearCfg as ItemConfig,
+  dagger: daggerCfg as ItemConfig,
   plank_shield: plankShieldCfg as ItemConfig,
-  bent_blade: bentBladeCfg as ItemConfig,
+  short_sword: shortSwordCfg as ItemConfig,
   leech_bead: leechBeadCfg as ItemConfig,
   buckler: bucklerCfg as ItemConfig,
-  spiked_charm: spikedCharmCfg as ItemConfig,
-  scavenger_lens: scavengerLensCfg as ItemConfig,
-  deserter_boots: deserterBootsCfg as ItemConfig,
-  marauder_boots: marauderBootsCfg as ItemConfig,
-  worn_pouch: wornPouchCfg as ItemConfig,
+  broadaxe: broadaxeCfg as ItemConfig,
+  rapier: rapierCfg as ItemConfig,
+  war_pick: warPickCfg as ItemConfig,
 };
 
 export const ITEM_BEHAVIORS: Record<string, ItemBehavior> = {
-  broken_staff: brokenStaffBeh,
+  battle_staff: battleStaffBeh,
   robe_scrap: robeScrapBeh,
   cracked_amulet: crackedAmuletBeh,
-  shaft: shaftBeh,
-  dented_helmet: dentedHelmetBeh,
-  leather_greaves: leatherGreavesBeh,
-  rusty_knife: rustyKnifeBeh,
+  short_spear: shortSpearBeh,
+  dagger: daggerBeh,
   plank_shield: plankShieldBeh,
-  bent_blade: bentBladeBeh,
+  short_sword: shortSwordBeh,
   leech_bead: leechBeadBeh,
   buckler: bucklerBeh,
-  spiked_charm: spikedCharmBeh,
-  scavenger_lens: scavengerLensBeh,
-  deserter_boots: deserterBootsBeh,
-  marauder_boots: marauderBootsBeh,
-  worn_pouch: wornPouchBeh,
+  broadaxe: broadaxeBeh,
+  rapier: rapierBeh,
+  war_pick: warPickBeh,
 };
 
 export function getItemConfig(item_id: string): ItemConfig {

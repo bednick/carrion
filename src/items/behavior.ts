@@ -5,7 +5,7 @@ import type { EventType, EventOf, EventResult } from '../combat/events';
 export interface CombatView {
   heroHp: number;
   heroMaxHp: number;
-  enemies: { id: string; hp: number; maxHp: number; isBoss?: boolean }[];
+  enemies: { id: string; hp: number; maxHp: number; slot: number; isBoss?: boolean }[];
   equipment: Partial<Record<SlotType, ItemInstance>>;
 }
 

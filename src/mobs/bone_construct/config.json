@@ -3,6 +3,8 @@
   "name": "Костяной конструкт",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 4.0 }
-  ]
+    { "damage": 5, "interval": 2.0 }
+  ],
+  "position": 1,
+  "ui": { "scale":  1.3 }
 }

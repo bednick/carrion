@@ -1,8 +1,0 @@
-{
-  "id": "leather_greaves",
-  "name": "Кожаные поножи",
-  "slots": ["legs"],
-  "type": "armor",
-  "base_value": 10,
-  "tags": ["armor"]
-}

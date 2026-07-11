@@ -4,7 +4,7 @@
   "description": "Развалины лагеря мага-командира. Здесь нежить — оружие, а не случайность.",
   "faction": "Магия — Нежить",
   "star": 2,
-  "fights": { "min": 5, "max": 9 },
+  "fights": { "min": 13, "max": 15 },
   "mob_pool": [
     { "mob_id": "rune_skeleton", "weight": 30 },
     { "mob_id": "rune_hound", "weight": 25 },

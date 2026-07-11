@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { FONT_FAMILY } from '../ui/theme';
 import { MetaStore } from '../core/MetaStore';
 import { EventBus } from '../core/EventBus';
 import { initQuestSystem } from '../core/QuestSystem';
@@ -10,7 +11,7 @@ import { craftPreview, salvageEssence, formatEssence, ESSENCE_TIERS } from '../i
 import type { Rarity, SlotType, EssencePool } from '../items/types';
 import { itemIconKey } from '../items/icons';
 import { resourceTag, goldTag } from '../ui/priceTag';
-import { rewardIconKey, essenceIconKey } from '../ui/rewards';
+import { rewardIconKey, essenceIconKey, essenceIconKeyByRarity } from '../ui/rewards';
 import { slotSilhouetteKey } from '../ui/silhouettes';
 import { Tooltip } from '../ui/Tooltip';
 import { DragDropManager } from '../ui/DragDropManager';
@@ -224,11 +225,11 @@ export class CampScene extends Phaser.Scene {
   }
 
   private buildHUD() {
-    this.add.text(640, 14, 'Лагерь', { fontSize: '22px', fontFamily: 'monospace', color: '#dddddd' }).setOrigin(0.5, 0);
+    this.add.text(640, 14, 'Лагерь', { fontSize: '22px', fontFamily: FONT_FAMILY, color: '#dddddd' }).setOrigin(0.5, 0);
     this.resourceHUD = new ResourceHUD(this);
 
     const coordText = this.add.text(10, 10, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#ffffff', backgroundColor: '#000000aa',
+      fontSize: '11px', fontFamily: FONT_FAMILY, color: '#ffffff', backgroundColor: '#000000aa',
     }).setDepth(100).setPadding(3);
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
       coordText.setText(`x:${Math.round(ptr.x)} y:${Math.round(ptr.y)}`);
@@ -242,29 +243,91 @@ export class CampScene extends Phaser.Scene {
       { key: 'amb_flute', volume: SoundManager.getLayerVolume('amb_flute', 0.5) },
     ]);
 
-    const resetBtn = this.add.rectangle(1255, 785, 90, 22, 0x1a0000)
+    const resetBtn = this.add.rectangle(1252, 785, 90, 22, 0x1a0000)
       .setStrokeStyle(1, 0x551111).setInteractive({ useHandCursor: true });
-    this.add.text(1255, 785, 'Сброс данных', { fontSize: '9px', fontFamily: 'monospace', color: '#663333' }).setOrigin(0.5);
+    this.add.text(1252, 785, 'Сброс данных', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#663333' }).setOrigin(0.5);
     resetBtn.on('pointerover', () => resetBtn.setFillStyle(0x2a0000));
     resetBtn.on('pointerout',  () => resetBtn.setFillStyle(0x1a0000));
     resetBtn.on('pointerdown', () => this.confirmReset());
+
+    // Дев-инструмент: балансировочный симулятор (balance.html) — открывается в новой вкладке.
+    // Только для дев-сервера (import.meta.env.DEV) — в проде balance.html не собирается и не нужен игроку.
+    if (import.meta.env.DEV) {
+      const balanceBtn = this.add.rectangle(1152, 785, 90, 22, 0x0a1a1a)
+        .setStrokeStyle(1, 0x225555).setInteractive({ useHandCursor: true });
+      this.add.text(1152, 785, 'Баланс-тул', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#337766' }).setOrigin(0.5);
+      balanceBtn.on('pointerover', () => balanceBtn.setFillStyle(0x143030));
+      balanceBtn.on('pointerout',  () => balanceBtn.setFillStyle(0x0a1a1a));
+      balanceBtn.on('pointerdown', () => window.open('./balance.html', '_blank'));
+    }
   }
 
   private confirmReset() {
     const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.7).setDepth(90).setInteractive();
     const box = this.add.rectangle(640, 400, 460, 160, 0x1e0a0a).setDepth(91).setStrokeStyle(2, 0x882222);
     const text = this.add.text(640, 368, '⚠ Сбросить весь прогресс?\nЗолото, металл, сундук, снаряжение — всё удалится.\nДействие необратимо.', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#ffaaaa', align: 'center',
+      fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffaaaa', align: 'center',
     }).setOrigin(0.5).setDepth(92);
     const yesBtn = this.add.rectangle(590, 432, 130, 34, 0x551111).setDepth(91).setInteractive({ useHandCursor: true });
-    const yesLbl = this.add.text(590, 432, 'Сбросить', { fontSize: '13px', fontFamily: 'monospace', color: '#ff6666' }).setOrigin(0.5).setDepth(92);
+    const yesLbl = this.add.text(590, 432, 'Сбросить', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ff6666' }).setOrigin(0.5).setDepth(92);
     const noBtn  = this.add.rectangle(710, 432, 130, 34, 0x224422).setDepth(91).setInteractive({ useHandCursor: true });
-    const noLbl  = this.add.text(710, 432, 'Отмена', { fontSize: '13px', fontFamily: 'monospace', color: '#aaffaa' }).setOrigin(0.5).setDepth(92);
+    const noLbl  = this.add.text(710, 432, 'Отмена', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(92);
 
     const close = () => [overlay, box, text, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
-    yesBtn.on('pointerdown', () => { close(); MetaStore.resetAll(); });
+    yesBtn.on('pointerdown', () => { close(); this.showStartWeaponPicker(); });
     noBtn.on('pointerdown', () => close());
     overlay.on('pointerdown', () => close());
+  }
+
+  // Экран выбора стартового оружия — второй шаг сброса прогресса. Выбор обязателен (клик по
+  // фону не закрывает экран): подтверждение уже дано на предыдущем шаге, отступать некуда.
+  private showStartWeaponPicker() {
+    const weaponIds = MetaStore.listStartWeapons();
+
+    const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.88).setDepth(90).setInteractive();
+    const title = this.add.text(640, 190, 'Выбери стартовое оружие', {
+      fontSize: '20px', fontFamily: FONT_FAMILY, color: '#ffdd44',
+    }).setOrigin(0.5).setDepth(92);
+    const hint = this.add.text(640, 218, 'Common — единственный предмет на стойке новой игры', {
+      fontSize: '11px', fontFamily: FONT_FAMILY, color: '#888888',
+    }).setOrigin(0.5).setDepth(92);
+
+    const objs: Phaser.GameObjects.GameObject[] = [overlay, title, hint];
+
+    const CARD_W = 130, CARD_H = 140, GAP = 16, COLS = 4;
+    const rows = Math.ceil(weaponIds.length / COLS);
+    const startY = 420 - ((rows - 1) * (CARD_H + GAP)) / 2;
+
+    weaponIds.forEach((id, i) => {
+      const col = i % COLS;
+      const row = Math.floor(i / COLS);
+      const rowCount = Math.min(COLS, weaponIds.length - row * COLS);
+      const rowTotal = rowCount * CARD_W + (rowCount - 1) * GAP;
+      const rowStartX = 640 - rowTotal / 2 + CARD_W / 2;
+      const x = rowStartX + col * (CARD_W + GAP);
+      const y = startY + row * (CARD_H + GAP);
+
+      const cfg = getItemConfig(id);
+      const card = this.add.rectangle(x, y, CARD_W, CARD_H, 0x1a1a2a)
+        .setStrokeStyle(2, 0x666666).setDepth(91).setInteractive({ useHandCursor: true });
+      const icon = this.add.image(x, y - 24, itemIconKey(id)).setDisplaySize(56, 56).setDepth(92);
+      const label = this.add.text(x, y + 32, cfg.name, {
+        fontSize: '11px', fontFamily: FONT_FAMILY, color: '#dddddd', align: 'center',
+        wordWrap: { width: CARD_W - 12 },
+      }).setOrigin(0.5, 0).setDepth(92);
+      objs.push(card, icon, label);
+
+      card.on('pointerover', () => {
+        card.setFillStyle(0x2a2a3a);
+        this.tooltip.showItem({ item_id: id, rarity: 'common' }, x + CARD_W / 2 + 8, y - CARD_H / 2);
+      });
+      card.on('pointerout', () => { card.setFillStyle(0x1a1a2a); this.tooltip.hide(); });
+      card.on('pointerdown', () => {
+        this.tooltip.hide();
+        objs.forEach(o => o.destroy());
+        MetaStore.resetAll(id);
+      });
+    });
   }
 
   private refreshHUD() {
@@ -273,7 +336,7 @@ export class CampScene extends Phaser.Scene {
 
   private buildHoverLabel() {
     this.hoverLabel = this.add.text(640, 780, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#aaaaaa',
+      fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaaaaa',
     }).setOrigin(0.5).setDepth(10);
   }
 
@@ -431,7 +494,7 @@ export class CampScene extends Phaser.Scene {
   private buildDealerAlert(x: number, y: number) {
     const glow = this.add.circle(0, -1, 16.5, 0xffcc33, 0.25).setBlendMode(Phaser.BlendModes.ADD);
     const mark = this.add.text(0, 0, '!', {
-      fontSize: '30px', fontFamily: 'monospace', color: '#ffdd44',
+      fontSize: '30px', fontFamily: FONT_FAMILY, color: '#ffdd44',
       fontStyle: 'bold', stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5);
 
@@ -449,6 +512,22 @@ export class CampScene extends Phaser.Scene {
   private refreshDealerAlert() {
     if (!this.dealerAlert) return;
     this.dealerAlert.setVisible(MetaStore.get().quests.pending_reward.length > 0);
+  }
+
+  // Есть ли среди активных (ещё не выполненных) квестов такой, чью цель можно
+  // выполнить в этой зоне — для маркера «?» на карте (QuestDef.areas).
+  private zoneHasActiveQuest(zoneId: string): boolean {
+    return MetaStore.get().quests.active.some(q => QUEST_DEFS[q.id]?.areas?.includes(zoneId));
+  }
+
+  // Маркер «?» в углу узла карты — без подсветки и покачивания (маркеров на
+  // карте может быть несколько одновременно).
+  private buildQuestMarker(x: number, y: number) {
+    const mark = this.add.text(x, y, '?', {
+      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#ffdd44',
+      fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+    this.panelContainer.add(mark);
   }
 
   private addNPCWithSprite(
@@ -602,7 +681,7 @@ export class CampScene extends Phaser.Scene {
 
     if (pending.length > 0) {
       container.add(this.add.text(379, y, 'Готово — забрать награду:', {
-        fontSize: '12px', fontFamily: 'monospace', color: '#ffdd44',
+        fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44',
       }).setOrigin(0.5));
       y += 20;
 
@@ -613,16 +692,16 @@ export class CampScene extends Phaser.Scene {
         const goldSum = def.rewards.filter(r => r.type === 'gold').reduce((s, r) => s + (r.value ?? 0), 0);
 
         const rowBg = this.add.rectangle(379, y + 18, 320, 36, 0x2a2a10).setStrokeStyle(1, 0x887722);
-        const titleT = this.add.text(225, y + 8, def.title, { fontSize: '12px', fontFamily: 'monospace', color: '#ddddaa' });
+        const titleT = this.add.text(225, y + 8, def.title, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddaa' });
         const rewardT = goldSum > 0
           ? goldTag(this, goldSum, { prefix: '+', iconSize: 14, fontSize: 11, color: '#ffdd44' }).setPosition(225, y + 30)
-          : this.add.text(225, y + 24, 'Выполнено', { fontSize: '11px', fontFamily: 'monospace', color: '#ffdd44' });
+          : this.add.text(225, y + 24, 'Выполнено', { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#ffdd44' });
 
         const claimBtn = this.add.rectangle(500, y + 18, 58, 26, hasGoldMetal ? 0x224422 : 0x222233)
           .setStrokeStyle(1, hasGoldMetal ? 0x44aa44 : 0x444455)
           .setInteractive({ useHandCursor: true });
         const claimLbl = this.add.text(500, y + 18, 'Забрать', {
-          fontSize: '11px', fontFamily: 'monospace', color: hasGoldMetal ? '#aaffaa' : '#666677',
+          fontSize: '11px', fontFamily: FONT_FAMILY, color: hasGoldMetal ? '#aaffaa' : '#666677',
         }).setOrigin(0.5);
 
         const qid = questId;
@@ -645,19 +724,21 @@ export class CampScene extends Phaser.Scene {
 
     if (active.length === 0 && pending.length === 0) {
       container.add(this.add.text(379, 400, 'Нет активных заданий', {
-        fontSize: '14px', fontFamily: 'monospace', color: '#666666',
+        fontSize: '14px', fontFamily: FONT_FAMILY, color: '#666666',
       }).setOrigin(0.5));
       return;
     }
 
-    for (const q of active) {
+    for (let i = 0; i < active.length; i++) {
+      const q = active[i];
       const def = QUEST_DEFS[q.id];
       if (!def) continue;
-      const title = this.add.text(210, y, def.title, { fontSize: '13px', fontFamily: 'monospace', color: '#dddddd' });
-      const desc = this.add.text(210, y + 16, def.description, { fontSize: '11px', fontFamily: 'monospace', color: '#888888' });
-      const progress = this.add.text(210, y + 30, `${q.progress}/${q.target}`, { fontSize: '11px', fontFamily: 'monospace', color: '#88aaff' });
+      const title = this.add.text(210, y, def.title, { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#dddddd' });
+      const desc = this.add.text(210, y + 16, def.description, { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#888888' });
+      const progress = this.add.text(210, y + 30, `${q.progress}/${q.target}`, { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#88aaff' });
       container.add([title, desc, progress]);
       y += 52;
+      container.add(this.add.rectangle(379, y - 8, 320, 1, 0x333344));
       if (y > 600) break;
     }
   }
@@ -763,7 +844,7 @@ export class CampScene extends Phaser.Scene {
         .setStrokeStyle(2, active ? 0x555577 : 0x33334a)
         .setInteractive({ useHandCursor: true });
       const lbl = this.add.text(x - 4, y, t.label, {
-        fontSize: '12px', fontFamily: 'monospace', color: active ? '#ffffff' : '#777788',
+        fontSize: '12px', fontFamily: FONT_FAMILY, color: active ? '#ffffff' : '#777788',
       }).setOrigin(0.5);
       this.panelContainer.add([bg, lbl]);
 
@@ -857,11 +938,11 @@ export class CampScene extends Phaser.Scene {
       .setStrokeStyle(2, item ? RARITY_COLORS[item.rarity] : 0x555566);
     const s1Content = item
       ? this.add.image(inputX, slotY, itemIconKey(item.item_id)).setDisplaySize(40, 40)
-      : this.add.text(inputX, slotY, '+', { fontSize: '20px', fontFamily: 'monospace', color: '#333344' }).setOrigin(0.5);
+      : this.add.text(inputX, slotY, '+', { fontSize: '20px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
 
     // "→"
     const arrowLbl = this.add.text(arrowX, slotY, '→', {
-      fontSize: '18px', fontFamily: 'monospace', color: previewResult ? '#667766' : '#333344',
+      fontSize: '18px', fontFamily: FONT_FAMILY, color: previewResult ? '#667766' : '#333344',
     }).setOrigin(0.5);
 
     // Слот результата (только превью, без взаимодействия)
@@ -873,8 +954,8 @@ export class CampScene extends Phaser.Scene {
     }
 
     // Подписи слотов
-    const lbl1 = this.add.text(inputX, slotY + 33, 'предмет', { fontSize: '9px', fontFamily: 'monospace', color: '#333344' }).setOrigin(0.5);
-    const lbl3 = this.add.text(resultX, slotY + 33, 'результат', { fontSize: '9px', fontFamily: 'monospace', color: previewResult ? '#667766' : '#333344' }).setOrigin(0.5);
+    const lbl1 = this.add.text(inputX, slotY + 33, 'предмет', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
+    const lbl3 = this.add.text(resultX, slotY + 33, 'результат', { fontSize: '9px', fontFamily: FONT_FAMILY, color: previewResult ? '#667766' : '#333344' }).setOrigin(0.5);
 
     // DragDrop: единственный входной слот + зона всей левой половины меню.
     if (this.dragDrop) {
@@ -945,7 +1026,7 @@ export class CampScene extends Phaser.Scene {
     const btn = this.add.rectangle(cx - 10, 460, 240, 36, btnColor);
     if (btnEnabled) btn.setInteractive({ useHandCursor: true });
     const btnLbl = this.add.text(cx - 10, 460, 'Улучшить', {
-      fontSize: '13px', fontFamily: 'monospace',
+      fontSize: '13px', fontFamily: FONT_FAMILY,
       color: btnEnabled ? '#aaffaa' : '#555566', align: 'center',
     }).setOrigin(0.5);
     if (btnEnabled && previewResult) {
@@ -986,7 +1067,7 @@ export class CampScene extends Phaser.Scene {
       }
     } else if (craftError) {
       costLbls.push(this.add.text(cx - 10, 494, craftError, {
-        fontSize: '11px', fontFamily: 'monospace', color: '#886655', align: 'center',
+        fontSize: '11px', fontFamily: FONT_FAMILY, color: '#886655', align: 'center',
         wordWrap: { width: 230 },
       }).setOrigin(0.5));
     }
@@ -1005,15 +1086,10 @@ export class CampScene extends Phaser.Scene {
       if (this.smithHammerMode) this.exitSmithHammerMode(); else this.enterSmithHammerMode();
     });
 
-    const hint = this.add.text(cx, 248, 'Клик — взять в руку, клик по слоту — положить\nShift+клик — быстро в слот / обратно', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#555566', align: 'center',
-    }).setOrigin(0.5);
-
     // Контур зоны крафта (вся левая половина) — предмет, брошенный сюда, займёт слот.
     const craftZone = this.add.rectangle(380, 432, 370, 440).setStrokeStyle(1, 0x444466).setFillStyle(0x000000, 0);
 
     const toAdd: Phaser.GameObjects.GameObject[] = [
-      hint,
       craftZone,
       s1Bg, s1Content, arrowLbl,
       s3Bg,
@@ -1031,9 +1107,9 @@ export class CampScene extends Phaser.Scene {
     const isShop = this.dealerTab === 'shop';
 
     const tabShopBg = this.add.rectangle(295, 192, 110, 30, isShop ? 0x444466 : 0x333355).setInteractive({ useHandCursor: true });
-    const tabShopLbl = this.add.text(295, 192, 'Магазин', { fontSize: '13px', fontFamily: 'monospace', color: isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
+    const tabShopLbl = this.add.text(295, 192, 'Магазин', { fontSize: '13px', fontFamily: FONT_FAMILY, color: isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
     const tabQstBg = this.add.rectangle(415, 192, 110, 30, !isShop ? 0x444466 : 0x333355).setInteractive({ useHandCursor: true });
-    const tabQstLbl = this.add.text(415, 192, 'Задания', { fontSize: '13px', fontFamily: 'monospace', color: !isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
+    const tabQstLbl = this.add.text(415, 192, 'Задания', { fontSize: '13px', fontFamily: FONT_FAMILY, color: !isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
 
     tabShopBg.on('pointerdown', () => { this.tabClickGuard = true; this.dealerTab = 'shop';   this.rebuildPanel(); });
     tabQstBg.on('pointerdown',  () => { this.tabClickGuard = true; this.dealerTab = 'quests'; this.rebuildPanel(); });
@@ -1047,25 +1123,25 @@ export class CampScene extends Phaser.Scene {
       );
       if (buyable.length === 0) {
         content.add(this.add.text(cx, 340, 'Все доступные зоны\nуже открыты', {
-          fontSize: '13px', fontFamily: 'monospace', color: '#555566', align: 'center',
+          fontSize: '13px', fontFamily: FONT_FAMILY, color: '#555566', align: 'center',
         }).setOrigin(0.5));
       } else {
-        content.add(this.add.text(cx, 220, 'Проходки', {
-          fontSize: '13px', fontFamily: 'monospace', color: '#888899',
-        }).setOrigin(0.5));
         buyable.forEach((entry, i) => {
-          const rowY = 250 + i * 44;
+          const rowY = 236 + i * 44;
+          const canAfford = meta.gold >= entry.passPrice!;
           const rowBg = this.add.rectangle(cx, rowY, 320, 36, 0x222233).setStrokeStyle(1, 0x444455);
-          const rowLabel = this.add.text(cx - 100, rowY, entry.label, {
-            fontSize: '12px', fontFamily: 'monospace', color: '#ccccdd',
+          const rowLabel = this.add.text(cx - 152, rowY, `Допуск: ${entry.label}`, {
+            fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ccccdd',
           }).setOrigin(0, 0.5);
-          const priceLabel = goldTag(this, entry.passPrice!, { iconSize: 16, fontSize: 12 })
-            .setPosition(cx + 55, rowY);
-          const buyBtn = this.add.rectangle(cx + 125, rowY, 60, 26, 0x224422)
-            .setStrokeStyle(1, 0x44aa44)
+          // originX: 1 — тег растёт влево от фиксированного правого края, поэтому доп. цифры
+          // в цене не заезжают на кнопку «Купить».
+          const priceLabel = goldTag(this, entry.passPrice!, { iconSize: 16, fontSize: 12, originX: 1 })
+            .setPosition(cx + 90, rowY);
+          const buyBtn = this.add.rectangle(cx + 125, rowY, 60, 26, canAfford ? 0x224422 : 0x332222)
+            .setStrokeStyle(1, canAfford ? 0x44aa44 : 0x664444)
             .setInteractive({ useHandCursor: true });
           const buyLbl = this.add.text(cx + 125, rowY, 'Купить', {
-            fontSize: '11px', fontFamily: 'monospace', color: '#aaffaa',
+            fontSize: '11px', fontFamily: FONT_FAMILY, color: canAfford ? '#aaffaa' : '#886666',
           }).setOrigin(0.5);
           buyBtn.on('pointerdown', () => {
             if (this.dragDrop?.isHolding()) return; // с предметом в руке клик не покупает — pointerup продаст
@@ -1099,20 +1175,13 @@ export class CampScene extends Phaser.Scene {
       });
     }
 
-    // Контур зоны продажи + подсказка — на обеих вкладках.
+    // Контур зоны продажи — на обеих вкладках.
     const dropOutline = this.add.rectangle(380, 432, 370, 440).setStrokeStyle(1, 0x554433).setFillStyle(0x000000, 0);
-    const sellHint = this.add.text(cx, 636, 'Брось предмет в левую половину — продать  ·  Shift+клик в сундуке — быстро', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#444455', align: 'center',
-    }).setOrigin(0.5);
-    this.panelContainer.add([tabShopBg, tabShopLbl, tabQstBg, tabQstLbl, dropOutline, sellHint, content]);
+    this.panelContainer.add([tabShopBg, tabShopLbl, tabQstBg, tabQstLbl, dropOutline, content]);
   }
 
   private buildChestStandContent() {
     const cx = 379;
-
-    const hintLbl = this.add.text(cx, 184, 'клик — взять в руку, клик по слоту — надеть  ·  Shift+клик — быстро', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#444455',
-    }).setOrigin(0.5);
 
     const tabs = this.buildStandTabs(cx, 210);
 
@@ -1127,7 +1196,7 @@ export class CampScene extends Phaser.Scene {
     };
 
     const stands = this.buildArmorStands(cx, 340, onStandSlotClick);
-    this.panelContainer.add([hintLbl, ...tabs, ...stands]);
+    this.panelContainer.add([...tabs, ...stands]);
   }
 
   // Табы выбора активной стойки-пресета (1/2/3): переключают selectedStandIndex.
@@ -1143,7 +1212,7 @@ export class CampScene extends Phaser.Scene {
         .setStrokeStyle(1, active ? 0x88aaff : 0x444455)
         .setInteractive({ useHandCursor: true });
       const lbl = this.add.text(x, y, `${i + 1}`, {
-        fontSize: '10px', fontFamily: 'monospace', color: active ? '#cfe0ff' : '#8899aa',
+        fontSize: '10px', fontFamily: FONT_FAMILY, color: active ? '#cfe0ff' : '#8899aa',
       }).setOrigin(0.5);
       if (!active) {
         bg.on('pointerover', () => bg.setFillStyle(0x2a2a3a));
@@ -1229,7 +1298,7 @@ export class CampScene extends Phaser.Scene {
     const ROWS_VIS = Math.floor(CONTENT_H / ROW_H);
 
     this.panelContainer.add(this.add.text(CHEST_CX, 163, 'Сундук', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#aaaaaa',
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#aaaaaa',
     }).setOrigin(0.5));
 
     if (showFilters) {
@@ -1266,16 +1335,16 @@ export class CampScene extends Phaser.Scene {
           isActive ? 0x2a2a3a : 0x1e1e2e)
           .setStrokeStyle(isActive ? 2 : 1, isActive ? col : 0x555566)
           .setInteractive({ useHandCursor: true });
-        const diamond = this.add.rectangle(cx, FILTER_Y2, 26, 26, col)
-          .setAngle(45)
-          .setAlpha(isActive ? 1 : 0.35);
-        bg.on('pointerover', () => { if (!isActive) { bg.setFillStyle(0x252530); diamond.setAlpha(0.65); } });
-        bg.on('pointerout', () => { if (!isActive) { bg.setFillStyle(0x1e1e2e); diamond.setAlpha(0.35); } });
+        const icon = this.add.image(cx, FILTER_Y2, essenceIconKeyByRarity(rarity))
+          .setDisplaySize(28, 28)
+          .setAlpha(isActive ? 1 : 0.4);
+        bg.on('pointerover', () => { if (!isActive) { bg.setFillStyle(0x252530); icon.setAlpha(0.65); } });
+        bg.on('pointerout', () => { if (!isActive) { bg.setFillStyle(0x1e1e2e); icon.setAlpha(0.4); } });
         bg.on('pointerdown', () => {
           this.chestRarityFilter = isActive ? null : rarity;
           this.rebuildPanel();
         });
-        this.panelContainer.add([bg, diamond]);
+        this.panelContainer.add([bg, icon]);
       }
 
       // Sort button — 6th cell in rarity row
@@ -1285,7 +1354,7 @@ export class CampScene extends Phaser.Scene {
           .setStrokeStyle(1, 0x555566)
           .setInteractive({ useHandCursor: true });
         const lbl = this.add.text(cx, FILTER_Y2, '▲▼', {
-          fontSize: '14px', fontFamily: 'monospace', color: '#666677',
+          fontSize: '14px', fontFamily: FONT_FAMILY, color: '#666677',
         }).setOrigin(0.5);
         bg.on('pointerover', () => { bg.setFillStyle(0x252530); lbl.setColor('#9999aa'); });
         bg.on('pointerout', () => { bg.setFillStyle(0x1e1e2e); lbl.setColor('#666677'); });
@@ -1307,14 +1376,16 @@ export class CampScene extends Phaser.Scene {
     });
 
     // Стак: одинаковый item_id + rarity рисуется одним квадратом с счётчиком.
-    // Хранилище остаётся плоским; представитель стака — первый экземпляр,
-    // при продаже/использовании удаляется он, счётчик уменьшается на один.
+    // Хранилище остаётся плоским; представитель стака — ПОСЛЕДНИЙ экземпляр
+    // (по индексу в chest), при продаже/использовании удаляется он. Так splice
+    // не сдвигает индексы первых вхождений других стаков — визуальный порядок
+    // стабилен, слот съезжает только когда стак опустошается полностью.
     const stacks: { item: ItemInstance; origIdx: number; count: number }[] = [];
     const stackByKey = new Map<string, { item: ItemInstance; origIdx: number; count: number }>();
     for (const { item, origIdx } of filteredItems) {
       const key = `${item.item_id}|${item.rarity}`;
       const existing = stackByKey.get(key);
-      if (existing) { existing.count++; continue; }
+      if (existing) { existing.count++; existing.origIdx = origIdx; continue; }
       const s = { item, origIdx, count: 1 };
       stackByKey.set(key, s);
       stacks.push(s);
@@ -1365,7 +1436,7 @@ export class CampScene extends Phaser.Scene {
           itemsCtr.add(this.add.image(x, yc, itemIconKey(inst.item_id)).setDisplaySize(38, 38));
           if (entry.count > 1) {
             itemsCtr.add(this.add.text(x + SIZE / 2 - 3, yc + SIZE / 2 - 3, `${entry.count}`, {
-              fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
+              fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffffff',
               stroke: '#000000', strokeThickness: 3,
             }).setOrigin(1, 1));
           }
@@ -1430,7 +1501,7 @@ export class CampScene extends Phaser.Scene {
     const bg = this.add.image(640, 380, 'map-texture').setDisplaySize(600, 620);
     const border = this.add.rectangle(640, 380, 600, 620, 0x000000, 0).setStrokeStyle(2, 0x7a6040);
     const title = this.add.text(640, 100, 'Карта', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#3a2010',
+      fontSize: '22px', fontFamily: FONT_FAMILY, color: '#3a2010',
       stroke: '#c8a86b', strokeThickness: 1,
     }).setOrigin(0.5);
     this.panelContainer.add([bg, border, title]);
@@ -1446,7 +1517,7 @@ export class CampScene extends Phaser.Scene {
     // Экран завершения игры — карта показывает баннер, когда зачищена центральная зона.
     if (meta.completed_areas.includes('battlefield')) {
       const banner = this.add.text(640, 662, '🏆 Поле Битвы пало — игра пройдена!', {
-        fontSize: '15px', fontFamily: 'monospace', color: '#ffdd44',
+        fontSize: '15px', fontFamily: FONT_FAMILY, color: '#ffdd44',
         backgroundColor: '#000000aa',
       }).setOrigin(0.5).setPadding(8, 4, 8, 4);
       this.panelContainer.add(banner);
@@ -1508,21 +1579,25 @@ export class CampScene extends Phaser.Scene {
 
     const node = this.add.rectangle(entry.x, entry.y, 120, 56, fillColor).setStrokeStyle(2, borderColor);
     const nameText = this.add.text(entry.x, entry.y - 8, entry.label, {
-      fontSize: '11px', fontFamily: 'monospace', color: labelColor,
+      fontSize: '11px', fontFamily: FONT_FAMILY, color: labelColor,
       align: 'center', wordWrap: { width: 110 },
     }).setOrigin(0.5);
     this.panelContainer.add([node, nameText]);
 
     if (isWip) {
       this.panelContainer.add(this.add.text(entry.x, entry.y + 14, 'В разработке', {
-        fontSize: '9px', fontFamily: 'monospace', color: '#333344',
+        fontSize: '9px', fontFamily: FONT_FAMILY, color: '#333344',
       }).setOrigin(0.5));
       return;
     }
 
+    if (this.zoneHasActiveQuest(entry.id)) {
+      this.buildQuestMarker(entry.x + 52, entry.y - 20);
+    }
+
     if (isCompleted) {
       this.panelContainer.add(this.add.text(entry.x, entry.y + 14, '✓ Пройдена', {
-        fontSize: '9px', fontFamily: 'monospace', color: '#44aa44',
+        fontSize: '9px', fontFamily: FONT_FAMILY, color: '#44aa44',
       }).setOrigin(0.5));
     }
 
@@ -1530,7 +1605,7 @@ export class CampScene extends Phaser.Scene {
       // Центр открывается автоматически зачисткой трёх конечных зон — проходку не купить.
       if (isCenter) {
         this.panelContainer.add(this.add.text(entry.x, entry.y + 14, '🔒 нужны 3 конечные зоны', {
-          fontSize: '9px', fontFamily: 'monospace', color: '#888888',
+          fontSize: '9px', fontFamily: FONT_FAMILY, color: '#888888',
         }).setOrigin(0.5));
         node.setInteractive({ useHandCursor: true });
         nameText.setInteractive({ useHandCursor: true });
@@ -1548,7 +1623,7 @@ export class CampScene extends Phaser.Scene {
       if (!zonePrereqMet(entry.id, completed)) {
         const prevLabel = zoneLabel(ZONE_PREREQ[entry.id]);
         this.panelContainer.add(this.add.text(entry.x, entry.y + 14, '🔒 пройди прошлую зону', {
-          fontSize: '9px', fontFamily: 'monospace', color: '#886666',
+          fontSize: '9px', fontFamily: FONT_FAMILY, color: '#886666',
         }).setOrigin(0.5));
         node.setInteractive({ useHandCursor: true });
         nameText.setInteractive({ useHandCursor: true });
@@ -1562,10 +1637,17 @@ export class CampScene extends Phaser.Scene {
         return;
       }
 
+      // Проходку можно купить — цвет карточки сигналит, хватает ли золота (аналогично магазину допусков).
+      const canAfford = MetaStore.get().gold >= (entry.passPrice ?? 0);
+      fillColor = canAfford ? 0x554422 : 0x332222;
+      borderColor = canAfford ? 0xaa8844 : 0x664444;
+      const lockColor = canAfford ? '#ffdd88' : '#886666';
+      node.setFillStyle(fillColor).setStrokeStyle(2, borderColor);
+
       const lockLbl = this.add.text(entry.x - 20, entry.y + 14, '🔒', {
-        fontSize: '9px', fontFamily: 'monospace', color: '#888888',
+        fontSize: '9px', fontFamily: FONT_FAMILY, color: lockColor,
       }).setOrigin(0, 0.5);
-      const lockPrice = goldTag(this, entry.passPrice ?? 0, { iconSize: 12, fontSize: 9, color: '#888888' })
+      const lockPrice = goldTag(this, entry.passPrice ?? 0, { iconSize: 12, fontSize: 9, color: lockColor })
         .setPosition(entry.x - 4, entry.y + 14);
       this.panelContainer.add([lockLbl, lockPrice]);
 
@@ -1573,10 +1655,9 @@ export class CampScene extends Phaser.Scene {
       nameText.setInteractive({ useHandCursor: true });
       [node, nameText].forEach(obj => {
         obj.on('pointerover', () => {
-          node.setFillStyle(0x332233);
+          node.setFillStyle(canAfford ? 0x664422 : 0x332233);
           this.tooltip.showLines([
-            { text: 'Заблокировано' },
-            { text: 'Купить проходку:' },
+            { text: canAfford ? 'Купить проходку:' : 'Не хватает золота:' },
             { text: `${entry.passPrice}`, color: '#ffcc00', icon: rewardIconKey('gold') },
           ], entry.x + 65, entry.y - 50);
         });
@@ -1617,14 +1698,14 @@ export class CampScene extends Phaser.Scene {
     const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.5).setDepth(200).setInteractive();
     const box = this.add.rectangle(640, 400, 500, 150, 0x1e1e2e).setDepth(201).setStrokeStyle(2, 0x555577);
     const text = this.add.text(640, 362, `Купить проходку в «${entry.label}»?`, {
-      fontSize: '14px', fontFamily: 'monospace', color: '#dddddd', align: 'center', wordWrap: { width: 460 },
+      fontSize: '14px', fontFamily: FONT_FAMILY, color: '#dddddd', align: 'center', wordWrap: { width: 460 },
     }).setOrigin(0.5).setDepth(202);
     const priceTag = goldTag(this, entry.passPrice, { iconSize: 18, fontSize: 15, originX: 0.5 })
       .setPosition(640, 390).setDepth(202);
     const yesBtn = this.add.rectangle(580, 420, 120, 34, 0x224422).setDepth(201).setInteractive({ useHandCursor: true });
-    const yesLbl = this.add.text(580, 420, 'Купить', { fontSize: '13px', fontFamily: 'monospace', color: '#aaffaa' }).setOrigin(0.5).setDepth(202);
+    const yesLbl = this.add.text(580, 420, 'Купить', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(202);
     const noBtn = this.add.rectangle(720, 420, 120, 34, 0x442222).setDepth(201).setInteractive({ useHandCursor: true });
-    const noLbl = this.add.text(720, 420, 'Отмена', { fontSize: '13px', fontFamily: 'monospace', color: '#ffaaaa' }).setOrigin(0.5).setDepth(202);
+    const noLbl = this.add.text(720, 420, 'Отмена', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffaaaa' }).setOrigin(0.5).setDepth(202);
 
     const close = () => [overlay, box, text, priceTag, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
     yesBtn.on('pointerdown', () => {
@@ -1632,6 +1713,7 @@ export class CampScene extends Phaser.Scene {
       MetaStore.spendGold(entry.passPrice!);
       MetaStore.unlockArea(entry.id);
       if (entry.questId) MetaStore.addActiveQuest(entry.questId, 1);
+      this.refreshHUD();
       this.rebuildPanel();
     });
     noBtn.on('pointerdown', () => close());
@@ -1640,7 +1722,7 @@ export class CampScene extends Phaser.Scene {
 
   private showMessage(msg: string) {
     const text = this.add.text(640, 740, msg, {
-      fontSize: '15px', fontFamily: 'monospace', color: '#ffaa44',
+      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#ffaa44',
     }).setOrigin(0.5).setDepth(200);
     this.time.delayedCall(2500, () => text.destroy());
   }

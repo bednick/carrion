@@ -3,7 +3,7 @@
   "name": "Жеребёнок",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 1.5 },
-    { "damage": 5, "interval": 1.8 }
+    { "damage": 5, "interval": 0.75 },
+    { "damage": 5, "interval": 0.9 }
   ]
 }

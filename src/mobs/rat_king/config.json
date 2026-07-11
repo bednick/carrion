@@ -1,10 +1,10 @@
 {
   "id": "rat_king",
   "name": "Крысиный король",
-  "health": 20,
+  "health": 100,
   "attacks": [
-    { "damage": 5, "interval": 2.0 },
-    { "damage": 5, "interval": 4.0 },
-    { "damage": 5, "interval": 3.0 }
+    { "damage": 1, "interval": 1.0 },
+    { "damage": 1, "interval": 1.0 },
+    { "damage": 1, "interval": 1.0 }
   ]
 }

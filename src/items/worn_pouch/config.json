@@ -1,8 +1,0 @@
-{
-  "id": "worn_pouch",
-  "name": "Истёртый подсумок",
-  "slots": ["body_lower"],
-  "type": "accessory",
-  "base_value": 10,
-  "tags": ["accessory", "secure"]
-}

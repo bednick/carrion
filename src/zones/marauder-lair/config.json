@@ -4,7 +4,7 @@
   "description": "Организованный лагерь банды. Броню снимают не с павших, а с тех, кого свалили.",
   "faction": "Мародёры — Броня",
   "star": 2,
-  "fights": { "min": 5, "max": 9 },
+  "fights": { "min": 9, "max": 11 },
   "mob_pool": [
     { "mob_id": "armed_marauder", "weight": 20 },
     { "mob_id": "executioner", "weight": 15 },

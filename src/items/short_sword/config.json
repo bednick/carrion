@@ -1,0 +1,8 @@
+{
+  "id": "short_sword",
+  "name": "Короткий меч",
+  "slots": ["hand_right"],
+  "type": "weapon",
+  "base_value": 10,
+  "tags": ["weapon", "balanced"]
+}

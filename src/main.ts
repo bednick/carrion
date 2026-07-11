@@ -3,6 +3,7 @@ import { PreloadScene } from './scenes/PreloadScene';
 import { CampScene } from './scenes/CampScene';
 import { ExpeditionScene } from './scenes/ExpeditionScene';
 import { MetaStore } from './core/MetaStore';
+import { loadFonts } from './ui/theme';
 
 MetaStore.init();
 
@@ -23,4 +24,4 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [PreloadScene, CampScene, ExpeditionScene],
 };
 
-new Phaser.Game(config);
+loadFonts().then(() => new Phaser.Game(config));

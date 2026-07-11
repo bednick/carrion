@@ -3,10 +3,10 @@
   "name": "Табунная кобыла",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 2.0 },
-    { "damage": 5, "interval": 2.6 }
+    { "damage": 5, "interval": 1.0 },
+    { "damage": 5, "interval": 1.3 }
   ],
   "summons": [
-    { "mob_id": "foal", "trigger": { "type": "interval", "every": 6.0 } }
+    { "mob_id": "foal", "trigger": { "type": "interval", "every": 3.0 } }
   ]
 }

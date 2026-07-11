@@ -3,7 +3,7 @@
   "name": "Гиена",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 1.8 },
-    { "damage": 5, "interval": 2.2 }
+    { "damage": 5, "interval": 0.9 },
+    { "damage": 5, "interval": 1.1 }
   ]
 }

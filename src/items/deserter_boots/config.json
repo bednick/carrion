@@ -1,8 +1,0 @@
-{
-  "id": "deserter_boots",
-  "name": "Сапоги дезертира",
-  "slots": ["legs"],
-  "type": "armor",
-  "base_value": 10,
-  "tags": ["armor", "escape", "fast"]
-}

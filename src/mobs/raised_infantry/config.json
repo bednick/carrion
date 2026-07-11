@@ -1,8 +1,8 @@
 {
   "id": "raised_infantry",
   "name": "Поднятый пехотинец",
-  "health": 10,
+  "health": 25,
   "attacks": [
-    { "damage": 5, "interval": 3.0 }
+    { "damage": 1, "interval": 1.5 }
   ]
 }

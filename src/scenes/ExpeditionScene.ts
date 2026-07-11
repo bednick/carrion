@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { FONT_FAMILY } from '../ui/theme';
 import { MetaStore } from '../core/MetaStore';
 import { EventBus } from '../core/EventBus';
 import { getZoneConfig, zoneBgKey, ZONE_BG_VARIANTS, BG_LAYERS, type BgLayer } from '../zones/registry';
@@ -313,7 +314,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private buildProgressBar() {
     this.add.text(640, 10, this.zoneCfg.name, {
-      fontSize: '16px', fontFamily: 'monospace', color: '#cccccc',
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#cccccc',
     }).setOrigin(0.5, 0).setDepth(2);
 
     const barW = 864;
@@ -324,7 +325,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.add.rectangle(barX + barW / 2, barY + barH / 2, barW, barH, 0x222233).setStrokeStyle(1, 0x444455).setDepth(2);
     this.progressFill = this.add.rectangle(barX, barY + barH / 2, 4, barH - 4, 0x4488cc).setOrigin(0, 0.5).setDepth(2);
     this.progressText = this.add.text(640, barY + barH / 2, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#aaaaaa',
+      fontSize: '11px', fontFamily: FONT_FAMILY, color: '#aaaaaa',
     }).setOrigin(0.5).setDepth(2);
   }
 
@@ -355,7 +356,10 @@ export class ExpeditionScene extends Phaser.Scene {
         }
         this.anims.create({ key: `${animPrefix}-idle`,   frames: this.anims.generateFrameNumbers(`${animPrefix}-idle`,   {}), frameRate: 8,  repeat: -1 });
         this.anims.create({ key: `${animPrefix}-walk`,   frames: this.anims.generateFrameNumbers(`${animPrefix}-walk`,   {}), frameRate: 10, repeat: -1 });
-        this.anims.create({ key: `${animPrefix}-attack`, frames: this.anims.generateFrameNumbers(`${animPrefix}-attack`, {}), frameRate: 12, repeat: 0 });
+        // frameRate ×2 относительно «естественного» 12 — держит замах короче COMBAT_TIME_SCALE-
+        // укороченных интервалов оружия (см. src/combat/CombatEngine.ts), иначе быстрое оружие на
+        // высокой редкости перезапускает анимацию на середине свинга.
+        this.anims.create({ key: `${animPrefix}-attack`, frames: this.anims.generateFrameNumbers(`${animPrefix}-attack`, {}), frameRate: 24, repeat: 0 });
         this.anims.create({ key: `${animPrefix}-hit`,    frames: this.anims.generateFrameNumbers(`${animPrefix}-hit`,    {}), frameRate: 10, repeat: 0 });
         if (this.textures.exists(`${animPrefix}-death`))
           this.anims.create({ key: `${animPrefix}-death`, frames: this.anims.generateFrameNumbers(`${animPrefix}-death`, {}), frameRate: 9, repeat: 0 });
@@ -375,13 +379,13 @@ export class ExpeditionScene extends Phaser.Scene {
     } else {
       this.heroSprite = this.add.rectangle(hx, 219, 64, 90, 0x4488aa).setDepth(5);
       this.add.text(hx, 219, 'С', {
-        fontSize: '28px', fontFamily: 'monospace', color: '#ffffff',
+        fontSize: '28px', fontFamily: FONT_FAMILY, color: '#ffffff',
       }).setOrigin(0.5).setDepth(6);
     }
 
     this.add.rectangle(hx, 310, 80, 10, 0x333333).setOrigin(0.5);
     this.heroHpFill = this.add.rectangle(hx - 40, 310, 80, 10, 0x44aa44).setOrigin(0, 0.5);
-    this.heroHpText = this.add.text(hx, 323, '', { fontSize: '11px', fontFamily: 'monospace', color: '#aaffaa' }).setOrigin(0.5);
+    this.heroHpText = this.add.text(hx, 323, '', { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5);
 
     this.updateHeroHpBar();
   }
@@ -602,7 +606,7 @@ export class ExpeditionScene extends Phaser.Scene {
         const img = this.textures.get(spriteKey).getSourceImage() as HTMLImageElement;
         const maxW = e.isBoss ? 210 : 150;
         const maxH = e.isBoss ? 165 : 130;
-        const sc = Math.min(maxW / img.width, maxH / img.height);
+        const sc = Math.min(maxW / img.width, maxH / img.height) * (getMobConfig(e.id).ui?.scale ?? 1);
         const dispH = img.height * sc;
         sprite = this.add.sprite(x, 287, spriteKey).setOrigin(0.5, 1).setDisplaySize(img.width * sc, dispH).setDepth(5);
         nameY = 287 - dispH - 12;
@@ -614,10 +618,10 @@ export class ExpeditionScene extends Phaser.Scene {
       }
       const uiAlpha = getMobConfig(e.id).ui?.alpha;
       if (uiAlpha !== undefined) sprite.setAlpha(uiAlpha);
-      const nameText = this.add.text(x, nameY, e.name, { fontSize: '10px', fontFamily: 'monospace', color: '#ddddaa' }).setOrigin(0.5);
+      const nameText = this.add.text(x, nameY, e.name, { fontSize: '10px', fontFamily: FONT_FAMILY, color: '#ddddaa' }).setOrigin(0.5);
       const hpBar = this.add.rectangle(x, 310, 80, 10, 0x333333).setOrigin(0.5);
       const hpFill = this.add.rectangle(x - 40, 310, 80, 10, 0xaa4444).setOrigin(0, 0.5);
-      const hpText = this.add.text(x, 323, `${e.hp}/${e.maxHp}`, { fontSize: '10px', fontFamily: 'monospace', color: '#ffaaaa' }).setOrigin(0.5);
+      const hpText = this.add.text(x, 323, `${e.hp}/${e.maxHp}`, { fontSize: '10px', fontFamily: FONT_FAMILY, color: '#ffaaaa' }).setOrigin(0.5);
 
       const atkBars: { fill: Phaser.GameObjects.Rectangle; bg: Phaser.GameObjects.Rectangle }[] = [];
       for (let t = 0; t < e.attackTimers.length; t++) {
@@ -696,7 +700,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private buildLootBelt() {
     const beltY = 370;
     this.add.rectangle(640, beltY, 1280, 52, 0x0a0a18).setStrokeStyle(1, 0x333355);
-    this.add.text(10, beltY, 'ЛЕНТА', { fontSize: '9px', fontFamily: 'monospace', color: '#333355' }).setOrigin(0, 0.5);
+    this.add.text(10, beltY, 'ЛЕНТА', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#333355' }).setOrigin(0, 0.5);
   }
 
   // Лента-очередь: предмет въезжает справа, упирается в левый край и копится. Уходит в сундук
@@ -772,7 +776,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.add.rectangle(640, zCy, 1280, zH, 0x201510).setStrokeStyle(2, 0x6b4020);
     this.add.text(640, 404, 'Экипировка · стойка', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#a06030',
+      fontSize: '11px', fontFamily: FONT_FAMILY, color: '#a06030',
     }).setOrigin(0.5, 0);
 
     this.add.image(640, 600, zoneDecorKey('warrior')).setTint(0xa06030).setAlpha(0.16);
@@ -794,7 +798,7 @@ export class ExpeditionScene extends Phaser.Scene {
         .setStrokeStyle(1, 0x444455)
         .setInteractive({ useHandCursor: true });
       const lbl = this.add.text(x, y, `${i + 1}`, {
-        fontSize: '10px', fontFamily: 'monospace', color: '#8899aa',
+        fontSize: '10px', fontFamily: FONT_FAMILY, color: '#8899aa',
       }).setOrigin(0.5);
       bg.on('pointerover', () => { if (i !== this.standIndex) bg.setFillStyle(0x2a2a3a); });
       bg.on('pointerout',  () => { if (i !== this.standIndex) bg.setFillStyle(0x222233); });
@@ -974,7 +978,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.pauseBtn = this.add.rectangle(centers[0], rowY, BTN_W, BTN_H, 0x222233)
       .setStrokeStyle(1, 0x444466)
       .setInteractive({ useHandCursor: true });
-    this.pauseIcon = this.add.text(centers[0], rowY, '⏸', { fontSize: '13px', fontFamily: 'monospace', color: '#aaaacc' }).setOrigin(0.5);
+    this.pauseIcon = this.add.text(centers[0], rowY, '⏸', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaaacc' }).setOrigin(0.5);
     this.pauseBtn.on('pointerover', () => { if (!this.isPaused) this.pauseBtn!.setFillStyle(0x2a2a44); });
     this.pauseBtn.on('pointerout',  () => { if (!this.isPaused) this.pauseBtn!.setFillStyle(0x222233); });
     this.pauseBtn.on('pointerdown', () => { if (this.isPaused) this.resume(); else this.pause(); });
@@ -987,7 +991,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const btn = this.add.rectangle(cx, rowY, BTN_W, BTN_H, active ? 0x2244aa : 0x222233)
         .setStrokeStyle(1, 0x444466)
         .setInteractive({ useHandCursor: true });
-      this.add.text(cx, rowY, `×${speeds[i]}`, { fontSize: '12px', fontFamily: 'monospace', color: '#aaaaff' }).setOrigin(0.5);
+      this.add.text(cx, rowY, `×${speeds[i]}`, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#aaaaff' }).setOrigin(0.5);
       this.speedBtns.push(btn);
 
       const spd = speeds[i];
@@ -1004,7 +1008,7 @@ export class ExpeditionScene extends Phaser.Scene {
       .setStrokeStyle(1, 0x664444)
       .setInteractive({ useHandCursor: true });
     const retreatLbl = this.add.text(rowLeft + totalW / 2, retreatY, 'В лагерь', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#ddaaaa',
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddaaaa',
     }).setOrigin(0.5);
     retreatBtn.on('pointerover', () => retreatBtn.setFillStyle(0x442a2a));
     retreatBtn.on('pointerout',  () => retreatBtn.setFillStyle(0x332222));
@@ -1020,18 +1024,18 @@ export class ExpeditionScene extends Phaser.Scene {
     const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.7).setInteractive();
     const box = this.add.rectangle(640, 400, 420, 190, 0x1a1a2a).setStrokeStyle(2, 0x664444);
     const title = this.add.text(640, 340, 'Вернуться в лагерь?', {
-      fontSize: '20px', fontFamily: 'monospace', color: '#ffcc88',
+      fontSize: '20px', fontFamily: FONT_FAMILY, color: '#ffcc88',
     }).setOrigin(0.5);
     const sub = this.add.text(640, 378, 'Собранный лут сохранится.\nЗона не будет зачтена.', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#bbbbbb', align: 'center',
+      fontSize: '13px', fontFamily: FONT_FAMILY, color: '#bbbbbb', align: 'center',
     }).setOrigin(0.5);
 
     const yesBtn = this.add.rectangle(552, 445, 150, 40, 0x332222).setStrokeStyle(1, 0x885555)
       .setInteractive({ useHandCursor: true });
-    const yesLbl = this.add.text(552, 445, 'В лагерь', { fontSize: '14px', fontFamily: 'monospace', color: '#ddaaaa' }).setOrigin(0.5);
+    const yesLbl = this.add.text(552, 445, 'В лагерь', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#ddaaaa' }).setOrigin(0.5);
     const noBtn = this.add.rectangle(728, 445, 150, 40, 0x222233).setStrokeStyle(1, 0x445588)
       .setInteractive({ useHandCursor: true });
-    const noLbl = this.add.text(728, 445, 'Остаться', { fontSize: '14px', fontFamily: 'monospace', color: '#aaccff' }).setOrigin(0.5);
+    const noLbl = this.add.text(728, 445, 'Остаться', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaccff' }).setOrigin(0.5);
 
     yesBtn.on('pointerover', () => yesBtn.setFillStyle(0x442a2a));
     yesBtn.on('pointerout',  () => yesBtn.setFillStyle(0x332222));
@@ -1052,7 +1056,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private buildStatusText() {
     this.statusText = this.add.text(640, 450, '', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#ffcc44',
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#ffcc44',
     }).setOrigin(0.5).setDepth(10);
   }
 
@@ -1163,6 +1167,19 @@ export class ExpeditionScene extends Phaser.Scene {
           this.jerkEnemy(enemyIdx, 12);
         }
         this.showStatus('Уклонение!', 600);
+      },
+      onCounterAttack: () => {
+        // Ответный удар героя (щит и т.п.) — надпись над героем, кто его совершил, а не над целью.
+        const b = this.heroSprite.getBounds();
+        const x = b.x + Math.random() * b.width;
+        spawnFloater(this, 'counter', 0, x, 130);
+      },
+      onHeal: (amount) => {
+        // Над головой героя, X — случайно по ширине модельки, Y фиксирован (тот же уровень, что и «Блок»).
+        const b = this.heroSprite.getBounds();
+        const x = b.x + Math.random() * b.width;
+        spawnFloater(this, 'heal', amount, x, 130);
+        this.updateHeroHpBar();
       },
       onEnemyDied: (enemy, enemyIdx, willReuseSlot) => {
         // willReuseSlot=true — это смена формы (фаза), а не смерть: не считаем.
@@ -1297,7 +1314,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const overlay = this.add.rectangle(640, 192, 1280, 320, 0x000000, 0.82).setInteractive();
     const title = this.add.text(640, 78, 'Победа! Выбери награду', {
-      fontSize: '26px', fontFamily: 'monospace', color: '#ffdd44',
+      fontSize: '26px', fontFamily: FONT_FAMILY, color: '#ffdd44',
     }).setOrigin(0.5);
     this.victoryContainer.add([overlay, title]);
 
@@ -1319,7 +1336,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.victoryContainer.add(goldTag(this, opt.gold, { iconSize: 46, fontSize: 26, originX: 0.5 })
           .setPosition(x, cardY - 6));
         this.victoryContainer.add(this.add.text(x, cardY + 44, 'Золото', {
-          fontSize: '12px', fontFamily: 'monospace', color: '#dddddd',
+          fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
         }).setOrigin(0.5, 0));
       } else if (opt.kind === 'essence') {
         const tiers = ESSENCE_TIERS.filter((t) => (opt.essence[t] ?? 0) > 0);
@@ -1330,12 +1347,12 @@ export class ExpeditionScene extends Phaser.Scene {
             .setPosition(x, startY + ti * rowH));
         });
         this.victoryContainer.add(this.add.text(x, cardY + 44, 'Эссенция', {
-          fontSize: '12px', fontFamily: 'monospace', color: '#dddddd',
+          fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
         }).setOrigin(0.5, 0));
       } else {
         this.victoryContainer.add(this.add.image(x, cardY - 28, itemIconKey(opt.item.item_id)).setDisplaySize(72, 72));
         this.victoryContainer.add(this.add.text(x, cardY + 34, getItemConfig(opt.item.item_id).name, {
-          fontSize: '12px', fontFamily: 'monospace', color: '#dddddd',
+          fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
           align: 'center', wordWrap: { width: CARD_W - 16 },
         }).setOrigin(0.5, 0));
       }

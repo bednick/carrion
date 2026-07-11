@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { FONT_FAMILY } from './theme';
 
 export interface SliderPopupOpts {
   label: string;
@@ -44,7 +45,7 @@ export class SliderPopup {
 
     const panel = scene.add.rectangle(0, 0, W, H, 0x1e1e2e, 0.97).setStrokeStyle(2, 0x555577).setInteractive();
     const label = scene.add.text(0, -H / 2 + 7, opts.label, {
-      fontSize: '12px', fontFamily: 'monospace', color: '#ddddee',
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddee',
     }).setOrigin(0.5, 0);
 
     const trackY = 9;

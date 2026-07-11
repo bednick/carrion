@@ -1,8 +1,9 @@
 {
   "id": "giant_rat",
   "name": "Огромная крыса",
-  "health": 10,
+  "health": 25,
   "attacks": [
-    { "damage": 5, "interval": 2.5 }
-  ]
+    { "damage": 1, "interval": 1.25 }
+  ],
+  "ui": { "scale": 1.3 }
 }
