@@ -26,32 +26,32 @@ export class PreloadScene extends Phaser.Scene {
     this.load.svg(zoneDecorKey('backpack'), ZONE_DECOR_URLS.backpack, { width: 364, height: 400 });
     this.load.svg(zoneDecorKey('anvil'), ZONE_DECOR_URLS.anvil, { width: 432, height: 360 });
     this.load.svg(zoneDecorKey('belt'), ZONE_DECOR_URLS.belt, { width: 360, height: 104 });
-    this.load.svg('hammer', '/hammer.svg', { width: 32, height: 32 });
-    this.load.image('map-texture', '/backgrounds/map-texture.png');
-    this.load.image('bg-camp', '/backgrounds/camp.2.png');
-    this.load.image('camp-fire', '/sprites/camp/campfire.2.png');
-    this.load.image('npc-smith', '/sprites/npc/smith.png');
-    this.load.image('npc-dealer', '/sprites/npc/dealer.png');
-    this.load.image('npc-flutist', '/sprites/npc/flutist.png');
-    this.load.image('chest-stand', '/sprites/npc/chest-stand.png');
-    this.load.image('char-strongman', '/sprites/characters/strongman/camp.png');
+    this.load.svg('hammer', 'hammer.svg', { width: 32, height: 32 });
+    this.load.image('map-texture', 'backgrounds/map-texture.png');
+    this.load.image('bg-camp', 'backgrounds/camp.2.png');
+    this.load.image('camp-fire', 'sprites/camp/campfire.2.png');
+    this.load.image('npc-smith', 'sprites/npc/smith.png');
+    this.load.image('npc-dealer', 'sprites/npc/dealer.png');
+    this.load.image('npc-flutist', 'sprites/npc/flutist.png');
+    this.load.image('chest-stand', 'sprites/npc/chest-stand.png');
+    this.load.image('char-strongman', 'sprites/characters/strongman/camp.png');
     // Боевые листы грузим как изображения — нарезаются по числу кадров в сцене
     // (frameWidth = width / count), чтобы переэкспорт из Aseprite не ломал нарезку.
-    this.load.image('char-strongman-idle',   '/sprites/characters/strongman/idle.png');
-    this.load.image('char-strongman-walk',   '/sprites/characters/strongman/walk.png');
-    this.load.image('char-strongman-attack', '/sprites/characters/strongman/attack.png');
-    this.load.image('char-strongman-hit',    '/sprites/characters/strongman/hit.png');
-    this.load.image('char-strongman-death',  '/sprites/characters/strongman/dead.png');
+    this.load.image('char-strongman-idle',   'sprites/characters/strongman/idle.png');
+    this.load.image('char-strongman-walk',   'sprites/characters/strongman/walk.png');
+    this.load.image('char-strongman-attack', 'sprites/characters/strongman/attack.png');
+    this.load.image('char-strongman-hit',    'sprites/characters/strongman/hit.png');
+    this.load.image('char-strongman-death',  'sprites/characters/strongman/dead.png');
 
     // Спрайты-заглушки мобов (одиночный base.png на моба)
     for (const id of ALL_MOB_IDS) {
-      this.load.image(`mob-${id}`, `/sprites/mobs/${id}/base.png`);
+      this.load.image(`mob-${id}`, `sprites/mobs/${id}/base.png`);
     }
 
     for (const [folder, layers] of Object.entries(ZONE_BG_VARIANTS)) {
       for (const [layer, count] of Object.entries(layers)) {
         for (let n = 1; n <= (count ?? 0); n++) {
-          this.load.image(zoneBgKey(folder, layer as BgLayer, n), `/backgrounds/zones/${folder}/${layer}.${n}.png`);
+          this.load.image(zoneBgKey(folder, layer as BgLayer, n), `backgrounds/zones/${folder}/${layer}.${n}.png`);
         }
       }
     }
