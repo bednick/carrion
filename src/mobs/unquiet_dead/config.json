@@ -1,0 +1,11 @@
+{
+  "id": "unquiet_dead",
+  "name": "Неупокоенный",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 }
+  ],
+  "phases": [
+    { "id": "unquiet_risen" }
+  ]
+}

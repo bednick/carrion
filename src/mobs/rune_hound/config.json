@@ -1,0 +1,8 @@
+{
+  "id": "rune_hound",
+  "name": "Рунная гончая",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 1.5 }
+  ]
+}

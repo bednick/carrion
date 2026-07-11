@@ -1,0 +1,9 @@
+{
+  "id": "hyena",
+  "name": "Гиена",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 1.8 },
+    { "damage": 5, "interval": 2.2 }
+  ]
+}

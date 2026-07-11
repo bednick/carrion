@@ -1,0 +1,8 @@
+{
+  "id": "bone_construct",
+  "name": "Костяной конструкт",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 4.0 }
+  ]
+}

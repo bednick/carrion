@@ -1,0 +1,27 @@
+{
+  "id": "beast-lair",
+  "name": "Логово зверей",
+  "description": "Норы и логова среди костей. Стаи не отпускают добычу, пока не разорвут.",
+  "faction": "Конница — Дикие звери",
+  "star": 2,
+  "fights": { "min": 5, "max": 9 },
+  "mob_pool": [
+    { "mob_id": "dire_wolf", "weight": 40 },
+    { "mob_id": "hyena", "weight": 25 },
+    { "mob_id": "boar", "weight": 15 },
+    { "mob_id": "she_wolf", "weight": 12 },
+    { "mob_id": "beast_den", "weight": 8 }
+  ],
+  "mob_loot": {
+    "gold": { "min": 0, "max": 0 },
+    "items": []
+  },
+  "boss": {
+    "mob_id": "pack_leader",
+    "loot": {
+      "gold": { "min": 800, "max": 1200 },
+      "essence": {"rare":  {"min": 10, "max": 20}},
+      "items": []
+    }
+  }
+}

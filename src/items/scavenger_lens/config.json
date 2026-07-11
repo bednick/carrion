@@ -1,0 +1,8 @@
+{
+  "id": "scavenger_lens",
+  "name": "Линза старьёвщика",
+  "slots": ["head"],
+  "type": "accessory",
+  "base_value": 10,
+  "tags": ["accessory", "magic_find"]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "herd_mare",
+  "name": "Табунная кобыла",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 },
+    { "damage": 5, "interval": 2.6 }
+  ],
+  "summons": [
+    { "mob_id": "foal", "trigger": { "type": "interval", "every": 6.0 } }
+  ]
+}

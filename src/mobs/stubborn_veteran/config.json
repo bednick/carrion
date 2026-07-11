@@ -1,0 +1,11 @@
+{
+  "id": "stubborn_veteran",
+  "name": "Упрямец",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 }
+  ],
+  "phases": [
+    { "id": "stubborn_veteran_risen" }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "scavenger",
+  "name": "Мусорщик",
+  "health": 8,
+  "attacks": [
+    { "damage": 3, "interval": 2.5 }
+  ]
+}

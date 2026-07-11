@@ -1,0 +1,29 @@
+{
+  "id": "marauder-lair",
+  "name": "Логово мародёров",
+  "description": "Организованный лагерь банды. Броню снимают не с павших, а с тех, кого свалили.",
+  "faction": "Мародёры — Броня",
+  "star": 2,
+  "fights": { "min": 5, "max": 9 },
+  "mob_pool": [
+    { "mob_id": "armed_marauder", "weight": 20 },
+    { "mob_id": "executioner", "weight": 15 },
+    { "mob_id": "cleaver", "weight": 15 },
+    { "mob_id": "flayer", "weight": 12 },
+    { "mob_id": "armored_herder", "weight": 12 },
+    { "mob_id": "skinner", "weight": 10 },
+    { "mob_id": "overseer", "weight": 8 }
+  ],
+  "mob_loot": {
+    "gold": { "min": 0, "max": 0 },
+    "items": []
+  },
+  "boss": {
+    "mob_id": "brigadier",
+    "loot": {
+      "gold": { "min": 3500, "max": 6500 },
+      "essence": {"epic":  {"min": 10, "max": 20}},
+      "items": []
+    }
+  }
+}

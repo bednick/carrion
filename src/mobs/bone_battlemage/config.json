@@ -1,0 +1,9 @@
+{
+  "id": "bone_battlemage",
+  "name": "Костяной боевой маг",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 },
+    { "damage": 5, "interval": 3.5 }
+  ]
+}

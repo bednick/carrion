@@ -1,0 +1,14 @@
+{
+  "id": "beast_den",
+  "name": "Звериная нора",
+  "health": 10,
+  "position": 3,
+  "summon_placement": "front",
+  "attacks": [
+    { "damage": 5, "interval": 3.5 }
+  ],
+  "summons": [
+    { "mob_id": "dire_wolf", "trigger": { "type": "interval", "every": 5.0 } },
+    { "mob_id": "hyena", "trigger": { "type": "interval", "every": 7.0 } }
+  ]
+}

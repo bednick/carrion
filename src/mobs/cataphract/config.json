@@ -1,0 +1,9 @@
+{
+  "id": "cataphract",
+  "name": "Панцирник",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 3.0 }
+  ],
+  "defense": { "armor": 4 }
+}

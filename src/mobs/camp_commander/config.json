@@ -1,0 +1,12 @@
+{
+  "id": "camp_commander",
+  "name": "Командир лагеря",
+  "health": 20,
+  "attacks": [
+    { "damage": 5, "interval": 3.0 }
+  ],
+  "defense": { "armor": 4 },
+  "phases": [
+    { "id": "camp_commander_light" }
+  ]
+}

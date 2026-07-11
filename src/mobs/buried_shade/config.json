@@ -1,0 +1,10 @@
+{
+  "id": "buried_shade",
+  "name": "Тень погребённого",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 }
+  ],
+  "defense": { "dodge": 0.3 },
+  "ui": { "alpha": 0.5 }
+}

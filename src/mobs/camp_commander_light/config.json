@@ -1,0 +1,8 @@
+{
+  "id": "camp_commander_light",
+  "name": "Командир налегке",
+  "health": 20,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 }
+  ]
+}

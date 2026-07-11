@@ -1,0 +1,11 @@
+{
+  "id": "cleaver",
+  "name": "Секач",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 }
+  ],
+  "phases": [
+    { "id": "cleaver_enraged" }
+  ]
+}

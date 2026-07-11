@@ -1,0 +1,8 @@
+{
+  "id": "armed_marauder",
+  "name": "Вооружённый мародёр",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 }
+  ]
+}

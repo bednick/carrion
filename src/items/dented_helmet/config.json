@@ -1,0 +1,8 @@
+{
+  "id": "dented_helmet",
+  "name": "Погнутый шлем",
+  "slots": ["head"],
+  "type": "armor",
+  "base_value": 10,
+  "tags": ["armor"]
+}

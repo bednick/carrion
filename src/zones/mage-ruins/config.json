@@ -1,0 +1,28 @@
+{
+  "id": "mage-ruins",
+  "name": "Руины магов",
+  "description": "Развалины лагеря мага-командира. Здесь нежить — оружие, а не случайность.",
+  "faction": "Магия — Нежить",
+  "star": 2,
+  "fights": { "min": 5, "max": 9 },
+  "mob_pool": [
+    { "mob_id": "rune_skeleton", "weight": 30 },
+    { "mob_id": "rune_hound", "weight": 25 },
+    { "mob_id": "rune_archer", "weight": 15 },
+    { "mob_id": "bone_construct", "weight": 12 },
+    { "mob_id": "bone_centipede", "weight": 12 },
+    { "mob_id": "bone_battlemage", "weight": 6 }
+  ],
+  "mob_loot": {
+    "gold": { "min": 0, "max": 0 },
+    "items": []
+  },
+  "boss": {
+    "mob_id": "bone_summoner",
+    "loot": {
+      "gold": { "min": 800, "max": 1200 },
+      "essence": {"rare":  {"min": 10, "max": 20}},
+      "items": []
+    }
+  }
+}

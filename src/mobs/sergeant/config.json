@@ -1,0 +1,12 @@
+{
+  "id": "sergeant",
+  "name": "Сержант",
+  "health": 20,
+  "attacks": [
+    { "damage": 5, "interval": 2.5 }
+  ],
+  "phases": [
+    { "id": "headless_knight", "chance": 1 },
+    { "id": "skeleton", "chance": 0.1 }
+  ]
+}

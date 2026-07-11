@@ -1,0 +1,32 @@
+{
+  "id": "trampled-meadows",
+  "name": "Растоптанные луга",
+  "description": "Поле разгона конницы. Взрытая земля, сломанные копья, полчища крыс.",
+  "faction": "Конница — Дикие звери",
+  "star": 1,
+  "fights": { "min": 5, "max": 9 },
+  "mob_pool": [
+    { "mob_id": "rat", "weight": 60 },
+    { "mob_id": "giant_rat", "weight": 40 }
+  ],
+  "mob_loot": {
+    "gold": { "min": 0, "max": 0 },
+    "items": [
+      { "item_id": "leather_greaves", "chance": 0.10 },
+      { "item_id": "dented_helmet", "chance": 0.10 },
+      { "item_id": "spiked_charm", "chance": 0.10 },
+      { "item_id": "bent_blade", "chance": 0.10 }
+    ]
+  },
+  "boss": {
+    "mob_id": "rat_king",
+    "loot": {
+      "gold": { "min": 100, "max": 150 },
+      "essence": {"uncommon":  {"min": 10, "max": 20}},
+      "items": [
+        { "item_id": "dented_helmet", "chance": 0.5, "rarity": "uncommon" },
+        { "item_id": "leather_greaves", "chance": 0.5, "rarity": "uncommon" }
+      ]
+    }
+  }
+}

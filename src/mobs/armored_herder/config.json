@@ -1,0 +1,9 @@
+{
+  "id": "armored_herder",
+  "name": "Загонщик в броне",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 }
+  ],
+  "defense": { "armor": 3 }
+}

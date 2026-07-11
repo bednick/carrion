@@ -1,0 +1,14 @@
+{
+  "id": "pack_leader",
+  "name": "Вожак стаи",
+  "health": 20,
+  "position": 3,
+  "summon_placement": "front",
+  "attacks": [
+    { "damage": 5, "interval": 1.5 }
+  ],
+  "summons": [
+    { "mob_id": "dire_wolf", "count": 3, "trigger": { "type": "start" } },
+    { "mob_id": "dire_wolf", "trigger": { "type": "interval", "every": 5.0 } }
+  ]
+}

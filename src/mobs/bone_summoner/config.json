@@ -1,0 +1,14 @@
+{
+  "id": "bone_summoner",
+  "name": "Призыватель костей",
+  "health": 20,
+  "position": 2,
+  "summon_placement": "front",
+  "attacks": [
+    { "damage": 5, "interval": 2.5 },
+    { "damage": 5, "interval": 4.0 }
+  ],
+  "summons": [
+    { "mob_id": "rune_skeleton", "count": 2, "trigger": { "type": "start" } }
+  ]
+}

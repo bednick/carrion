@@ -1,0 +1,11 @@
+{
+  "id": "she_wolf",
+  "name": "Волчица-мать",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.5 }
+  ],
+  "summons": [
+    { "mob_id": "dire_wolf", "trigger": { "type": "interval", "every": 6.0 } }
+  ]
+}

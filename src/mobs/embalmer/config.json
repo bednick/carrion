@@ -1,0 +1,12 @@
+{
+  "id": "embalmer",
+  "name": "Бальзамировщик",
+  "health": 20,
+  "attacks": [
+    { "damage": 5, "interval": 2.5 },
+    { "damage": 5, "interval": 4.0 }
+  ],
+  "phases": [
+    { "id": "swaddled_horror" }
+  ]
+}

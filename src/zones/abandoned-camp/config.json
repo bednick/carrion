@@ -1,0 +1,29 @@
+{
+  "id": "abandoned-camp",
+  "name": "Брошенный лагерь",
+  "description": "Военный лагерь под ветеранами-мародёрами. Строй и доспех. Порог перед Полем Битвы.",
+  "faction": "Мародёры — Броня",
+  "star": 2,
+  "fights": { "min": 5, "max": 9 },
+  "mob_pool": [
+    { "mob_id": "veteran", "weight": 20 },
+    { "mob_id": "maceman", "weight": 15 },
+    { "mob_id": "stubborn_veteran", "weight": 15 },
+    { "mob_id": "armored_veteran", "weight": 12 },
+    { "mob_id": "spiked_veteran", "weight": 12 },
+    { "mob_id": "armored_avenger", "weight": 10 },
+    { "mob_id": "cataphract", "weight": 8 }
+  ],
+  "mob_loot": {
+    "gold": { "min": 0, "max": 0 },
+    "items": []
+  },
+  "boss": {
+    "mob_id": "camp_commander",
+    "loot": {
+      "gold": { "min": 800, "max": 1200 },
+      "essence": {"rare":  {"min": 10, "max": 20}},
+      "items": []
+    }
+  }
+}

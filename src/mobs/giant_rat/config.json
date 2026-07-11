@@ -1,0 +1,8 @@
+{
+  "id": "giant_rat",
+  "name": "Огромная крыса",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.5 }
+  ]
+}

@@ -1,0 +1,5 @@
+Звуковые эффекты — Kenney (https://kenney.nl), лицензия CC0 (общественное достояние).
+Атрибуция не обязательна. Использованные паки:
+  - RPG Audio          (hero_attack, loot_pickup, disassemble, sell)
+  - Impact Sounds      (hero_hurt, block, enemy_death, boss_victory)
+  - Interface Sounds   (craft)

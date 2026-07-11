@@ -1,0 +1,12 @@
+{
+  "id": "rune_archer",
+  "name": "Рунный лучник",
+  "health": 10,
+  "position": 1,
+  "attacks": [
+    { "damage": 5, "interval": 2.5 }
+  ],
+  "summons": [
+    { "mob_id": "bone_wall", "count": 1, "position": 0, "trigger": { "type": "start" } }
+  ]
+}

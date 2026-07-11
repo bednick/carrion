@@ -1,0 +1,12 @@
+{
+  "id": "brigadier",
+  "name": "Бригадир",
+  "health": 20,
+  "attacks": [
+    { "damage": 5, "interval": 3.0 }
+  ],
+  "defense": { "thorns": 2 },
+  "phases": [
+    { "id": "brigadier_light" }
+  ]
+}

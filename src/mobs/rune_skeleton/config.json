@@ -1,0 +1,8 @@
+{
+  "id": "rune_skeleton",
+  "name": "Рунный скелет",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.5 }
+  ]
+}

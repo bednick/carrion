@@ -1,0 +1,11 @@
+{
+  "id": "mauler",
+  "name": "Матёрый хищник",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 1.5 },
+    { "damage": 5, "interval": 1.8 },
+    { "damage": 5, "interval": 2.2 },
+    { "damage": 5, "interval": 2.6 }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "buckler",
+  "name": "Баклер",
+  "slots": ["hand_left"],
+  "type": "shield",
+  "base_value": 10,
+  "tags": ["shield", "block", "counter"]
+}

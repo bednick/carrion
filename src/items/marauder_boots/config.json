@@ -1,0 +1,8 @@
+{
+  "id": "marauder_boots",
+  "name": "Сапоги мародёра",
+  "slots": ["legs"],
+  "type": "armor",
+  "base_value": 10,
+  "tags": ["armor", "escape", "magic_find"]
+}

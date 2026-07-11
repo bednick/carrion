@@ -1,0 +1,9 @@
+{
+  "id": "dump_boss",
+  "name": "Главарь свалки",
+  "health": 30,
+  "attacks": [
+    { "damage": 6, "interval": 3.0 }
+  ],
+  "defense": { "armor": 2 }
+}

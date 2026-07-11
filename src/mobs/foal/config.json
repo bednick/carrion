@@ -1,0 +1,9 @@
+{
+  "id": "foal",
+  "name": "Жеребёнок",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 1.5 },
+    { "damage": 5, "interval": 1.8 }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "predator-pasture",
+  "name": "Пастбище хищников",
+  "description": "Одичавшие боевые кони сбились в яростные табуны. Раненый зверь тут не отступает.",
+  "faction": "Конница — Дикие звери",
+  "star": 2,
+  "fights": { "min": 5, "max": 9 },
+  "mob_pool": [
+    { "mob_id": "wild_horse", "weight": 35 },
+    { "mob_id": "foal", "weight": 20 },
+    { "mob_id": "mauler", "weight": 18 },
+    { "mob_id": "prowler", "weight": 15 },
+    { "mob_id": "herd_mare", "weight": 12 }
+  ],
+  "mob_loot": {
+    "gold": { "min": 0, "max": 0 },
+    "items": []
+  },
+  "boss": {
+    "mob_id": "herd_stallion",
+    "loot": {
+      "gold": { "min": 3500, "max": 6500 },
+      "essence": {"epic":  {"min": 10, "max": 20}},
+      "items": []
+    }
+  }
+}

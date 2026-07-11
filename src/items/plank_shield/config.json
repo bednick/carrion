@@ -1,0 +1,8 @@
+{
+  "id": "plank_shield",
+  "name": "Щит из досок",
+  "slots": ["hand_left"],
+  "type": "shield",
+  "base_value": 10,
+  "tags": ["shield", "block"]
+}

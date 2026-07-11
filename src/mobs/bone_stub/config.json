@@ -1,0 +1,8 @@
+{
+  "id": "bone_stub",
+  "name": "Костяной обрубок",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 }
+  ]
+}

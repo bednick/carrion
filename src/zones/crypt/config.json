@@ -1,0 +1,28 @@
+{
+  "id": "crypt",
+  "name": "Склеп",
+  "description": "Прерванный погребальный ритуал. Мертвецы поднялись сами — голодные и многорукие.",
+  "faction": "Магия — Нежить",
+  "star": 2,
+  "fights": { "min": 5, "max": 9 },
+  "mob_pool": [
+    { "mob_id": "ghoul", "weight": 100 },
+    { "mob_id": "unquiet_dead", "weight": 100 },
+    { "mob_id": "many_armed_dead", "weight": 100 },
+    { "mob_id": "buried_knight", "weight": 100 },
+    { "mob_id": "buried_shade", "weight": 100 },
+    { "mob_id": "wailer", "weight": 100 }
+  ],
+  "mob_loot": {
+    "gold": { "min": 0, "max": 0 },
+    "items": []
+  },
+  "boss": {
+    "mob_id": "embalmer",
+    "loot": {
+      "gold": { "min": 3500, "max": 6500 },
+      "essence": {"epic":  {"min": 10, "max": 20}},
+      "items": []
+    }
+  }
+}

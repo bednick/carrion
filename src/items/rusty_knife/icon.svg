@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <rect width="40" height="40" rx="4" fill="#0e0e0e"/>
+  <!-- рукоять -->
+  <line x1="7" y1="34" x2="15" y2="26" stroke="#5a3010" stroke-width="6" stroke-linecap="round"/>
+  <!-- гарда -->
+  <line x1="12" y1="29" x2="19" y2="26" stroke="#555555" stroke-width="3" stroke-linecap="round"/>
+  <!-- клинок -->
+  <polygon points="16,25 33,8 35,10 20,26" fill="#906040" stroke="#c09060" stroke-width="0.5"/>
+  <!-- ржавчина -->
+  <circle cx="22" cy="22" r="1.5" fill="#a04820"/>
+  <circle cx="27" cy="16" r="1.2" fill="#a04820"/>
+  <circle cx="30" cy="12" r="0.9" fill="#803818" opacity="0.8"/>
+</svg>

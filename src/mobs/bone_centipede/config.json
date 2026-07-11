@@ -1,0 +1,11 @@
+{
+  "id": "bone_centipede",
+  "name": "Костяная многоножка",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 2.0 }
+  ],
+  "summons": [
+    { "mob_id": "bone_stub", "count": 2, "trigger": { "type": "death" } }
+  ]
+}

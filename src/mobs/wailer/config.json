@@ -1,0 +1,9 @@
+{
+  "id": "wailer",
+  "name": "Плакальщик",
+  "health": 10,
+  "attacks": [
+    { "damage": 5, "interval": 4.0 }
+  ],
+  "ui": { "alpha": 0.5 }
+}

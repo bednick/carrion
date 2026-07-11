@@ -1,0 +1,31 @@
+{
+  "id": "armor-dump",
+  "name": "Свалка доспехов",
+  "description": "Свалка снятой брони мародёров. Тут копаются самые неопытные из банды.",
+  "faction": "Мародёры — Броня",
+  "star": 1,
+  "fights": { "min": 5, "max": 9 },
+  "mob_pool": [
+    { "mob_id": "scavenger", "weight": 60 },
+    { "mob_id": "henchman", "weight": 40 }
+  ],
+  "mob_loot": {
+    "gold": { "min": 0, "max": 10 },
+    "items": [
+      { "item_id": "rusty_knife", "chance": 0.10 },
+      { "item_id": "scavenger_lens", "chance": 0.10 },
+      { "item_id": "plank_shield", "chance": 0.10 },
+      { "item_id": "buckler", "chance": 0.10 }
+    ]
+  },
+  "boss": {
+    "mob_id": "dump_boss",
+    "loot": {
+      "gold": { "min": 100, "max": 150 },
+      "essence": {"uncommon":  {"min": 10, "max": 20}},
+      "items": [
+        { "item_id": "plank_shield", "chance": 0.5, "rarity": "uncommon" }
+      ]
+    }
+  }
+}
