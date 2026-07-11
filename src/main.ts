@@ -24,4 +24,12 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [PreloadScene, CampScene, ExpeditionScene],
 };
 
-loadFonts().then(() => new Phaser.Game(config));
+loadFonts().then(() => {
+  const game = new Phaser.Game(config);
+  // pixelArt:true ставит на весь canvas CSS image-rendering:pixelated (нужно, чтобы спрайты
+  // не блюрились при масштабировании внутри игры). Побочный эффект: Scale.FIT на экранах с
+  // нецелым коэффициентом растяжения тем же nearest-neighbor ресемплит уже отрисованный текст,
+  // и буквы одного слова визуально «плывут» по размеру. Возвращаем плавную интерполяцию для
+  // финального CSS-масштаба канвы — сэмплинг текстур спрайтов внутри игры (antialiasGL) не трогаем.
+  Phaser.Display.Canvas.CanvasInterpolation.setBicubic(game.canvas);
+});
