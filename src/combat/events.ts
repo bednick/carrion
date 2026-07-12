@@ -1,6 +1,12 @@
 import type { SlotType } from '../items/types';
 import type { EnemySpec } from '../zones/types';
 
+// Урон безоружного героя — фолбэк и для дефолт-автора движка (CombatEngine.apply), и для
+// кросс-slot эффектов, читающих «базовый урон hand_right» (CombatView.mainWeaponBaseDamage),
+// когда рука пуста. Живёт в events.ts (не в CombatEngine.ts), чтобы предметы могли импортировать
+// его без обратной зависимости items → combat/CombatEngine.
+export const UNARMED_DAMAGE = 1;
+
 // Боевой источник/цель события: герой (+ каким слотом бьёт) или конкретный враг.
 // idx — индекс врага в state.enemies (для применения движком); id — для отрисовки/атрибуции.
 export type Side =
@@ -27,6 +33,7 @@ export type EventType =
   | 'damage'
   | 'block'
   | 'dodge'
+  | 'counter'
   | 'heal'
   | 'kill'
   | 'summon';
@@ -40,6 +47,7 @@ export type GameEvent = EventMeta &
     | { type: 'damage'; source: Side; target: Side; amount: number } // экземпляр урона «в полёте»
     | { type: 'block'; source: Side; target: Side; prevented: number } // урон полностью отклонён (щит)
     | { type: 'dodge'; source: Side; target: Side } // враг уклонился — входящий урон погашен
+    | { type: 'counter'; source: Side; target: Side } // чисто презентационное: «это был контрудар», HP не трогает
     | { type: 'heal'; source: Side; target: Side; amount: number }
     | { type: 'kill'; source: Side; target: Side }
     | { type: 'summon'; source: Side; spec: EnemySpec; position?: number } // призыв врага в свободную ячейку доски

@@ -32,6 +32,7 @@ npm run preview  # превью production-сборки
 | [`docs/content.items.md`](docs/content.items.md)                   | Предметы: правила R1–R9, слоты (роли, архетипы), теги, модель синергий      |
 | [`docs/content.items.legs.md`](docs/content.items.legs.md)         | Обувь (слот legs): политика семейства, полюса мародёры/гонец, предметы      |
 | [`docs/content.items.hand_right.md`](docs/content.items.hand_right.md) | Оружие (слот hand_right): формы урона, архетипы, характеристики, предметы |
+| [`docs/content.items.hand_left.md`](docs/content.items.hand_left.md) | Щит/второе оружие (слот hand_left): ось защита/урон, риддеры щита, предметы |
 | [`docs/combat-events.md`](docs/combat-events.md)                   | Событийная модель боя: типы событий, replace/spawn, диспетчер, attack_ready |
 | [`docs/roadmap.md`](docs/roadmap.md)                               | Запланированный, но не реализованный функционал (механики «на вырост»)      |
 | [`docs/roadmap.balance.md`](docs/roadmap.balance.md)               | Баланс: что сделано (3 стартовые зоны), план продолжения после предметов    |

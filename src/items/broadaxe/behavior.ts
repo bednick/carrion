@@ -49,6 +49,7 @@ const behavior: ItemBehavior = {
       { text: `Наносит сплеш урон всем прочим существам в размере ${Math.round(SPLASH_RATIO * 100)}%`, color: DMG_COLOR },
     ];
   },
+  baseDamage: damage,
 };
 
 export default behavior;

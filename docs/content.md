@@ -217,14 +217,14 @@ boss_DPS(zone) = 25 × hero_DPS_ref(zone) / boss_total_HP
 
 ```json
 {
-  "id": "plank_shield",
-  "name": "Щит из досок",
+  "id": "heavy_shield",
+  "name": "Тяжёлый щит",
   "slots": [
     "hand_left"
   ],
   "type": "shield",
   "base_value": 10,
-  "block_chance": 0.25
+  "tags": ["shield", "block"]
 }
 ```
 

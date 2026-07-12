@@ -1,6 +1,6 @@
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 export type SlotType = 'head' | 'body' | 'legs' | 'hand_left' | 'hand_right' | 'ring' | 'amulet';
-export type ItemType = 'weapon' | 'armor' | 'shield' | 'accessory';
+export type ItemType = 'weapon' | 'armor' | 'shield' | 'accessory' | 'gloves';
 
 /**
  * Тиры эссенции — ресурса повышения редкости. Обычного (common) и легендарного тиров

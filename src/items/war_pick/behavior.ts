@@ -33,6 +33,7 @@ const behavior: ItemBehavior = {
     { text: `Шанс крита: ${Math.round(critChance(rarity) * 100)}%`, color: DMG_COLOR },
     { text: `Множитель крита: ×${CRIT_MULT}`, color: DMG_COLOR },
   ],
+  baseDamage: () => BASE_DAMAGE,
 };
 
 export default behavior;

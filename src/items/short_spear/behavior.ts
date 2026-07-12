@@ -3,6 +3,8 @@ import { scaleByRarity } from '../scaleByRarity';
 
 const DMG_COLOR = '#ffcc44';
 
+const damage = (rarity: import('../types').Rarity) => Math.round(scaleByRarity(5, rarity, 1.5));
+
 // Прошив: бьёт основную цель и живого врага в строго соседней ячейке позади неё
 // (по board-слоту, не по индексу массива — те расходятся после призывов). Пустая ячейка
 // между целями блокирует прошив. Обе цели получают одинаковый урон.
@@ -13,7 +15,7 @@ const behavior: ItemBehavior = {
       if (e.source.side !== 'hero' || e.source.slot !== ctx.slot || e.origin.from !== 'engine') {
         return {};
       }
-      const dmg = Math.round(scaleByRarity(5, ctx.rarity, 1.5));
+      const dmg = damage(ctx.rarity);
       const spawn = [
         { type: 'attack' as const, source: e.source, target: e.target, amount: dmg, origin: e.origin },
       ];
@@ -41,10 +43,11 @@ const behavior: ItemBehavior = {
     },
   },
   stats: (rarity) => [
-    { text: `Урон: ${Math.round(scaleByRarity(5, rarity, 1.5))}`, color: DMG_COLOR },
+    { text: `Урон: ${damage(rarity)}`, color: DMG_COLOR },
     { text: `Перезарядка: 1.25s`, color: DMG_COLOR },
     { text: `Также наносит урон стоящему за целью противнику`, color: DMG_COLOR },
   ],
+  baseDamage: damage,
 };
 
 export default behavior;

@@ -1,0 +1,8 @@
+{
+  "id": "heavy_gloves",
+  "name": "Тяжёлые перчатки",
+  "slots": ["hand_left"],
+  "type": "gloves",
+  "base_value": 10,
+  "tags": ["gloves", "crit"]
+}

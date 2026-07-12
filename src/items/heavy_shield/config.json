@@ -1,6 +1,6 @@
 {
-  "id": "plank_shield",
-  "name": "Щит из досок",
+  "id": "heavy_shield",
+  "name": "Тяжёлый щит",
   "slots": ["hand_left"],
   "type": "shield",
   "base_value": 10,

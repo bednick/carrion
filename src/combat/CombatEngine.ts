@@ -4,10 +4,10 @@ import type { EnemySpec, SummonRef } from '../zones/types';
 import type { SlotType, ItemInstance } from '../items/types';
 import type { CombatView } from '../items/behavior';
 import type { GameEvent, Side, Origin, EventResult } from './events';
+import { UNARMED_DAMAGE } from './events';
 import { getItemBehavior } from '../items/registry';
 import { HANDLER_ORDER, MAX_CASCADE, runPass, stampOrigin } from './dispatcher';
 
-const UNARMED_DAMAGE = 1;
 const UNARMED_INTERVAL = 1500;
 
 // Упреждение анимации удара (мс реального времени): анимацию замаха надо стартовать
@@ -41,7 +41,11 @@ export interface CombatCallbacks {
 /** Разрешает ссылку призыва (`mob_id` + override) в готовый EnemySpec. Движок не лезет в конфиги. */
 export type SummonResolver = (ref: SummonRef) => EnemySpec;
 
-/** Потоки стамины героя: по одному на надетое оружие (предмет с `attackInterval`). */
+/**
+ * Потоки стамины героя: по одному на надетое оружие (предмет с `attackInterval`). Прочая экипировка
+ * может кросс-slot модифицировать таймер оружия через `weaponTimerMod` (перчатки `hand_left` → интервал/
+ * первый тик `hand_right`, см. `docs/content.items.hand_left.md`).
+ */
 function buildWeaponTimers(equipment: Partial<Record<SlotType, ItemInstance>>) {
   const timers: HeroState['weaponTimers'] = [];
   for (const slot of HANDLER_ORDER) {
@@ -49,7 +53,21 @@ function buildWeaponTimers(equipment: Partial<Record<SlotType, ItemInstance>>) {
     if (!inst) continue;
     const beh = getItemBehavior(inst.item_id);
     if (!beh.attackInterval) continue;
-    timers.push({ slot, interval: beh.attackInterval(inst.rarity) * 1000, elapsed: 0 });
+
+    let interval = beh.attackInterval(inst.rarity) * 1000;
+    let firstTickRatio = 0;
+
+    for (const otherSlot of HANDLER_ORDER) {
+      if (otherSlot === slot) continue;
+      const otherInst = equipment[otherSlot];
+      if (!otherInst) continue;
+      const mod = getItemBehavior(otherInst.item_id).weaponTimerMod?.(otherInst.rarity, slot);
+      if (!mod) continue;
+      if (mod.intervalMult) interval *= mod.intervalMult;
+      if (mod.firstTickRatio) firstTickRatio = Math.max(firstTickRatio, mod.firstTickRatio);
+    }
+
+    timers.push({ slot, interval, elapsed: interval * firstTickRatio });
   }
   return timers;
 }
@@ -226,11 +244,16 @@ export class CombatEngine {
 
   private buildView(): CombatView {
     const { hero, enemies } = this.state;
+    const mainWeapon = hero.equipment.hand_right;
+    const mainWeaponBaseDamage = mainWeapon
+      ? getItemBehavior(mainWeapon.item_id).baseDamage?.(mainWeapon.rarity)
+      : undefined;
     return {
       heroHp: hero.hp,
       heroMaxHp: hero.maxHp,
       enemies: enemies.map(e => ({ id: e.id, hp: e.hp, maxHp: e.maxHp, slot: e.slot, isBoss: e.isBoss })),
       equipment: hero.equipment,
+      mainWeaponBaseDamage,
     };
   }
 
@@ -317,13 +340,8 @@ export class CombatEngine {
       case 'attack':
         return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, origin: e.origin }];
 
-      case 'damage': {
-        // Контрудар: урон героя по врагу, порождённый событием, чьей целью был герой
-        // (входящий удар/блок) — а не обычной атакой по расписанию стамины.
-        const isCounter = e.source.side === 'hero' && e.target.side === 'enemy'
-          && !!e.cause && 'target' in e.cause && e.cause.target.side === 'hero';
-        return this.applyDamage(e.source, e.target, e.amount, isCounter);
-      }
+      case 'damage':
+        return this.applyDamage(e.source, e.target, e.amount);
 
       case 'block':
         this.cb.onBlock(e.target.side === 'hero' ? 'hero' : 'enemy', e.target.side === 'enemy' ? e.target.idx : -1);
@@ -331,6 +349,12 @@ export class CombatEngine {
 
       case 'dodge':
         this.cb.onDodge?.(e.target.side === 'enemy' ? e.target.idx : -1);
+        return [];
+
+      // Чисто презентационное событие (как block/dodge) — HP не трогает, только UI-колбэк.
+      // Спавнится явно предметами вроде buckler рядом с настоящей атакой (см. content.items.hand_left.md).
+      case 'counter':
+        this.cb.onCounterAttack?.();
         return [];
 
       case 'heal': {
@@ -371,7 +395,7 @@ export class CombatEngine {
     return [];
   }
 
-  private applyDamage(source: Side, target: Side, rawAmount: number, isCounter = false): GameEvent[] {
+  private applyDamage(source: Side, target: Side, rawAmount: number): GameEvent[] {
     const amount = Math.max(0, Math.round(rawAmount));
 
     if (target.side === 'enemy') {
@@ -380,7 +404,6 @@ export class CombatEngine {
       if (amount > 0) {
         enemy.hp = Math.max(0, enemy.hp - amount);
         this.cb.onDamageDealt('enemy', amount, target.idx);
-        if (isCounter) this.cb.onCounterAttack?.();
       }
       if (enemy.hp <= 0) {
         return [{ type: 'kill', source, target, origin: { from: 'engine' } }];

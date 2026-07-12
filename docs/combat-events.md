@@ -59,6 +59,7 @@ type GameEvent = EventMeta & (
     | { type: 'damage'; source: Side; target: Side; amount: number }       // экземпляр урона «в полёте»
     | { type: 'block'; source: Side; target: Side; prevented: number }    // урон полностью отклонён (щит героя / флэт-броня врага в ноль)
     | { type: 'dodge'; source: Side; target: Side }                       // враг уклонился — входящий урон погашен
+    | { type: 'counter'; source: Side; target: Side }                     // чисто презентационное: «это был контрудар», HP не трогает
     | { type: 'heal'; source: Side; target: Side; amount: number }       // лечение
     | { type: 'kill'; source: Side; target: Side }                       // цель доведена до 0 HP
     | { type: 'summon'; source: Side; spec: EnemySpec }                  // призыв врага в свободную ячейку доски
@@ -92,6 +93,7 @@ type GameEvent = EventMeta & (
 | `damage`                  | отнимает `amount` у HP цели; если HP цели → 0, ставит в очередь `kill`         |
 | `block`                   | играет анимацию блока, HP не трогает                                           |
 | `dodge`                   | играет анимацию уклонения врага, HP не трогает                                 |
+| `counter`                 | играет анимацию контрудара (`onCounterAttack`), HP не трогает — спавнится **рядом** с настоящим `attack`, не вместо него (см. `buckler`, `content.items.hand_left.md`) |
 | `heal`                    | добавляет `amount` к HP цели (капается `maxHp`)                                |
 | `kill`                    | удаляет врага / запускает фазу; если все мертвы — ставит в очередь `fight_end` |
 | `summon`                  | строит врага из `spec`, ставит в ближайшую свободную ячейку доски; нет ячеек — гасится |
@@ -256,8 +258,8 @@ export default standardWeapon({damage: 2, interval: 1.0, scale: {damage: 1.1, in
 | Щит (`block_chance`)         | на `damage`(target=hero): шанс → `replace:[]` + `spawn:[block]`     |
 | Лечение за убийство (амулет) | на `kill`: `spawn:[heal(target=hero)]`                              |
 | Лайфстил за удар             | на `damage`(source=hero, target=enemy): `spawn:[heal(target=hero)]` |
-| Контрудар/шипы               | на `damage`(target=hero): `spawn:[damage(target=атакующий враг)]`   |
-| Контрудар щита за блок       | на `block`(target=hero): `spawn:[damage(target=враг)]`              |
+| Контрудар (`buckler`)        | на `damage`(target=hero), независимый ролл: `spawn:[attack(source.slot=hand_right, target=атакующий враг) + counter]` — `attack`, не `damage` напрямую, чтобы поймать крит-хуки вроде `heavy_gloves`; `counter` — чисто презентационный дубль рядом (см. §2, `content.items.hand_left.md`) |
+| Шипы (`spiked_shield`)       | на `damage`(target=hero), безусловно: `spawn:[damage(target=атакующий враг)]` (доля дошедшего урона) |
 | Флэт-броня врага             | на `damage`(target=enemy): `replace:[damage с меньшим amount]`      |
 | Уклонение врага              | на `damage`(target=enemy): шанс → `replace:[]` + `spawn:[dodge]`    |
 | Шипы врага                   | на `damage`(target=enemy): `spawn:[damage(target=hero)]`           |

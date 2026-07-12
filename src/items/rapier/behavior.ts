@@ -30,6 +30,7 @@ const behavior: ItemBehavior = {
     { text: `Перезарядка: ${interval(rarity).toFixed(2)}s`, color: DMG_COLOR },
     { text: `Наносит два удара за одну атаку`, color: DMG_COLOR },
   ],
+  baseDamage: damage,
 };
 
 export default behavior;

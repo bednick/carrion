@@ -40,6 +40,7 @@ export function standardWeapon(opts: WeaponOpts): ItemBehavior {
       { text: `Урон: ${damage(rarity)}`, color: DMG_COLOR },
       { text: `Перезарядка: ${interval(rarity).toFixed(1)}s`, color: DMG_COLOR },
     ],
+    baseDamage: damage,
   };
 }
 

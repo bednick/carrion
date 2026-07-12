@@ -1,0 +1,8 @@
+{
+  "id": "light_gloves",
+  "name": "Лёгкие перчатки",
+  "slots": ["hand_left"],
+  "type": "gloves",
+  "base_value": 10,
+  "tags": ["gloves", "fast"]
+}
