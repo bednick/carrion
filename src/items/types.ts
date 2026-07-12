@@ -1,5 +1,5 @@
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-export type SlotType = 'head' | 'body_upper' | 'body_lower' | 'legs' | 'hand_left' | 'hand_right';
+export type SlotType = 'head' | 'body' | 'legs' | 'hand_left' | 'hand_right' | 'ring' | 'amulet';
 export type ItemType = 'weapon' | 'armor' | 'shield' | 'accessory';
 
 /**

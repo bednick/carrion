@@ -73,9 +73,9 @@
   ],
   "chest": [],
   "armor_stands": [
-    { "head": null, "body_upper": null, "body_lower": null, "legs": null, "hand_left": null, "hand_right": null },
-    { "head": null, "body_upper": null, "body_lower": null, "legs": null, "hand_left": null, "hand_right": null },
-    { "head": null, "body_upper": null, "body_lower": null, "legs": null, "hand_left": null, "hand_right": null }
+    { "head": null, "body": null, "legs": null, "hand_left": null, "hand_right": null, "ring": null, "amulet": null },
+    { "head": null, "body": null, "legs": null, "hand_left": null, "hand_right": null, "ring": null, "amulet": null },
+    { "head": null, "body": null, "legs": null, "hand_left": null, "hand_right": null, "ring": null, "amulet": null }
   ],
   "active_stand": 0,
   "stats": {

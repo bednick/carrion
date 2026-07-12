@@ -6,6 +6,6 @@
   "star": 3,
   "mob_pool": [],
   "boss": {
-    "mob_id": "skeleton"
+    "mob_id": "sergeant_boss"
   }
 }

@@ -1,7 +1,7 @@
 {
   "id": "leech_bead",
   "name": "Пиявочная бусина",
-  "slots": ["body_upper"],
+  "slots": ["ring"],
   "type": "accessory",
   "base_value": 10,
   "tags": ["accessory", "lifesteal", "on_hit"]

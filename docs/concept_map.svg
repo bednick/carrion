@@ -1,110 +1,118 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="660" viewBox="0 0 700 660">
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="820" viewBox="0 0 820 900">
+
+  <defs>
+    <marker id="arrowhead" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+      <polygon points="0,0 9,4.5 0,9" fill="#7a5228"/>
+    </marker>
+  </defs>
 
   <!-- Background -->
-  <rect width="700" height="660" fill="#c4a85c"/>
+  <rect width="820" height="820" fill="#c4a85c"/>
 
-  <!-- Background hex tiles (decorative) -->
-  <polygon points="256,310 218.5,375 143.5,375 106,310 143.5,245 218.5,245" fill="#cebc7a" stroke="#b0a060" stroke-width="1.5"/>
-  <polygon points="256,440 218.5,505 143.5,505 106,440 143.5,375 218.5,375" fill="#cebc7a" stroke="#b0a060" stroke-width="1.5"/>
-  <polygon points="369,115 331.5,180 256.5,180 219,115 256.5,50 331.5,50"   fill="#cebc7a" stroke="#b0a060" stroke-width="1.5"/>
-  <polygon points="369,505 331.5,570 256.5,570 219,505 256.5,440 331.5,440" fill="#cebc7a" stroke="#b0a060" stroke-width="1.5"/>
-  <polygon points="481,50 443.5,115 368.5,115 331,50 368.5,-15 443.5,-15"   fill="#cebc7a" stroke="#b0a060" stroke-width="1.5"/>
-  <polygon points="481,570 443.5,635 368.5,635 331,570 368.5,505 443.5,505" fill="#cebc7a" stroke="#b0a060" stroke-width="1.5"/>
-  <polygon points="706,180 668.5,245 593.5,245 556,180 593.5,115 668.5,115" fill="#cebc7a" stroke="#b0a060" stroke-width="1.5"/>
-  <polygon points="706,310 668.5,375 593.5,375 556,310 593.5,245 668.5,245" fill="#cebc7a" stroke="#b0a060" stroke-width="1.5"/>
-  <polygon points="706,440 668.5,505 593.5,505 556,440 593.5,375 668.5,375" fill="#cebc7a" stroke="#b0a060" stroke-width="1.5"/>
+  <!-- Decorative grass marks in the empty gaps between columns -->
+  <text x="280" y="698" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
+  <text x="540" y="698" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
+  <text x="280" y="508" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
+  <text x="540" y="508" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
+  <text x="280" y="318" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
+  <text x="540" y="318" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
 
-  <!-- Grass symbols on background hexes -->
-  <text x="181" y="318" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
-  <text x="181" y="448" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
-  <text x="294" y="123" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
-  <text x="294" y="513" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
-  <text x="406" y="58"  text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
-  <text x="406" y="578" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
-  <text x="631" y="188" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
-  <text x="631" y="318" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
-  <text x="631" y="448" text-anchor="middle" font-size="16" fill="#9a8840" opacity="0.8" font-family="serif">~</text>
+  <!-- ═══ ROUTE ARROWS (drawn first, under the hexes) ═══ -->
+  <!-- Внутри каждой колонки: старт → средняя → средняя (снизу вверх) -->
+  <line x1="150" y1="625" x2="150" y2="567" stroke="#7a5228" stroke-width="3" marker-end="url(#arrowhead)"/>
+  <line x1="150" y1="435" x2="150" y2="377" stroke="#7a5228" stroke-width="3" marker-end="url(#arrowhead)"/>
 
-  <!-- ── MAGIC FACTION (BLUE / UNDEAD) ── -->
+  <line x1="410" y1="625" x2="410" y2="567" stroke="#7a5228" stroke-width="3" marker-end="url(#arrowhead)"/>
+  <line x1="410" y1="435" x2="410" y2="377" stroke="#7a5228" stroke-width="3" marker-end="url(#arrowhead)"/>
 
-  <!-- Magic Starter (-2,0) at (181,180) -->
-  <polygon points="256,180 218.5,245 143.5,245 106,180 143.5,115 218.5,115"
+  <line x1="670" y1="625" x2="670" y2="567" stroke="#7a5228" stroke-width="3" marker-end="url(#arrowhead)"/>
+  <line x1="670" y1="435" x2="670" y2="377" stroke="#7a5228" stroke-width="3" marker-end="url(#arrowhead)"/>
+
+  <!-- Три верхние (медиум-2) зоны сходятся в финал над центральной колонкой -->
+  <line x1="187.5" y1="247" x2="368" y2="178" stroke="#7a5228" stroke-width="3" marker-end="url(#arrowhead)"/>
+  <line x1="410" y1="247" x2="410" y2="178" stroke="#7a5228" stroke-width="3" marker-end="url(#arrowhead)"/>
+  <line x1="632.5" y1="247" x2="452" y2="178" stroke="#7a5228" stroke-width="3" marker-end="url(#arrowhead)"/>
+
+  <!-- ══════════════ НЕЖИТЬ / МАГИЯ (СИНИЙ) — левая колонка ══════════════ -->
+
+  <!-- Мёртвые поля — старт (150,690) -->
+  <polygon points="225,690 187.5,755 112.5,755 75,690 112.5,625 187.5,625"
            fill="#4575b8" stroke="#2a55a0" stroke-width="2.5"/>
-  <text x="181" y="153" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#c8dcff" font-weight="bold" letter-spacing="1">СТАРТ</text>
-  <text x="181" y="178" text-anchor="middle" font-family="sans-serif" font-size="22" fill="white">☽</text>
-  <text x="181" y="196" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8c8ff">Мёртвые поля</text>
-  <text x="181" y="208" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#88aaee" opacity="0.85">★☆☆</text>
+  <text x="150" y="663" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#c8dcff" font-weight="bold" letter-spacing="1">СТАРТ</text>
+  <text x="150" y="688" text-anchor="middle" font-family="sans-serif" font-size="22" fill="white">☽</text>
+  <text x="150" y="706" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8c8ff">Мёртвые поля</text>
+  <text x="150" y="718" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#88aaee" opacity="0.85">★☆☆</text>
 
-  <!-- Magic Medium 1 (-1,0) at (294,245) -->
-  <polygon points="369,245 331.5,310 256.5,310 219,245 256.5,180 331.5,180"
+  <!-- Руины магов — средняя 1 (150,500) -->
+  <polygon points="225,500 187.5,565 112.5,565 75,500 112.5,435 187.5,435"
            fill="#2d5090" stroke="#1a3a78" stroke-width="2.5"/>
-  <text x="294" y="232" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">☽</text>
-  <text x="294" y="252" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8c8ff">Руины магов</text>
-  <text x="294" y="265" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#88aaee" opacity="0.85">★★☆</text>
+  <text x="150" y="497" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">☽</text>
+  <text x="150" y="517" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8c8ff">Руины магов</text>
+  <text x="150" y="530" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#88aaee" opacity="0.85">★★☆</text>
 
-  <!-- Magic Medium 2 (-1,1) at (294,375) -->
-  <polygon points="369,375 331.5,440 256.5,440 219,375 256.5,310 331.5,310"
+  <!-- Склеп — средняя 2 (150,310) -->
+  <polygon points="225,310 187.5,375 112.5,375 75,310 112.5,245 187.5,245"
            fill="#2d5090" stroke="#1a3a78" stroke-width="2.5"/>
-  <text x="294" y="362" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">☽</text>
-  <text x="294" y="382" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8c8ff">Склеп</text>
-  <text x="294" y="395" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#88aaee" opacity="0.85">★★☆</text>
+  <text x="150" y="307" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">☽</text>
+  <text x="150" y="327" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8c8ff">Склеп</text>
+  <text x="150" y="340" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#88aaee" opacity="0.85">★★☆</text>
 
-  <!-- ── CAVALRY FACTION (GREEN / ANIMALS) ── -->
+  <!-- ══════════════ ЗВЕРИ / КОННИЦА (ЗЕЛЁНЫЙ) — центральная колонка ══════════════ -->
 
-  <!-- Cavalry Starter (1,-2) at (519,115) -->
-  <polygon points="594,115 556.5,180 481.5,180 444,115 481.5,50 556.5,50"
+  <!-- Растоптанные луга — старт (410,690) -->
+  <polygon points="485,690 447.5,755 372.5,755 335,690 372.5,625 447.5,625"
            fill="#45904d" stroke="#2a6832" stroke-width="2.5"/>
-  <text x="519" y="88"  text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#c8ffd0" font-weight="bold" letter-spacing="1">СТАРТ</text>
-  <text x="519" y="113" text-anchor="middle" font-family="sans-serif" font-size="22" fill="white">♘</text>
-  <text x="519" y="131" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8ffb8">Растоптанные луга</text>
-  <text x="519" y="143" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#80d890" opacity="0.85">★☆☆</text>
+  <text x="410" y="663" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#c8ffd0" font-weight="bold" letter-spacing="1">СТАРТ</text>
+  <text x="410" y="688" text-anchor="middle" font-family="sans-serif" font-size="22" fill="white">♘</text>
+  <text x="410" y="706" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8ffb8">Растоптанные луга</text>
+  <text x="410" y="718" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#80d890" opacity="0.85">★☆☆</text>
 
-  <!-- Cavalry Medium 1 (0,-1) at (406,180) -->
-  <polygon points="481,180 443.5,245 368.5,245 331,180 368.5,115 443.5,115"
+  <!-- Логово зверей — средняя 1 (410,500) -->
+  <polygon points="485,500 447.5,565 372.5,565 335,500 372.5,435 447.5,435"
            fill="#2d6a35" stroke="#1a4f22" stroke-width="2.5"/>
-  <text x="406" y="167" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">♘</text>
-  <text x="406" y="187" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8ffb8">Логово зверей</text>
-  <text x="406" y="200" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#80d890" opacity="0.85">★★☆</text>
+  <text x="410" y="497" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">♘</text>
+  <text x="410" y="517" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8ffb8">Логово зверей</text>
+  <text x="410" y="530" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#80d890" opacity="0.85">★★☆</text>
 
-  <!-- Cavalry Medium 2 (1,-1) at (519,245) -->
-  <polygon points="594,245 556.5,310 481.5,310 444,245 481.5,180 556.5,180"
+  <!-- Пастбище хищников — средняя 2 (410,310) -->
+  <polygon points="485,310 447.5,375 372.5,375 335,310 372.5,245 447.5,245"
            fill="#2d6a35" stroke="#1a4f22" stroke-width="2.5"/>
-  <text x="519" y="232" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">♘</text>
-  <text x="519" y="252" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8ffb8">Пастбище хищников</text>
-  <text x="519" y="265" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#80d890" opacity="0.85">★★☆</text>
+  <text x="410" y="307" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">♘</text>
+  <text x="410" y="327" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#a8ffb8">Пастбище хищников</text>
+  <text x="410" y="340" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#80d890" opacity="0.85">★★☆</text>
 
-  <!-- ── MARAUDER FACTION (ORANGE) ── -->
+  <!-- ══════════════ МАРОДЁРЫ (ОРАНЖЕВЫЙ) — правая колонка ══════════════ -->
 
-  <!-- Marauder Medium 1 (1,0) at (519,375) -->
-  <polygon points="594,375 556.5,440 481.5,440 444,375 481.5,310 556.5,310"
-           fill="#8a4015" stroke="#6a2a05" stroke-width="2.5"/>
-  <text x="519" y="362" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">⚔</text>
-  <text x="519" y="382" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ffe0b0">Логово мародёров</text>
-  <text x="519" y="395" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#d0a060" opacity="0.85">★★☆</text>
-
-  <!-- Marauder Medium 2 (0,1) at (406,440) -->
-  <polygon points="481,440 443.5,505 368.5,505 331,440 368.5,375 443.5,375"
-           fill="#8a4015" stroke="#6a2a05" stroke-width="2.5"/>
-  <text x="406" y="427" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">⚔</text>
-  <text x="406" y="447" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ffe0b0">Брошенный лагерь</text>
-  <text x="406" y="460" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#d0a060" opacity="0.85">★★☆</text>
-
-  <!-- Marauder Starter (1,1) at (519,505) -->
-  <polygon points="594,505 556.5,570 481.5,570 444,505 481.5,440 556.5,440"
+  <!-- Свалка доспехов — старт (670,690) -->
+  <polygon points="745,690 707.5,755 632.5,755 595,690 632.5,625 707.5,625"
            fill="#c47828" stroke="#a45808" stroke-width="2.5"/>
-  <text x="519" y="478" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ffe0b0" font-weight="bold" letter-spacing="1">СТАРТ</text>
-  <text x="519" y="503" text-anchor="middle" font-family="sans-serif" font-size="22" fill="white">⚔</text>
-  <text x="519" y="521" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ffe0b0">Свалка доспехов</text>
-  <text x="519" y="533" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#d0a060" opacity="0.85">★☆☆</text>
+  <text x="670" y="663" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ffe0b0" font-weight="bold" letter-spacing="1">СТАРТ</text>
+  <text x="670" y="688" text-anchor="middle" font-family="sans-serif" font-size="22" fill="white">⚔</text>
+  <text x="670" y="706" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ffe0b0">Свалка доспехов</text>
+  <text x="670" y="718" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#d0a060" opacity="0.85">★☆☆</text>
 
-  <!-- ── FINAL BOSS (CENTER) ── -->
-  <polygon points="481,310 443.5,375 368.5,375 331,310 368.5,245 443.5,245"
+  <!-- Брошенный лагерь — средняя 1 (670,500) -->
+  <polygon points="745,500 707.5,565 632.5,565 595,500 632.5,435 707.5,435"
+           fill="#8a4015" stroke="#6a2a05" stroke-width="2.5"/>
+  <text x="670" y="497" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">⚔</text>
+  <text x="670" y="517" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ffe0b0">Брошенный лагерь</text>
+  <text x="670" y="530" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#d0a060" opacity="0.85">★★☆</text>
+
+  <!-- Логово мародёров — средняя 2 (670,310) -->
+  <polygon points="745,310 707.5,375 632.5,375 595,310 632.5,245 707.5,245"
+           fill="#8a4015" stroke="#6a2a05" stroke-width="2.5"/>
+  <text x="670" y="307" text-anchor="middle" font-family="sans-serif" font-size="19" fill="white">⚔</text>
+  <text x="670" y="327" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ffe0b0">Логово мародёров</text>
+  <text x="670" y="340" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#d0a060" opacity="0.85">★★☆</text>
+
+  <!-- ══════════════ ФИНАЛЬНЫЙ БОСС — над центральной колонкой ══════════════ -->
+  <polygon points="485,110 447.5,175 372.5,175 335,110 372.5,45 447.5,45"
            fill="#5a0f0f" stroke="#cc2020" stroke-width="3.5"/>
-  <text x="406" y="290" text-anchor="middle" font-family="sans-serif" font-size="26" fill="white">☠</text>
-  <text x="406" y="314" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ff9090" font-weight="bold" letter-spacing="0.5">ФИНАЛЬНЫЙ БОСС</text>
-  <text x="406" y="328" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#cc6060">Поле Битвы</text>
-  <text x="406" y="342" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#ff4040" opacity="0.85">★★★</text>
+  <text x="410" y="90"  text-anchor="middle" font-family="sans-serif" font-size="26" fill="white">☠</text>
+  <text x="410" y="114" text-anchor="middle" font-family="sans-serif" font-size="8"  fill="#ff9090" font-weight="bold" letter-spacing="0.5">ФИНАЛЬНЫЙ БОСС</text>
+  <text x="410" y="128" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#cc6060">Поле Битвы</text>
+  <text x="410" y="142" text-anchor="middle" font-family="sans-serif" font-size="7"  fill="#ff4040" opacity="0.85">★★★</text>
 
   <!-- ── LEGEND ── -->
   <rect x="8" y="8" width="175" height="110" rx="6" fill="#1a1a2e" opacity="0.88" stroke="#555" stroke-width="1"/>
@@ -122,9 +130,9 @@
   <rect x="16" y="96" width="14" height="14" rx="2" fill="#5a0f0f" stroke="#cc2020" stroke-width="1.5"/>
   <text x="36" y="108" font-family="sans-serif" font-size="10" fill="#ccc">☠ Финальный босс</text>
 
-  <!-- ── FACTION LABELS ── -->
-  <text x="108" y="290" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#6090d8" font-weight="bold" opacity="0.9">МАГИЯ</text>
-  <text x="500" y="68"  text-anchor="middle" font-family="sans-serif" font-size="11" fill="#60c870" font-weight="bold" opacity="0.9">КОННИЦА</text>
-  <text x="590" y="458" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#e09040" font-weight="bold" opacity="0.9">МАРОДЁРЫ</text>
+  <!-- ── FACTION LABELS (под стартовой зоной каждой колонки) ── -->
+  <text x="150" y="780" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#6090d8" font-weight="bold" opacity="0.9">МАГИЯ</text>
+  <text x="410" y="780" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#60c870" font-weight="bold" opacity="0.9">КОННИЦА</text>
+  <text x="670" y="780" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#e09040" font-weight="bold" opacity="0.9">МАРОДЁРЫ</text>
 
 </svg>

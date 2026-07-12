@@ -29,6 +29,16 @@ export function getZoneConfig(zoneId: string): ZoneConfig {
   return cfg;
 }
 
+/** Уникальные item_id, которые могут выпасть в зоне (mob_loot + boss.loot, без дублей). */
+export function getZoneLootItemIds(zoneId: string): string[] {
+  const cfg = getZoneConfig(zoneId);
+  const ids = [
+    ...(cfg.mob_loot?.items ?? []).map(e => e.item_id),
+    ...(cfg.boss.loot?.items ?? []).map(e => e.item_id),
+  ];
+  return [...new Set(ids)];
+}
+
 export const ALL_ZONE_IDS = [
   'dead-fields',
   'trampled-meadows',

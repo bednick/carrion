@@ -8,7 +8,7 @@ import { getItemBehavior } from '../items/registry';
  * хуков — при появлении встанет перед этим списком.
  */
 export const HANDLER_ORDER: SlotType[] = [
-  'hand_right', 'hand_left', 'head', 'body_upper', 'body_lower', 'legs',
+  'hand_right', 'hand_left', 'head', 'body', 'legs', 'ring', 'amulet',
 ];
 
 /** Предохранитель от каскада/петель на одно исходное событие. */

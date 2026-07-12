@@ -1,7 +1,7 @@
 {
   "id": "robe_scrap",
   "name": "Лоскут мантии",
-  "slots": ["body_upper"],
+  "slots": ["body"],
   "type": "armor",
   "base_value": 10,
   "tags": ["armor"]

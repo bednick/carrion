@@ -5,7 +5,7 @@ import { salvageEssence, ESSENCE_TIERS } from '../items/craft';
 import { rewardIconKey, essenceIconKey } from './rewards';
 import type { ItemInstance, Rarity, EssenceTier } from '../items/types';
 
-const RARITY_COLORS: Record<Rarity, string> = {
+export const RARITY_COLORS: Record<Rarity, string> = {
   common: '#ffffff',
   uncommon: '#55ff55',
   rare: '#5555ff',
@@ -19,6 +19,11 @@ interface Line {
   icon?: string; // ключ текстуры иконки ресурса перед текстом (золото/эссенция)
   // Ряд из пар «иконка+число» в одну строку (все тиры эссенции, включая нули).
   segments?: { icon: string; text: string; color: string }[];
+  // Ряд иконок предметов зоны: найденные — обычная иконка, не найденные — затемнённая + «?».
+  iconRow?: { texture: string; discovered: boolean }[];
+  // Строка из разноцветных/полужирных фрагментов подряд (без пробелов между ними —
+  // пробелы уже часть текста фрагментов), напр. подсветка слова внутри описания.
+  parts?: { text: string; color: string; bold?: boolean }[];
 }
 
 /**
@@ -72,10 +77,10 @@ export class Tooltip {
     this.render([lines.map(t => ({ text: t, color: '#ffffff' }))], x, y);
   }
 
-  /** Как showText, но с цветом (и опц. иконкой ресурса) на строку; белый по умолчанию. */
-  showLines(lines: { text: string; color?: string; icon?: string }[], x: number, y: number) {
+  /** Как showText, но с цветом (и опц. иконкой ресурса / рядом иконок предметов) на строку; белый по умолчанию. */
+  showLines(lines: { text: string; color?: string; icon?: string; iconRow?: Line['iconRow']; parts?: Line['parts'] }[], x: number, y: number) {
     this.currentItem = null;
-    this.render([lines.map(l => ({ text: l.text, color: l.color ?? '#ffffff', icon: l.icon }))], x, y);
+    this.render([lines.map(l => ({ text: l.text, color: l.color ?? '#ffffff', icon: l.icon, iconRow: l.iconRow, parts: l.parts }))], x, y);
   }
 
   /** Секции: [идентичность, характеристики, цены]. Пустые секции отбрасываются при рендере. */
@@ -132,6 +137,32 @@ export class Tooltip {
       for (const line of group) {
         const ICON = 15, ICON_GAP = 4;
 
+        // Ряд иконок предметов зоны: найден → обычная иконка, не найден → затемнённая + «?».
+        if (line.iconRow) {
+          const ROW_ICON = 20, ROW_GAP = 5;
+          let sx = 8;
+          for (const cell of line.iconRow) {
+            const cx = sx + ROW_ICON / 2, cy = 8 + totalH + ROW_ICON / 2;
+            const frame = this.scene.add.rectangle(cx, cy, ROW_ICON + 4, ROW_ICON + 4)
+              .setStrokeStyle(1, 0xffffff, 0.8);
+            this.decor.push(frame);
+            const img = this.scene.add.image(cx, cy, cell.texture)
+              .setDisplaySize(ROW_ICON, ROW_ICON);
+            if (!cell.discovered) img.setTint(0x555566).setAlpha(0.6);
+            this.icons.push(img);
+            if (!cell.discovered) {
+              const q = this.scene.add.text(cx, cy, '?', {
+                fontSize: '13px', fontFamily: FONT_FAMILY, fontStyle: 'bold', color: '#ffffff',
+              }).setOrigin(0.5);
+              this.texts.push(q);
+            }
+            sx += ROW_ICON + 4 + ROW_GAP;
+          }
+          maxW = Math.max(maxW, sx - ROW_GAP - 8);
+          totalH += ROW_ICON + 6;
+          continue;
+        }
+
         // Ряд «иконка+число … иконка+число» в одну строку.
         if (line.segments) {
           const SEG_GAP = 12;
@@ -149,6 +180,24 @@ export class Tooltip {
             sx += ICON + ICON_GAP + t.width + SEG_GAP;
           }
           maxW = Math.max(maxW, sx - SEG_GAP - 8);
+          totalH += lineH + 2;
+          continue;
+        }
+
+        // Строка из разноцветных/полужирных фрагментов подряд (подсветка слова в описании).
+        if (line.parts) {
+          let sx = 8;
+          let lineH = 0;
+          for (const part of line.parts) {
+            const t = this.scene.add.text(sx, 8 + totalH, part.text, {
+              fontSize: '13px', fontFamily: FONT_FAMILY, color: part.color,
+              fontStyle: part.bold ? 'bold' : undefined,
+            });
+            this.texts.push(t);
+            lineH = Math.max(lineH, t.height);
+            sx += t.width;
+          }
+          maxW = Math.max(maxW, sx - 8);
           totalH += lineH + 2;
           continue;
         }
@@ -180,8 +229,8 @@ export class Tooltip {
     this.container.removeAll(false);
     this.container.add([this.bg, ...this.decor, ...this.icons, ...this.texts]);
 
-    const cx = Math.min(x, this.scene.scale.width - maxW - 24);
-    const cy = Math.min(y, this.scene.scale.height - totalH - 24);
+    const cx = Math.max(8, Math.min(x, this.scene.scale.width - maxW - 24));
+    const cy = Math.max(8, Math.min(y, this.scene.scale.height - totalH - 24));
     this.container.setPosition(cx, cy).setVisible(true);
   }
 

@@ -16,7 +16,7 @@ const STORAGE_KEY = 'carrion.meta.v1';
 // экране стартового оружия. Читается один раз в createDefault() и тут же стирается.
 const PENDING_START_WEAPON_KEY = 'carrion.meta.pending_start_weapon';
 
-export type SlotId = 'head' | 'body_upper' | 'body_lower' | 'legs' | 'hand_left' | 'hand_right';
+export type SlotId = 'head' | 'body' | 'legs' | 'hand_left' | 'hand_right' | 'ring' | 'amulet';
 
 export interface ItemInstance {
   item_id: string;
@@ -65,11 +65,12 @@ export interface MetaState {
 function emptyStand(): ArmorStand {
   return {
     head: null,
-    body_upper: null,
-    body_lower: null,
+    body: null,
     legs: null,
     hand_left: null,
     hand_right: null,
+    ring: null,
+    amulet: null,
   };
 }
 

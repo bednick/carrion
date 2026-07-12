@@ -6,6 +6,7 @@ import giantRatCfg from './giant_rat/config.json';
 import scavengerCfg from './scavenger/config.json';
 import henchmanCfg from './henchman/config.json';
 import sergeantCfg from './sergeant/config.json';
+import sergeantBossCfg from './sergeant_boss/config.json';
 import headlessKnightCfg from './headless_knight/config.json';
 import ratKingCfg from './rat_king/config.json';
 import dumpBossCfg from './dump_boss/config.json';
@@ -69,6 +70,7 @@ const MOB_CONFIGS: Record<string, MobConfig> = {
   scavenger: scavengerCfg as unknown as MobConfig,
   henchman: henchmanCfg as unknown as MobConfig,
   sergeant: sergeantCfg as unknown as MobConfig,
+  sergeant_boss: sergeantBossCfg as unknown as MobConfig,
   headless_knight: headlessKnightCfg as unknown as MobConfig,
   rat_king: ratKingCfg as unknown as MobConfig,
   dump_boss: dumpBossCfg as unknown as MobConfig,

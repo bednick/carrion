@@ -12,9 +12,10 @@ const SLOTS: { id: SlotType; label: string }[] = [
   { id: 'hand_right', label: 'Правая рука' },
   { id: 'hand_left', label: 'Левая рука' },
   { id: 'head', label: 'Голова' },
-  { id: 'body_upper', label: 'Верх тела' },
-  { id: 'body_lower', label: 'Низ тела' },
+  { id: 'body', label: 'Тело' },
   { id: 'legs', label: 'Ноги' },
+  { id: 'ring', label: 'Кольцо' },
+  { id: 'amulet', label: 'Амулет' },
 ];
 
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];

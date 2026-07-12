@@ -50,3 +50,25 @@ export function spawnFloater(scene: Phaser.Scene, type: FloaterType, value: numb
     onComplete: () => text.destroy(),
   });
 }
+
+/** Иконка ресурса + число, всплывает и гаснет так же, как spawnFloater (для разбора предметов и т.п.). */
+export function spawnIconFloater(scene: Phaser.Scene, iconKey: string, text: string, x: number, y: number, color = '#44ddff') {
+  const depth = 300;
+  const icon = scene.add.image(x - 4, y, iconKey).setDisplaySize(22, 22).setOrigin(1, 0.5).setDepth(depth);
+  const label = scene.add.text(x + 4, y, text, {
+    fontSize: `${FONT_SIZE}px`,
+    fontFamily: FONT_FAMILY,
+    color,
+    stroke: '#000000',
+    strokeThickness: 3,
+  }).setOrigin(0, 0.5).setDepth(depth);
+
+  scene.tweens.add({
+    targets: [icon, label],
+    y: y - 60,
+    alpha: 0,
+    duration: 1350,
+    ease: 'Power1',
+    onComplete: () => { icon.destroy(); label.destroy(); },
+  });
+}

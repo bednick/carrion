@@ -113,7 +113,7 @@ const RARITY_COLORS: Record<Rarity, number> = {
 };
 
 
-const EQUIP_SLOTS: SlotId[] = ['head', 'body_upper', 'body_lower', 'legs', 'hand_left', 'hand_right'];
+const EQUIP_SLOTS: SlotId[] = ['head', 'body', 'legs', 'hand_left', 'hand_right', 'ring', 'amulet'];
 
 type EnemyGraphic = {
   baseX: number;
@@ -168,6 +168,9 @@ export class ExpeditionScene extends Phaser.Scene {
   private progressText!: Phaser.GameObjects.Text;
   private speedBtns: Phaser.GameObjects.Rectangle[] = [];
   private isPaused = false;
+  // Отдельно от isPaused: не даёт открыть второй диалог поверх первого повторным кликом
+  // по "В лагерь", в т.ч. когда игра уже была на паузе кнопкой/SPACE до этого клика.
+  private retreatDialogOpen = false;
   // Отложенный переход (бой→ходьба, победа, смерть). Тикается в update() и завязан только на
   // isPaused — в отличие от this.time.delayedCall, не замораживается при рассинхроне часов.
   private delayed: { remaining: number; fn: () => void } | null = null;
@@ -267,7 +270,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.generateFightPlan();
     this.buildUI();
     new VolumeControl(this);
-    this.resourceHUD = new ResourceHUD(this);
+    this.resourceHUD = new ResourceHUD(this, this.tooltip);
     this.questTracker = new QuestTracker(this);
     EventBus.on('quest_completed', this.onQuestCompleted, this);
     // Перенос ленты при «Продолжить поиски» (только визуал — предметы всё равно уйдут в сундук).
@@ -841,19 +844,20 @@ export class ExpeditionScene extends Phaser.Scene {
 
   // Экипировка героя — только просмотр выбранной стойки (без drag, без ячеек рюкзака/крафта).
   private buildEquipSlots() {
-    // Пропорции из art-spec.md: head(32,18), hands(10/54,48), body_upper(32,52), legs(32,72)
-    // Масштаб: head→hands 30px, hands→body_lower ~16px, body_lower→legs ~8px → сжато до UI
+    // Крестовая раскладка вокруг портрета (см. docs/art-spec.md): ring/head/amulet сверху,
+    // hand_left/body/hand_right в центре, legs снизу.
     const cx = 640;
     const originY = 518;
     const SIZE = 48;
 
     const ANATOMY: Record<SlotId, { dx: number; dy: number }> = {
+      ring:        { dx: -54, dy:  28 },
       head:        { dx:   0, dy:   0 },
-      hand_left:   { dx: -54, dy:  56 },
-      body_upper:  { dx:   0, dy:  56 },
-      hand_right:  { dx:  54, dy:  56 },
-      body_lower:  { dx:   0, dy: 112 },
-      legs:        { dx:   0, dy: 168 },
+      amulet:      { dx:  54, dy:  28 },
+      hand_left:   { dx: -54, dy:  84 },
+      body:        { dx:   0, dy:  56 },
+      hand_right:  { dx:  54, dy:  84 },
+      legs:        { dx:   0, dy: 112 },
     };
 
     for (const slotId of EQUIP_SLOTS) {
@@ -1018,8 +1022,11 @@ export class ExpeditionScene extends Phaser.Scene {
 
   // Подтверждение отступления: лут с ленты сохраняется, зона НЕ засчитывается.
   private confirmRetreat() {
-    if (this.isPaused) return;
-    this.pause();
+    if (this.retreatDialogOpen) return;
+    this.retreatDialogOpen = true;
+    // Если игрок уже сам поставил игру на паузу до клика — не снимаем её при отмене диалога.
+    const wasPaused = this.isPaused;
+    if (!wasPaused) this.pause();
     const c = this.add.container(0, 0).setDepth(200);
     const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.7).setInteractive();
     const box = this.add.rectangle(640, 400, 420, 190, 0x1a1a2a).setStrokeStyle(2, 0x664444);
@@ -1043,7 +1050,11 @@ export class ExpeditionScene extends Phaser.Scene {
     noBtn.on('pointerout',  () => noBtn.setFillStyle(0x222233));
 
     yesBtn.on('pointerdown', () => this.retreatToCamp());
-    noBtn.on('pointerdown', () => { c.destroy(); this.resume(); });
+    noBtn.on('pointerdown', () => {
+      c.destroy();
+      this.retreatDialogOpen = false;
+      if (!wasPaused) this.resume();
+    });
 
     c.add([overlay, box, title, sub, yesBtn, yesLbl, noBtn, noLbl]);
   }

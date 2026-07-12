@@ -1,8 +1,8 @@
 {
   "id": "headless_knight",
   "name": "Рыцарь без головы",
-  "health": 100,
+  "health": 50,
   "attacks": [
-    { "damage": 2, "interval": 1.75 }
+    { "damage": 4, "interval": 1.75 }
   ]
 }

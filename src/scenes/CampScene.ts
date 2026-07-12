@@ -15,7 +15,7 @@ import { rewardIconKey, essenceIconKey, essenceIconKeyByRarity } from '../ui/rew
 import { slotSilhouetteKey } from '../ui/silhouettes';
 import { Tooltip } from '../ui/Tooltip';
 import { DragDropManager } from '../ui/DragDropManager';
-import { getZoneConfig, WIP_ZONE_IDS } from '../zones/registry';
+import { getZoneConfig, getZoneLootItemIds, WIP_ZONE_IDS } from '../zones/registry';
 import type { ZoneConfig } from '../zones/types';
 import { HAMMER_CURSOR } from '../ui/hammerCursor';
 import { QuestTracker } from '../ui/QuestTracker';
@@ -24,6 +24,7 @@ import { ResourceHUD } from '../ui/ResourceHUD';
 import { VolumeControl } from '../ui/VolumeControl';
 import { SoundManager } from '../core/SoundManager';
 import { SliderPopup } from '../ui/SliderPopup';
+import { spawnIconFloater } from '../ui/Floater';
 
 interface MapZoneEntry {
   id: string;
@@ -34,17 +35,24 @@ interface MapZoneEntry {
   questId?: string;
 }
 
+// Раскладка — 3 колонки по фракциям (нежить / звери / мародёры слева направо), внутри
+// колонки снизу вверх: старт → средняя → средняя. Финал — сверху над центральной колонкой.
+// Порядок снизу вверх обязан совпадать с FACTION_ROUTES (иначе стрелки укажут вниз).
 const MAP_ZONE_LAYOUT: MapZoneEntry[] = [
-  { id: 'battlefield',       label: 'Поле битвы',          x: 640,  y: 400 },
-  { id: 'mage-ruins',        label: 'Руины магов',         x: 450,  y: 335, passPrice: 500 },
-  { id: 'crypt',             label: 'Склеп',               x: 450,  y: 465, passPrice: 5000 },
-  { id: 'dead-fields',       label: 'Мёртвые поля',        x: 450,  y: 205 },
-  { id: 'beast-lair',        label: 'Логово зверей',       x: 640,  y: 265, passPrice: 500 },
-  { id: 'predator-pasture',  label: 'Пастбище хищников',   x: 830,  y: 335, passPrice: 5000 },
-  { id: 'trampled-meadows',  label: 'Растоптанные луга',   x: 830,  y: 165, passPrice: 50 },
-  { id: 'marauder-lair',     label: 'Логово мародёров',    x: 830,  y: 465, passPrice: 5000 },
-  { id: 'abandoned-camp',    label: 'Брошенный лагерь',    x: 640,  y: 535, passPrice: 500 },
-  { id: 'armor-dump',        label: 'Свалка доспехов',     x: 830,  y: 595, passPrice: 50 },
+  // Нежить (Магия) — левая колонка
+  { id: 'dead-fields',       label: 'Мёртвые поля',        x: 450,  y: 574 },
+  { id: 'mage-ruins',        label: 'Руины магов',         x: 450,  y: 444, passPrice: 500 },
+  { id: 'crypt',             label: 'Склеп',               x: 450,  y: 314, passPrice: 5000 },
+  // Звери (Конница) — центральная колонка
+  { id: 'trampled-meadows',  label: 'Растоптанные луга',   x: 640,  y: 574, passPrice: 50 },
+  { id: 'beast-lair',        label: 'Логово зверей',       x: 640,  y: 444, passPrice: 500 },
+  { id: 'predator-pasture',  label: 'Пастбище хищников',   x: 640,  y: 314, passPrice: 5000 },
+  // Мародёры — правая колонка
+  { id: 'armor-dump',        label: 'Свалка доспехов',     x: 830,  y: 574, passPrice: 50 },
+  { id: 'abandoned-camp',    label: 'Брошенный лагерь',    x: 830,  y: 444, passPrice: 500 },
+  { id: 'marauder-lair',     label: 'Логово мародёров',    x: 830,  y: 314, passPrice: 5000 },
+  // Финал — над центральной колонкой
+  { id: 'battlefield',       label: 'Поле битвы',          x: 640,  y: 172 },
 ];
 
 // Единый маршрут прохождения каждой фракции: стартовая → средние → Поле битвы.
@@ -128,6 +136,8 @@ export class CampScene extends Phaser.Scene {
   private panelContainer!: Phaser.GameObjects.Container;
   private hoverLabel!: Phaser.GameObjects.Text;
   private smithCraftItem: ItemInstance | null = null;
+  /** Готовый предмет после улучшения — лежит в правой ячейке, пока игрок не заберёт его drag'ом. */
+  private smithResultItem: ItemInstance | null = null;
   private smithHammerMode = false;
   private dealerTab: 'shop' | 'quests' = 'quests';
   private panelState: 'smith' | 'dealer' | 'chest' | 'map' | null = null;
@@ -213,6 +223,7 @@ export class CampScene extends Phaser.Scene {
         // Shift или режим разборки — старое быстрое действие; обычный клик — взять предмет в руку.
         const quick = (ptr.event as MouseEvent | undefined)?.shiftKey || this.smithHammerMode;
         if (quick) {
+          this.tooltip.hide();
           this.pendingDrag.fallback?.();
         } else if (this.dragDrop?.pickUp(this.pendingDrag.slotId)) {
           this.rebuildPanel();
@@ -226,7 +237,7 @@ export class CampScene extends Phaser.Scene {
 
   private buildHUD() {
     this.add.text(640, 14, 'Лагерь', { fontSize: '22px', fontFamily: FONT_FAMILY, color: '#dddddd' }).setOrigin(0.5, 0);
-    this.resourceHUD = new ResourceHUD(this);
+    this.resourceHUD = new ResourceHUD(this, this.tooltip);
 
     const coordText = this.add.text(10, 10, '', {
       fontSize: '11px', fontFamily: FONT_FAMILY, color: '#ffffff', backgroundColor: '#000000aa',
@@ -625,6 +636,7 @@ export class CampScene extends Phaser.Scene {
     this.dragDrop?.destroy();
     this.dragDrop = null;
     if (this.smithCraftItem) { MetaStore.addToChest(this.smithCraftItem); this.smithCraftItem = null; }
+    if (this.smithResultItem) { MetaStore.addToChest(this.smithResultItem); this.smithResultItem = null; }
     this.smithHammerMode = false;
     this.input.setDefaultCursor('default');
     this.input.off('pointermove', this.forceHammerCursor, this);
@@ -759,12 +771,13 @@ export class CampScene extends Phaser.Scene {
     const originY = startY + 16;
 
     const ANATOMY: Record<SlotId, { dx: number; dy: number }> = {
+      ring:        { dx: -54, dy:  28 },
       head:        { dx:   0, dy:   0 },
-      hand_left:   { dx: -54, dy:  56 },
-      body_upper:  { dx:   0, dy:  56 },
-      hand_right:  { dx:  54, dy:  56 },
-      body_lower:  { dx:   0, dy: 112 },
-      legs:        { dx:   0, dy: 168 },
+      amulet:      { dx:  54, dy:  28 },
+      hand_left:   { dx: -54, dy:  84 },
+      body:        { dx:   0, dy:  56 },
+      hand_right:  { dx:  54, dy:  84 },
+      legs:        { dx:   0, dy: 112 },
     };
 
     for (const [slotId, { dx, dy }] of Object.entries(ANATOMY) as [SlotId, { dx: number; dy: number }][]) {
@@ -888,6 +901,53 @@ export class CampScene extends Phaser.Scene {
     return formatEssence(pool);
   }
 
+  /** Диалог подтверждения перед разборкой — предмет теряется безвозвратно. */
+  private confirmSalvage(item: ItemInstance, onConfirm: () => void) {
+    this.tooltip.hide();
+    const cfg = getItemConfig(item.item_id);
+    const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.7).setDepth(190).setInteractive();
+    const box = this.add.rectangle(640, 400, 420, 150, 0x1e1a0a).setDepth(191).setStrokeStyle(2, 0x886622);
+    const text = this.add.text(640, 378, `Разобрать «${cfg.name}»?\nПредмет будет утерян, взамен — эссенция.`, {
+      fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffddaa', align: 'center',
+    }).setOrigin(0.5).setDepth(192);
+    const yesBtn = this.add.rectangle(590, 434, 130, 34, 0x5a3a1a).setDepth(191).setInteractive({ useHandCursor: true });
+    const yesLbl = this.add.text(590, 434, 'Разобрать', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffcc88' }).setOrigin(0.5).setDepth(192);
+    const noBtn  = this.add.rectangle(710, 434, 130, 34, 0x224422).setDepth(191).setInteractive({ useHandCursor: true });
+    const noLbl  = this.add.text(710, 434, 'Отмена', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(192);
+
+    const close = () => [overlay, box, text, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
+    // Отмена — выходим из режима разборки, возвращаем обычный курсор.
+    const cancel = () => { close(); this.exitSmithHammerMode(); };
+    yesBtn.on('pointerdown', () => { close(); onConfirm(); });
+    noBtn.on('pointerdown', () => cancel());
+    overlay.on('pointerdown', () => cancel());
+  }
+
+  /** Разбирает предмет: эссенция в мету, всплывающие иконки на месте клика, обновление панели. */
+  private performSalvage(item: ItemInstance, x: number, y: number, keepHammer: boolean) {
+    const pool = this.smithCalcEssence(item);
+    const label = this.grantSalvage(item);
+    this.spawnSalvageFloaters(pool, x, y);
+    this.showMessage(`+${label} эссенции`);
+    this.refreshHUD();
+    if (!keepHammer) this.exitSmithHammerMode(); else this.rebuildPanel();
+  }
+
+  /** Иконка+число для каждого полученного тира эссенции — в случайной точке рядом с кликом. */
+  private spawnSalvageFloaters(pool: EssencePool, x: number, y: number) {
+    for (const tier of ESSENCE_TIERS) {
+      const amount = pool[tier];
+      if (amount <= 0) continue;
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 8 + Math.random() * 20;
+      spawnIconFloater(
+        this, essenceIconKey(tier), `+${amount}`,
+        x + Math.cos(angle) * radius, y + Math.sin(angle) * radius,
+        TIER_HEX[tier],
+      );
+    }
+  }
+
   private forceHammerCursor() {
     this.game.canvas.style.cursor = HAMMER_CURSOR;
   }
@@ -912,15 +972,19 @@ export class CampScene extends Phaser.Scene {
     const inputX = 315, arrowX = 380, resultX = 445;
     const slotY = 375;
     const item = this.smithCraftItem;
+    const resultItem = this.smithResultItem;
 
     // Превью улучшения одного предмета: следующая редкость + стоимость.
+    // Пока в правой ячейке лежит неснятый результат, крафтить дальше нельзя — сначала забрать.
     let previewResult: ItemInstance | null = null;
     let canCraft = false;
     let craftError: string | null = null;
     let goldCost = 0;
     let essenceCost: EssencePool | null = null;
 
-    if (item) {
+    if (item && resultItem) {
+      craftError = 'Заберите результат из ячейки справа';
+    } else if (item) {
       const pv = craftPreview(item, null);
       if (pv.result) {
         previewResult = pv.result;
@@ -941,21 +1005,24 @@ export class CampScene extends Phaser.Scene {
       : this.add.text(inputX, slotY, '+', { fontSize: '20px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
 
     // "→"
+    const arrowActive = !!(previewResult || resultItem);
     const arrowLbl = this.add.text(arrowX, slotY, '→', {
-      fontSize: '18px', fontFamily: FONT_FAMILY, color: previewResult ? '#667766' : '#333344',
+      fontSize: '18px', fontFamily: FONT_FAMILY, color: arrowActive ? '#667766' : '#333344',
     }).setOrigin(0.5);
 
-    // Слот результата (только превью, без взаимодействия)
+    // Слот результата: пока идёт выбор — полупрозрачное превью; после апгрейда — настоящий предмет, который можно забрать.
     const s3Bg = this.add.rectangle(resultX, slotY, S, S, 0x252530)
-      .setStrokeStyle(2, previewResult ? RARITY_COLORS[previewResult.rarity] : 0x333344);
+      .setStrokeStyle(2, resultItem ? RARITY_COLORS[resultItem.rarity] : previewResult ? RARITY_COLORS[previewResult.rarity] : 0x333344);
     let s3Content: Phaser.GameObjects.Image | null = null;
-    if (previewResult) {
+    if (resultItem) {
+      s3Content = this.add.image(resultX, slotY, itemIconKey(resultItem.item_id)).setDisplaySize(40, 40);
+    } else if (previewResult) {
       s3Content = this.add.image(resultX, slotY, itemIconKey(previewResult.item_id)).setDisplaySize(40, 40).setAlpha(0.3);
     }
 
     // Подписи слотов
     const lbl1 = this.add.text(inputX, slotY + 33, 'предмет', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
-    const lbl3 = this.add.text(resultX, slotY + 33, 'результат', { fontSize: '9px', fontFamily: FONT_FAMILY, color: previewResult ? '#667766' : '#333344' }).setOrigin(0.5);
+    const lbl3 = this.add.text(resultX, slotY + 33, 'результат', { fontSize: '9px', fontFamily: FONT_FAMILY, color: arrowActive ? '#667766' : '#333344' }).setOrigin(0.5);
 
     // DragDrop: единственный входной слот + зона всей левой половины меню.
     if (this.dragDrop) {
@@ -980,6 +1047,16 @@ export class CampScene extends Phaser.Scene {
           this.time.delayedCall(0, () => this.rebuildPanel());
         },
       });
+      // Слот результата — только забрать drag'ом, положить в него нельзя.
+      if (resultItem) {
+        this.dragDrop.registerSlot({
+          id: 'smith_result_slot',
+          rect: new Phaser.Geom.Rectangle(resultX - S / 2, slotY - S / 2, S, S),
+          item: resultItem,
+          onRemove: () => { const it = this.smithResultItem; this.smithResultItem = null; return it; },
+          onAccept: () => {},
+        });
+      }
     }
 
     // Взаимодействие с входным слотом
@@ -995,10 +1072,12 @@ export class CampScene extends Phaser.Scene {
           if (this.dragDrop?.isHolding()) return;
           if (this.smithHammerMode) {
             const it = this.smithCraftItem!;
-            const label = this.grantSalvage(it);
-            this.smithCraftItem = null;
-            this.showMessage(`+${label} эссенции`); this.refreshHUD();
-            if (!(ptr.event as MouseEvent).shiftKey) this.exitSmithHammerMode(); else this.rebuildPanel();
+            const keepHammer = (ptr.event as MouseEvent).shiftKey;
+            const clickX = ptr.x, clickY = ptr.y;
+            this.confirmSalvage(it, () => {
+              this.smithCraftItem = null;
+              this.performSalvage(it, clickX, clickY, keepHammer);
+            });
             return;
           }
           this.pendingDrag = {
@@ -1011,8 +1090,35 @@ export class CampScene extends Phaser.Scene {
       }
     }
 
-    // Тултип превью результата
-    if (previewResult) {
+    // Взаимодействие со слотом результата
+    if (resultItem) {
+      // Готовый предмет — можно забрать drag'ом (клик берёт в руку / зажатие тащит).
+      s3Bg.setInteractive({ useHandCursor: true });
+      s3Bg.on('pointerover', () => {
+        s3Bg.setFillStyle(0x35354a);
+        this.tooltip.showItem(resultItem, resultX + S / 2 + 8, slotY - S / 2 - 8);
+      });
+      s3Bg.on('pointerout', () => { s3Bg.setFillStyle(0x252530); this.tooltip.hide(); });
+      if (this.dragDrop) {
+        s3Bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+          if (this.dragDrop?.isHolding()) return;
+          if (this.smithHammerMode) {
+            const it = this.smithResultItem!;
+            const keepHammer = (ptr.event as MouseEvent).shiftKey;
+            const clickX = ptr.x, clickY = ptr.y;
+            this.confirmSalvage(it, () => {
+              this.smithResultItem = null;
+              this.performSalvage(it, clickX, clickY, keepHammer);
+            });
+            return;
+          }
+          this.pendingDrag = { slotId: 'smith_result_slot', downX: ptr.x, downY: ptr.y };
+        });
+      } else {
+        s3Bg.on('pointerdown', () => { MetaStore.addToChest(this.smithResultItem!); this.smithResultItem = null; this.rebuildPanel(); });
+      }
+    } else if (previewResult) {
+      // Только превью следующего шага — без взаимодействия, кроме тултипа.
       s3Bg.setInteractive({ useHandCursor: false });
       s3Bg.on('pointerover', () => {
         this.tooltip.showItem(previewResult!, resultX + S / 2 + 8, slotY - S / 2 - 8, { defaultCost: 'essence' });
@@ -1020,12 +1126,18 @@ export class CampScene extends Phaser.Scene {
       s3Bg.on('pointerout', () => { this.tooltip.hide(); });
     }
 
+    // Две равнозначные кнопки в ряд: «Улучшить» и «Разобрать» (см. docs/ui.md).
+    const UP_W = 180, DIS_W = 150, BTN_GAP = 14;
+    const rowTotal = UP_W + BTN_GAP + DIS_W;
+    const upX = cx - rowTotal / 2 + UP_W / 2;
+    const disX = cx + rowTotal / 2 - DIS_W / 2;
+
     // Кнопка — всегда «Улучшить», активна только когда хватает ресурсов.
     const btnEnabled = canCraft;
     const btnColor = btnEnabled ? 0x335533 : 0x222233;
-    const btn = this.add.rectangle(cx - 10, 460, 240, 36, btnColor);
+    const btn = this.add.rectangle(upX, 460, UP_W, 36, btnColor);
     if (btnEnabled) btn.setInteractive({ useHandCursor: true });
-    const btnLbl = this.add.text(cx - 10, 460, 'Улучшить', {
+    const btnLbl = this.add.text(upX, 460, 'Улучшить', {
       fontSize: '13px', fontFamily: FONT_FAMILY,
       color: btnEnabled ? '#aaffaa' : '#555566', align: 'center',
     }).setOrigin(0.5);
@@ -1034,8 +1146,9 @@ export class CampScene extends Phaser.Scene {
         if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не улучшает
         MetaStore.spendGold(goldCost);
         if (essenceCost) MetaStore.spendEssence(essenceCost);
-        // Улучшение на месте: предмет в слоте становится следующей редкости.
-        this.smithCraftItem = { item_id: previewResult!.item_id, rarity: previewResult!.rarity };
+        // Улучшенный предмет уходит в правую ячейку, входной слот освобождается.
+        this.smithResultItem = { item_id: previewResult!.item_id, rarity: previewResult!.rarity };
+        this.smithCraftItem = null;
         EventBus.emit('item_crafted');
         EventBus.emit('items_combined');
         this.refreshHUD();
@@ -1062,23 +1175,27 @@ export class CampScene extends Phaser.Scene {
         const enough = row.have >= row.need;
         costLbls.push(resourceTag(this, row.icon, `${row.have} / ${row.need}`, {
           iconSize: 15, fontSize: 11, originX: 0.5, color: enough ? '#88aa88' : '#dd5555',
-        }).setPosition(cx - 10, ry));
+        }).setPosition(upX, ry));
         ry += 18;
       }
     } else if (craftError) {
-      costLbls.push(this.add.text(cx - 10, 494, craftError, {
+      costLbls.push(this.add.text(upX, 494, craftError, {
         fontSize: '11px', fontFamily: FONT_FAMILY, color: '#886655', align: 'center',
-        wordWrap: { width: 230 },
+        wordWrap: { width: 210 },
       }).setOrigin(0.5));
     }
 
-    // Кнопка разборки (режим молота)
+    // Кнопка разборки (режим молота) — с подписью, наравне с «Улучшить».
     const hammerActive = this.smithHammerMode;
-    const hammerBtn = this.add.rectangle(521, 460, 34, 34,
+    const hammerBtn = this.add.rectangle(disX, 460, DIS_W, 36,
       hammerActive ? 0x5a3a1a : 0x2a2a1a)
       .setStrokeStyle(hammerActive ? 2 : 1, hammerActive ? 0xffaa44 : 0x446644)
       .setInteractive({ useHandCursor: true });
-    const hammerG = this.add.image(521, 460, 'hammer').setDisplaySize(24, 24);
+    const hammerG = this.add.image(disX - DIS_W / 2 + 24, 460, 'hammer').setDisplaySize(20, 20);
+    const hammerLbl = this.add.text(disX - DIS_W / 2 + 42, 460, 'Разобрать', {
+      fontSize: '13px', fontFamily: FONT_FAMILY,
+      color: hammerActive ? '#ffcc88' : '#aaddaa', align: 'center',
+    }).setOrigin(0, 0.5);
     hammerBtn.on('pointerover', () => { if (!this.smithHammerMode) hammerBtn.setFillStyle(0x3a3a2a); });
     hammerBtn.on('pointerout',  () => { if (!this.smithHammerMode) hammerBtn.setFillStyle(0x2a2a1a); });
     hammerBtn.on('pointerdown', () => {
@@ -1086,16 +1203,12 @@ export class CampScene extends Phaser.Scene {
       if (this.smithHammerMode) this.exitSmithHammerMode(); else this.enterSmithHammerMode();
     });
 
-    // Контур зоны крафта (вся левая половина) — предмет, брошенный сюда, займёт слот.
-    const craftZone = this.add.rectangle(380, 432, 370, 440).setStrokeStyle(1, 0x444466).setFillStyle(0x000000, 0);
-
     const toAdd: Phaser.GameObjects.GameObject[] = [
-      craftZone,
       s1Bg, s1Content, arrowLbl,
       s3Bg,
       lbl1, lbl3,
       btn, btnLbl,
-      hammerBtn, hammerG,
+      hammerBtn, hammerG, hammerLbl,
       ...costLbls,
     ];
     if (s3Content) toAdd.push(s3Content);
@@ -1143,9 +1256,9 @@ export class CampScene extends Phaser.Scene {
           const buyLbl = this.add.text(cx + 125, rowY, 'Купить', {
             fontSize: '11px', fontFamily: FONT_FAMILY, color: canAfford ? '#aaffaa' : '#886666',
           }).setOrigin(0.5);
-          buyBtn.on('pointerdown', () => {
+          buyBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
             if (this.dragDrop?.isHolding()) return; // с предметом в руке клик не покупает — pointerup продаст
-            this.tryBuyMapPass(entry);
+            this.tryBuyMapPass(entry, ptr.x, ptr.y);
           });
           content.add([rowBg, rowLabel, priceLabel, buyBtn, buyLbl]);
         });
@@ -1168,7 +1281,8 @@ export class CampScene extends Phaser.Scene {
           const cfg = getItemConfig(it.item_id);
           MetaStore.addGold(cfg.base_value);
           EventBus.emit('item_sold');
-          this.showMessage(`+${cfg.base_value}g`);
+          const ptr = this.input.activePointer;
+          spawnIconFloater(this, rewardIconKey('gold'), `+${cfg.base_value}`, ptr.x, ptr.y, '#ffcc00');
           this.refreshHUD();
           this.time.delayedCall(0, () => this.rebuildPanel());
         },
@@ -1228,11 +1342,12 @@ export class CampScene extends Phaser.Scene {
     if (this.panelState === 'smith') {
       return (inst, idx) => {
         if (this.smithHammerMode) {
+          // Сундук — без подтверждения: спрашиваем только за предметы прямо у кузнеца (2 слота стола).
+          const ptr = this.input.activePointer;
+          const keepHammer = !!(ptr?.event as MouseEvent)?.shiftKey;
+          const clickX = ptr?.x ?? 640, clickY = ptr?.y ?? 400;
           MetaStore.removeFromChest(idx);
-          const label = this.grantSalvage(inst);
-          this.showMessage(`+${label} эссенции`); this.refreshHUD();
-          const shift = (this.input.activePointer?.event as MouseEvent)?.shiftKey;
-          if (!shift) this.exitSmithHammerMode(); else this.rebuildPanel();
+          this.performSalvage(inst, clickX, clickY, keepHammer);
           return;
         }
         if (!this.smithCraftItem) {
@@ -1250,6 +1365,8 @@ export class CampScene extends Phaser.Scene {
         MetaStore.removeFromChest(idx);
         MetaStore.addGold(cfg.base_value);
         EventBus.emit('item_sold');
+        const ptr = this.input.activePointer;
+        spawnIconFloater(this, rewardIconKey('gold'), `+${cfg.base_value}`, ptr.x, ptr.y, '#ffcc00');
         this.refreshHUD();
         this.rebuildPanel();
       };
@@ -1282,7 +1399,7 @@ export class CampScene extends Phaser.Scene {
 
     const FILTER_CELL = 52;
     const CELL_GAP = 6;
-    const N_FILTER_CELLS = 6;
+    const N_FILTER_CELLS = 7;
     const FILTER_ROW_W = N_FILTER_CELLS * FILTER_CELL + (N_FILTER_CELLS - 1) * CELL_GAP;
     const FILTER_START_X = CHEST_CX - FILTER_ROW_W / 2;
     const FILTER_Y1 = 210;
@@ -1302,7 +1419,7 @@ export class CampScene extends Phaser.Scene {
     }).setOrigin(0.5));
 
     if (showFilters) {
-      const SLOT_TYPES: SlotType[] = ['head', 'body_upper', 'body_lower', 'legs', 'hand_left', 'hand_right'];
+      const SLOT_TYPES: SlotType[] = ['head', 'body', 'legs', 'hand_left', 'hand_right', 'ring', 'amulet'];
 
       for (let i = 0; i < SLOT_TYPES.length; i++) {
         const slot = SLOT_TYPES[i];
@@ -1662,7 +1779,7 @@ export class CampScene extends Phaser.Scene {
           ], entry.x + 65, entry.y - 50);
         });
         obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
-        obj.on('pointerdown', () => this.tryBuyMapPass(entry));
+        obj.on('pointerdown', (ptr: Phaser.Input.Pointer) => this.tryBuyMapPass(entry, ptr.x, ptr.y));
       });
       return;
     }
@@ -1674,8 +1791,20 @@ export class CampScene extends Phaser.Scene {
       obj.on('pointerover', () => {
         node.setFillStyle(isCompleted ? 0x336633 : 0x336688);
         // Имя — в цвет эссенции награды зоны; ниже — краткий лор. Бои/фракцию не показываем.
-        const lines = [{ text: cfg.name, color: zoneNameColor(cfg) }];
+        const lines: { text: string; color: string; iconRow?: { texture: string; discovered: boolean }[] }[] = [
+          { text: cfg.name, color: zoneNameColor(cfg) },
+        ];
         for (const l of wrapText(cfg.description ?? '')) lines.push({ text: l, color: '#bbbbbb' });
+        // Ряд иконок предметов зоны: найден (вынесен в сундук) → обычная иконка, иначе — затемнённая + «?».
+        const itemIds = getZoneLootItemIds(entry.id);
+        if (itemIds.length > 0) {
+          const carriedOut = MetaStore.get().stats.items_carried_out;
+          lines.push({ text: '', color: '#bbbbbb' });
+          lines.push({
+            text: '', color: '#ffffff',
+            iconRow: itemIds.map(id => ({ texture: itemIconKey(id), discovered: !!carriedOut[id] })),
+          });
+        }
         this.tooltip.showLines(lines, entry.x + 65, entry.y - 70);
       });
       obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
@@ -1688,36 +1817,20 @@ export class CampScene extends Phaser.Scene {
     });
   }
 
-  private tryBuyMapPass(entry: MapZoneEntry) {
+  /** Покупка проходки — без подтверждения, мгновенно; списание видно по всплывающей цифре у клика. */
+  private tryBuyMapPass(entry: MapZoneEntry, x?: number, y?: number) {
     if (!entry.passPrice) return;
     const meta = MetaStore.get();
     if (meta.gold < entry.passPrice) {
       this.showMessage(`Недостаточно золота! Нужно ${entry.passPrice}g`);
       return;
     }
-    const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.5).setDepth(200).setInteractive();
-    const box = this.add.rectangle(640, 400, 500, 150, 0x1e1e2e).setDepth(201).setStrokeStyle(2, 0x555577);
-    const text = this.add.text(640, 362, `Купить проходку в «${entry.label}»?`, {
-      fontSize: '14px', fontFamily: FONT_FAMILY, color: '#dddddd', align: 'center', wordWrap: { width: 460 },
-    }).setOrigin(0.5).setDepth(202);
-    const priceTag = goldTag(this, entry.passPrice, { iconSize: 18, fontSize: 15, originX: 0.5 })
-      .setPosition(640, 390).setDepth(202);
-    const yesBtn = this.add.rectangle(580, 420, 120, 34, 0x224422).setDepth(201).setInteractive({ useHandCursor: true });
-    const yesLbl = this.add.text(580, 420, 'Купить', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(202);
-    const noBtn = this.add.rectangle(720, 420, 120, 34, 0x442222).setDepth(201).setInteractive({ useHandCursor: true });
-    const noLbl = this.add.text(720, 420, 'Отмена', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffaaaa' }).setOrigin(0.5).setDepth(202);
-
-    const close = () => [overlay, box, text, priceTag, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
-    yesBtn.on('pointerdown', () => {
-      close();
-      MetaStore.spendGold(entry.passPrice!);
-      MetaStore.unlockArea(entry.id);
-      if (entry.questId) MetaStore.addActiveQuest(entry.questId, 1);
-      this.refreshHUD();
-      this.rebuildPanel();
-    });
-    noBtn.on('pointerdown', () => close());
-    overlay.on('pointerdown', () => close());
+    MetaStore.spendGold(entry.passPrice);
+    MetaStore.unlockArea(entry.id);
+    if (entry.questId) MetaStore.addActiveQuest(entry.questId, 1);
+    spawnIconFloater(this, rewardIconKey('gold'), `-${entry.passPrice}`, x ?? entry.x, y ?? entry.y, '#ffcc00');
+    this.refreshHUD();
+    this.rebuildPanel();
   }
 
   private showMessage(msg: string) {

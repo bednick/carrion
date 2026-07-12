@@ -1,8 +1,8 @@
 {
   "id": "skeleton",
   "name": "Скелет",
-  "health": 50,
+  "health": 25,
   "attacks": [
-    { "damage": 1, "interval": 1.25 }
+    { "damage": 2, "interval": 1.25 }
   ]
 }

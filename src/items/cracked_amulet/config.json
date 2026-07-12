@@ -1,7 +1,7 @@
 {
   "id": "cracked_amulet",
   "name": "Треснувший амулет",
-  "slots": ["body_upper"],
+  "slots": ["amulet"],
   "type": "accessory",
   "base_value": 10,
   "tags": ["accessory", "on_kill", "lifesteal"]
