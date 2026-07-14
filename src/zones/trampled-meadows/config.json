@@ -13,7 +13,7 @@
     "gold": { "min": 0, "max": 0 },
     "items": [
       { "item_id": "short_sword", "chance": 0.10 },
-      { "item_id": "cracked_amulet", "chance": 0.10 },
+      { "item_id": "vulture_amulet", "chance": 0.10 },
       { "item_id": "leech_bead", "chance": 0.10 },
       { "item_id": "barrier_amulet", "chance": 0.10 },
       { "item_id": "thread_charm", "chance": 0.10 },
@@ -29,7 +29,7 @@
       "essence": {"uncommon":  {"min": 10, "max": 20}},
       "items": [
         { "item_id": "short_sword", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "cracked_amulet", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "vulture_amulet", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "leech_bead", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "barrier_amulet", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "thread_charm", "chance": 0.10, "rarity": "uncommon" },

@@ -43,10 +43,12 @@ export interface EnemyState {
   phaseIndex?: number;
 }
 
-/** Разовый порог аварийного лечения амулета (docs/content.items.amulet.md): не скейлится редкостью (R5). */
+/** Разовый порог аварийного лечения амулета (docs/content.items.amulet.md): не скейлится редкостью (R5).
+ * healPercent — доля от heroMaxHp (0..1), не фиксированное число: хил считается от текущего maxHp
+ * героя в момент срабатывания (applyDamage), а не один раз при сборке. */
 export interface EmergencyHealConfig {
   thresholdRatio: number;
-  healAmount: number;
+  healPercent: number;
 }
 
 export interface HeroState {

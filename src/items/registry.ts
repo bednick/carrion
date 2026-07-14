@@ -6,7 +6,7 @@ import gleamingPlateCfg from './gleaming_plate/config.json';
 import spikedCuirassCfg from './spiked_cuirass/config.json';
 import desperatePlateCfg from './desperate_plate/config.json';
 import heavyPlateCfg from './heavy_plate/config.json';
-import crackedAmuletCfg from './cracked_amulet/config.json';
+import vultureAmuletCfg from './vulture_amulet/config.json';
 import barrierAmuletCfg from './barrier_amulet/config.json';
 import threadCharmCfg from './thread_charm/config.json';
 import shortSpearCfg from './short_spear/config.json';
@@ -28,7 +28,7 @@ import gleamingPlateBeh from './gleaming_plate/behavior';
 import spikedCuirassBeh from './spiked_cuirass/behavior';
 import desperatePlateBeh from './desperate_plate/behavior';
 import heavyPlateBeh from './heavy_plate/behavior';
-import crackedAmuletBeh from './cracked_amulet/behavior';
+import vultureAmuletBeh from './vulture_amulet/behavior';
 import barrierAmuletBeh from './barrier_amulet/behavior';
 import threadCharmBeh from './thread_charm/behavior';
 import shortSpearBeh from './short_spear/behavior';
@@ -51,7 +51,7 @@ export const ITEM_CONFIGS: Record<string, ItemConfig> = {
   spiked_cuirass: spikedCuirassCfg as ItemConfig,
   desperate_plate: desperatePlateCfg as ItemConfig,
   heavy_plate: heavyPlateCfg as ItemConfig,
-  cracked_amulet: crackedAmuletCfg as ItemConfig,
+  vulture_amulet: vultureAmuletCfg as ItemConfig,
   barrier_amulet: barrierAmuletCfg as ItemConfig,
   thread_charm: threadCharmCfg as ItemConfig,
   short_spear: shortSpearCfg as ItemConfig,
@@ -75,7 +75,7 @@ export const ITEM_BEHAVIORS: Record<string, ItemBehavior> = {
   spiked_cuirass: spikedCuirassBeh,
   desperate_plate: desperatePlateBeh,
   heavy_plate: heavyPlateBeh,
-  cracked_amulet: crackedAmuletBeh,
+  vulture_amulet: vultureAmuletBeh,
   barrier_amulet: barrierAmuletBeh,
   thread_charm: threadCharmBeh,
   short_spear: shortSpearBeh,

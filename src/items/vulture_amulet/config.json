@@ -1,6 +1,6 @@
 {
-  "id": "cracked_amulet",
-  "name": "Треснувший амулет",
+  "id": "vulture_amulet",
+  "name": "Амулет грифа",
   "slots": ["amulet"],
   "type": "accessory",
   "base_value": 10,

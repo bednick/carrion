@@ -232,8 +232,8 @@ boss_DPS(zone) = 25 × hero_DPS_ref(zone) / boss_total_HP
 
 ```json
 {
-  "id": "cracked_amulet",
-  "name": "Треснувший амулет",
+  "id": "vulture_amulet",
+  "name": "Амулет грифа",
   "slots": [
     "amulet"
   ],

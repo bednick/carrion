@@ -463,7 +463,7 @@ export class CombatEngine {
     const eh = hero.emergencyHeal;
     if (eh && !hero.emergencyHealUsed && hero.hp / hero.maxHp < eh.thresholdRatio) {
       hero.emergencyHealUsed = true;
-      const heal = Math.min(hero.maxHp - hero.hp, eh.healAmount);
+      const heal = Math.min(hero.maxHp - hero.hp, Math.round(hero.maxHp * eh.healPercent));
       if (heal > 0) {
         hero.hp += heal;
         this.cb.onHeal?.(heal);

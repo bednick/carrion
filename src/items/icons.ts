@@ -3,7 +3,7 @@ import gleamingPlate from './gleaming_plate/icon.svg';
 import spikedCuirass from './spiked_cuirass/icon.svg';
 import desperatePlate from './desperate_plate/icon.svg';
 import heavyPlate from './heavy_plate/icon.svg';
-import crackedAmulet from './cracked_amulet/icon.svg';
+import vultureAmulet from './vulture_amulet/icon.svg';
 import barrierAmulet from './barrier_amulet/icon.svg';
 import threadCharm from './thread_charm/icon.svg';
 import shortSpear from './short_spear/icon.svg';
@@ -26,7 +26,7 @@ export const ITEM_ICON_URLS: Record<string, string> = {
   spiked_cuirass: spikedCuirass,
   desperate_plate: desperatePlate,
   heavy_plate: heavyPlate,
-  cracked_amulet: crackedAmulet,
+  vulture_amulet: vultureAmulet,
   barrier_amulet: barrierAmulet,
   thread_charm: threadCharm,
   short_spear: shortSpear,
