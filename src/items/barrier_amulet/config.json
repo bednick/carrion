@@ -1,0 +1,8 @@
+{
+  "id": "barrier_amulet",
+  "name": "Амулет барьера",
+  "slots": ["amulet"],
+  "type": "accessory",
+  "base_value": 10,
+  "tags": ["accessory", "barrier"]
+}

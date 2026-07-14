@@ -43,6 +43,12 @@ export interface EnemyState {
   phaseIndex?: number;
 }
 
+/** Разовый порог аварийного лечения амулета (docs/content.items.amulet.md): не скейлится редкостью (R5). */
+export interface EmergencyHealConfig {
+  thresholdRatio: number;
+  healAmount: number;
+}
+
 export interface HeroState {
   maxHp: number;
   hp: number;
@@ -51,6 +57,16 @@ export interface HeroState {
   // его авторит хук предмета при срабатывании (docs/combat-events.md §5).
   weaponTimers: { slot: SlotType; interval: number; elapsed: number }[];
   unarmedTimer: number;
+  // Барьер (временный HP-пул поверх обычного HP, docs/content.items.amulet.md): выдаётся заново
+  // на каждый бой (buildInitialHero), тает по мере поглощения урона в applyDamage, не
+  // восстанавливается до следующего боя. barrierMax — для UI (бар текущий/максимум).
+  barrier: number;
+  barrierMax: number;
+  // Аварийный хил (docs/content.items.amulet.md): конфиг читается один раз при сборке героя из
+  // ItemBehavior.emergencyHeal; emergencyHealUsed — флаг «уже сработал в этом бою», сбрасывается
+  // на каждый buildInitialHero (новый бой), не на смену фазы одного боя.
+  emergencyHeal?: EmergencyHealConfig;
+  emergencyHealUsed: boolean;
 }
 
 export type CombatPhase = 'fighting' | 'walking' | 'done' | 'dead';

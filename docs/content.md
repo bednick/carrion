@@ -202,14 +202,14 @@ boss_DPS(zone) = 25 × hero_DPS_ref(zone) / boss_total_HP
 
 ```json
 {
-  "id": "robe_scrap",
-  "name": "Лоскут мантии",
+  "id": "gleaming_plate",
+  "name": "Блестящие латы",
   "slots": [
     "body"
   ],
   "type": "armor",
   "base_value": 10,
-  "damage_reduction": 1
+  "damage_reduction": 2
 }
 ```
 

@@ -14,7 +14,12 @@
     "items": [
       { "item_id": "short_sword", "chance": 0.10 },
       { "item_id": "cracked_amulet", "chance": 0.10 },
-      { "item_id": "leech_bead", "chance": 0.10 }
+      { "item_id": "leech_bead", "chance": 0.10 },
+      { "item_id": "barrier_amulet", "chance": 0.10 },
+      { "item_id": "thread_charm", "chance": 0.10 },
+      { "item_id": "spiked_cuirass", "chance": 0.10 },
+      { "item_id": "desperate_plate", "chance": 0.10 },
+      { "item_id": "heavy_plate", "chance": 0.10 }
     ]
   },
   "boss": {
@@ -25,7 +30,12 @@
       "items": [
         { "item_id": "short_sword", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "cracked_amulet", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "leech_bead", "chance": 0.10, "rarity": "uncommon" }
+        { "item_id": "leech_bead", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "barrier_amulet", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "thread_charm", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "spiked_cuirass", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "desperate_plate", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "heavy_plate", "chance": 0.10, "rarity": "uncommon" }
       ]
     }
   }

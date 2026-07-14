@@ -1,5 +1,6 @@
 import type { Rarity, SlotType, ItemInstance } from './types';
 import type { EventType, EventOf, EventResult } from '../combat/events';
+import type { EmergencyHealConfig } from '../combat/types';
 
 /** Снимок боя «только для чтения», доступный хукам для условных синергий. */
 export interface CombatView {
@@ -59,6 +60,11 @@ export interface WeaponTimerMod {
  * - `weaponTimerMod` — кросс-slot модификатор таймера другого слота (см. `WeaponTimerMod`).
  * - `baseDamage` — «паспортный» урон оружия (без крита/риддеров), читается кросс-slot через
  *   `CombatView.mainWeaponBaseDamage` (напр. контрудар buckler «бьёт как обычная атака»).
+ * - `barrierAmount`/`emergencyHeal` — не хуки-трансформеры, а декларативные значения, читаемые
+ *   ДВИЖКОМ один раз при сборке героя (`CombatEngine.buildInitialHero`, тот же приём, что у
+ *   `attackInterval`) — сама механика (поглощение барьером, разовый порог) живёт в
+ *   `CombatEngine.applyDamage`, не в `on`-хуке предмета (нужно мутируемое per-fight состояние,
+ *   которого у стейтлес-хуков нет), см. `docs/content.items.amulet.md`.
  */
 export interface ItemBehavior {
   attackInterval?: (rarity: Rarity) => number;
@@ -67,4 +73,6 @@ export interface ItemBehavior {
   meta?: (rarity: Rarity) => MetaModifiers;
   weaponTimerMod?: (rarity: Rarity, targetSlot: SlotType) => WeaponTimerMod | undefined;
   baseDamage?: (rarity: Rarity) => number;
+  barrierAmount?: (rarity: Rarity) => number;
+  emergencyHeal?: (rarity: Rarity) => EmergencyHealConfig;
 }

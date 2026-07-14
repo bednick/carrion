@@ -11,6 +11,7 @@ const COLORS: Record<FloaterType, number> = {
   block: 0xffdd00,
   absorb: 0x88bbdd,
   counter: 0xff8844,
+  barrier: 0x66ccff,
 };
 
 const LABELS: Record<FloaterType, (v: number) => string> = {
@@ -22,6 +23,7 @@ const LABELS: Record<FloaterType, (v: number) => string> = {
   block: () => 'Блок',
   absorb: () => 'Отражено',
   counter: () => 'Контрудар!',
+  barrier: v => `-${v} барьер`,
 };
 
 const FONT_SIZE = 20;

@@ -1,0 +1,8 @@
+{
+  "id": "heavy_plate",
+  "name": "Тяжёлые латы",
+  "slots": ["body"],
+  "type": "armor",
+  "base_value": 10,
+  "tags": ["armor", "slow"]
+}

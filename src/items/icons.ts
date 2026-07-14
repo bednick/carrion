@@ -1,6 +1,11 @@
 import battleStaff from './battle_staff/icon.svg';
-import robeScrap from './robe_scrap/icon.svg';
+import gleamingPlate from './gleaming_plate/icon.svg';
+import spikedCuirass from './spiked_cuirass/icon.svg';
+import desperatePlate from './desperate_plate/icon.svg';
+import heavyPlate from './heavy_plate/icon.svg';
 import crackedAmulet from './cracked_amulet/icon.svg';
+import barrierAmulet from './barrier_amulet/icon.svg';
+import threadCharm from './thread_charm/icon.svg';
 import shortSpear from './short_spear/icon.svg';
 import dagger from './dagger/icon.svg';
 import heavyShield from './heavy_shield/icon.svg';
@@ -17,8 +22,13 @@ import warPick from './war_pick/icon.svg';
 
 export const ITEM_ICON_URLS: Record<string, string> = {
   battle_staff: battleStaff,
-  robe_scrap: robeScrap,
+  gleaming_plate: gleamingPlate,
+  spiked_cuirass: spikedCuirass,
+  desperate_plate: desperatePlate,
+  heavy_plate: heavyPlate,
   cracked_amulet: crackedAmulet,
+  barrier_amulet: barrierAmulet,
+  thread_charm: threadCharm,
   short_spear: shortSpear,
   dagger: dagger,
   heavy_shield: heavyShield,
