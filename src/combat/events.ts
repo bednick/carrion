@@ -43,8 +43,10 @@ export type GameEvent = EventMeta &
     | { type: 'fight_start'; enemies: string[] }
     | { type: 'fight_end'; outcome: 'win' }
     | { type: 'attack_ready'; source: Side; target: Side } // часы: поток стамины заполнен
-    | { type: 'attack'; source: Side; target: Side; amount: number } // взмах, авторённый предметом
-    | { type: 'damage'; source: Side; target: Side; amount: number } // экземпляр урона «в полёте»
+    // armorPierce (0..1) — доля брони цели, игнорируемая этим ударом (напр. крит `war_pick`); движок
+    // переносит поле с `attack` на выведенный `damage` (см. `CombatEngine.apply`), `enemyDefend` его читает.
+    | { type: 'attack'; source: Side; target: Side; amount: number; armorPierce?: number } // взмах, авторённый предметом
+    | { type: 'damage'; source: Side; target: Side; amount: number; armorPierce?: number } // экземпляр урона «в полёте»
     | { type: 'block'; source: Side; target: Side; prevented: number } // урон полностью отклонён (щит)
     | { type: 'dodge'; source: Side; target: Side } // враг уклонился — входящий урон погашен
     | { type: 'counter'; source: Side; target: Side } // чисто презентационное: «это был контрудар», HP не трогает

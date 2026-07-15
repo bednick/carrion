@@ -260,7 +260,7 @@ export default standardWeapon({damage: 2, interval: 1.0, scale: {damage: 1.1, in
 | Лайфстил за удар             | на `damage`(source=hero, target=enemy): `spawn:[heal(target=hero)]` |
 | Контрудар (`buckler`)        | на `damage`(target=hero), независимый ролл: `spawn:[attack(source.slot=hand_right, target=атакующий враг) + counter]` — `attack`, не `damage` напрямую, чтобы поймать крит-хуки вроде `heavy_gloves`; `counter` — чисто презентационный дубль рядом (см. §2, `content.items.hand_left.md`) |
 | Шипы (`spiked_shield`)       | на `damage`(target=hero), безусловно: `spawn:[damage(target=атакующий враг)]` (доля дошедшего урона) |
-| Флэт-броня врага             | на `damage`(target=enemy): `replace:[damage с меньшим amount]`      |
+| Броня врага (`armor`)        | на `damage`(target=enemy): `replace:[damage с меньшим amount]`      |
 | Уклонение врага              | на `damage`(target=enemy): шанс → `replace:[]` + `spawn:[dodge]`    |
 | Шипы врага                   | на `damage`(target=enemy): `spawn:[damage(target=hero)]`           |
 
@@ -273,9 +273,13 @@ export default standardWeapon({damage: 2, interval: 1.0, scale: {damage: 1.1, in
 урон. Порядок внутри хука: **dodge → armor → thorns** (уклонился — броня/шипы не применяются). Спавны штампуются
 `origin: { from: 'enemy', id }`. Ничего отдельно не скейлится — значения берутся как есть.
 
-Если **флэт-броня свела реальный удар в ноль** (`before > 0`, после — `0`), хук дополнительно спавнит
-`block`(target=enemy) — то же терминальное событие полного отклонения, что у щита героя; UI рисует над мобом
-«Отражено» (щит героя даёт «Блок»). Уклонение спавнит `dodge` → UI «мимо».
+Броня (`armor`) — процентная и мультипликативная (0..1, с 2026-07, см. `docs/mechanics.md` §«Броня vs щит»,
+`src/combat/mitigation.ts`): снижает `amount`, но никогда не обнуляет удар целиком — округление гарантирует
+минимум 1, если исходный урон был > 0. `armorPierce` удара (напр. крит `war_pick`, см.
+`content.items.hand_right.md`) снижает эффективную броню для конкретного удара. Терминальное `block`(target=enemy)
+от брони больше не спавнится (не может сработать при мультипликативной модели, ветка убрана вместе с
+FloaterType `absorb`/надписью «Отражено», ныне мёртвым UI) — единственная реакция врага на входящий удар с
+собственной надписью теперь `dodge` → UI «мимо».
 
 Эмерджентность бесплатна: «лайфстил за удар» автоматически сильнее с `fast`-оружием — больше срабатываний `damage`,
 без спец-кода на пару (§4.B).

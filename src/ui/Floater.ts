@@ -9,7 +9,6 @@ const COLORS: Record<FloaterType, number> = {
   gold: 0xffcc00,
   miss: 0xcccccc,
   block: 0xffdd00,
-  absorb: 0x88bbdd,
   counter: 0xff8844,
   barrier: 0x66ccff,
 };
@@ -21,7 +20,6 @@ const LABELS: Record<FloaterType, (v: number) => string> = {
   gold: v => `+${v}G`,
   miss: () => 'мимо',
   block: () => 'Блок',
-  absorb: () => 'Отражено',
   counter: () => 'Контрудар!',
   barrier: v => `-${v} барьер`,
 };
@@ -33,7 +31,7 @@ const FONT_SIZES: Partial<Record<FloaterType, number>> = {
 };
 
 export function spawnFloater(scene: Phaser.Scene, type: FloaterType, value: number, x: number, y: number) {
-  // Цифры урона рисуем поверх длинных надписей (Блок/Отражено/мимо), чтобы не терялись при наложении.
+  // Цифры урона рисуем поверх длинных надписей (Блок/мимо), чтобы не терялись при наложении.
   const depth = type === 'damage' ? 320 : 300;
   const text = scene.add.text(x, y, LABELS[type](value), {
     fontSize: `${FONT_SIZES[type] ?? FONT_SIZE}px`,

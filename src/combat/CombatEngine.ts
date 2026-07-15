@@ -7,6 +7,7 @@ import type { GameEvent, Side, Origin, EventResult } from './events';
 import { UNARMED_DAMAGE } from './events';
 import { getItemBehavior } from '../items/registry';
 import { HANDLER_ORDER, MAX_CASCADE, runPass, stampOrigin } from './dispatcher';
+import { mitigateDamage } from './mitigation';
 
 const UNARMED_INTERVAL = 1500;
 
@@ -322,17 +323,17 @@ export class CombatEngine {
       };
     }
 
-    // armor — флэт-срез входящего урона.
+    // armor — мультипликативный срез входящего урона (доля 0..1, никогда не обнуляет удар целиком).
+    // armorPierce удара (напр. крит `war_pick`) снижает эффективную броню для ЭТОГО удара — переносится
+    // с `attack` на `damage` в `apply()`, здесь не скейлится и не стакается (одно значение на удар).
     const before = e.amount;
     let amount = before;
-    if (def.armor) amount = Math.max(0, amount - def.armor);
+    if (def.armor) {
+      const effectiveArmor = def.armor * (1 - (e.armorPierce ?? 0));
+      amount = mitigateDamage(amount, effectiveArmor);
+    }
 
     const spawn: GameEvent[] = [];
-
-    // Броня свела реальный удар в ноль → полное отклонение (событие `block` для UI «Отражено»).
-    if (def.armor && before > 0 && amount === 0) {
-      spawn.push({ type: 'block', source: e.source, target: e.target, prevented: before, origin });
-    }
 
     // thorns — отражает фикс в героя за сам факт удара (только на удар героя).
     if (def.thorns && e.source.side === 'hero') {
@@ -362,7 +363,7 @@ export class CombatEngine {
         return [];
 
       case 'attack':
-        return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, origin: e.origin }];
+        return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, armorPierce: e.armorPierce, origin: e.origin }];
 
       case 'damage':
         return this.applyDamage(e.source, e.target, e.amount);

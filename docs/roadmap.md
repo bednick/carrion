@@ -24,7 +24,8 @@
 
 ---
 
-> **Защита врага реализована (2026-07).** Флэт-броня, уклонение (шансовое) и шипы врага живут в движке через
+> **Защита врага реализована (2026-07).** Процентная броня (мультипликативная, с 2026-07 — см. `docs/mechanics.md`
+> §«Броня vs щит»), уклонение (шансовое) и шипы врага живут в движке через
 > `MobConfig.defense: { armor?, dodge?, thorns? }` — встроенный хук на `damage`(target=enemy), порядок
 > dodge → armor → thorns (см. [`combat-events.md`](combat-events.md) §6, [`content.mobs.format.md`](content.mobs.format.md)).
 > Демо-мобы: `buried_shade` (dodge), `armored_veteran` (armor), `spiked_veteran` (thorns). Остальным

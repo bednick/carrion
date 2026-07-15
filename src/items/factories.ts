@@ -1,6 +1,7 @@
 import type { Rarity } from './types';
 import type { ItemBehavior } from './behavior';
 import { scaleByRarity } from './scaleByRarity';
+import { mitigateDamage } from '../combat/mitigation';
 
 const DMG_COLOR = '#ffcc44';
 const DEF_COLOR = '#44aaff';
@@ -45,30 +46,28 @@ export function standardWeapon(opts: WeaponOpts): ItemBehavior {
 }
 
 export interface ArmorOpts {
-  reduction: number;
+  /** Доля снижения урона (0..1) на `common`. */
+  pct: number;
   scale?: number;
+  /** Потолок доли на верхней редкости — броня не должна вырастать до гарантированного блока. */
+  cap?: number;
 }
 
-/** Броня: на входящий по герою урон снижает `amount` (стакается с другой бронёй по порядку). */
+/** Броня: мультипликативно снижает входящий по герою урон (стакается с другой бронёй по порядку,
+ *  никогда не обнуляет удар целиком — см. `mitigateDamage`). */
 export function standardArmor(opts: ArmorOpts): ItemBehavior {
   const scale = opts.scale ?? 1.5;
-  const reduction = (rarity: Rarity) => Math.round(scaleByRarity(opts.reduction, rarity, scale));
+  const cap = opts.cap ?? 0.6;
+  const pct = (rarity: Rarity) => Math.min(cap, scaleByRarity(opts.pct, rarity, scale));
 
   return {
     on: {
-      // Броня свела реальный удар в ноль → полное отклонение (тот же `block`, что и у брони врага —
-      // см. `enemyDefend` в CombatEngine — для единой UI-надписи «Отражено»/«Блок»).
       damage: (e, ctx) => {
         if (e.target.side !== 'hero') return {};
-        const before = e.amount;
-        const reduced = Math.max(0, before - reduction(ctx.rarity));
-        const spawn = before > 0 && reduced === 0
-          ? [{ type: 'block' as const, source: e.source, target: e.target, prevented: before, origin: e.origin }]
-          : undefined;
-        return { replace: [{ ...e, amount: reduced }], spawn };
+        return { replace: [{ ...e, amount: mitigateDamage(e.amount, pct(ctx.rarity)) }] };
       },
     },
-    stats: (rarity) => [{ text: `Защита: ${reduction(rarity)}`, color: DEF_COLOR }],
+    stats: (rarity) => [{ text: `Защита: ${Math.round(pct(rarity) * 100)}%`, color: DEF_COLOR }],
   };
 }
 

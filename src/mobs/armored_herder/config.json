@@ -5,5 +5,5 @@
   "attacks": [
     { "damage": 5, "interval": 1.0 }
   ],
-  "defense": { "armor": 3 }
+  "defense": { "armor": 0.32 }
 }

@@ -5,7 +5,7 @@
   "attacks": [
     { "damage": 5, "interval": 1.5 }
   ],
-  "defense": { "armor": 4 },
+  "defense": { "armor": 0.4 },
   "phases": [
     { "id": "camp_commander_light" }
   ]

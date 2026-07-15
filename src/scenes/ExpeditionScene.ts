@@ -660,7 +660,7 @@ export class ExpeditionScene extends Phaser.Scene {
       sprite.on('pointerover', () => {
         const def = eCapture.defense;
         const defParts: string[] = [];
-        if (def?.armor) defParts.push(`Броня ${def.armor}`);
+        if (def?.armor) defParts.push(`Броня ${Math.round(def.armor * 100)}%`);
         if (def?.dodge) defParts.push(`Уклон ${Math.round(def.dodge * 100)}%`);
         if (def?.thorns) defParts.push(`Шипы ${def.thorns}`);
         this.tooltip.showText([
@@ -1147,7 +1147,7 @@ export class ExpeditionScene extends Phaser.Scene {
           SoundManager.play('hero_attack');
           const g = this.enemyGraphics[enemyIdx];
           if (g) {
-            // Цифра урона — в случайной точке нижних 2/3 модельки (надписи Блок/Отражено/мимо остаются над головой).
+            // Цифра урона — в случайной точке нижних 2/3 модельки (надписи Блок/мимо остаются над головой).
             const p = this.damageSpot(g.sprite);
             spawnFloater(this, 'damage', amount, p.x, p.y);
             this.flashSprite(g.sprite, 0xff0000);
@@ -1156,21 +1156,13 @@ export class ExpeditionScene extends Phaser.Scene {
           this.updateEnemyGraphics();
         }
       },
-      onBlock: (target, enemyIdx) => {
+      onBlock: (target) => {
+        // target=enemy сейчас недостижим: броня мобов процентная и не обнуляет удар целиком
+        // (см. docs/mechanics.md §«Броня vs щит»), полный блок остаётся только за щитом героя.
+        if (target !== 'hero') return;
         SoundManager.play('block');
-        if (target === 'hero') {
-          this.flashSprite(this.heroSprite, 0xffdd00);
-          spawnFloater(this, 'block', 0, 560, 130);
-        } else {
-          // Флэт-броня врага свела удар в ноль → «Отражено» над мобом.
-          const g = this.enemyGraphics[enemyIdx];
-          if (g) {
-            const headY = g.sprite instanceof Phaser.GameObjects.Sprite
-              ? g.sprite.y - g.sprite.displayHeight - 10
-              : g.sprite.y - 60;
-            spawnFloater(this, 'absorb', 0, g.sprite.x, headY);
-          }
-        }
+        this.flashSprite(this.heroSprite, 0xffdd00);
+        spawnFloater(this, 'block', 0, 560, 130);
       },
       onDodge: (enemyIdx) => {
         SoundManager.play('block');
