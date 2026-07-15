@@ -47,30 +47,47 @@
       .progress { color: #667788; font-size: 11px; margin-top: 6px; }
       .winrate-bar { height: 6px; background: #2a2a44; border-radius: 3px; overflow: hidden; margin-top: 4px; }
       .winrate-bar > div { height: 100%; background: #44aa44; }
+      .nav { margin-bottom: 16px; }
+      .nav a { color: #77aaff; text-decoration: none; font-size: 12px; }
+      .nav a:hover { text-decoration: underline; }
       .hist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
       .hist-box { background: #14141f; border: 1px solid #333355; border-radius: 4px; padding: 8px 10px 4px; }
       .hist-title { color: #8899aa; font-size: 11px; margin-bottom: 4px; }
+      .details-title { color: #ffcc44; font-size: 14px; margin-bottom: 10px; }
+      .details-hint { color: #667788; font-size: 12px; }
+      #summary table { table-layout: fixed; }
+      #summary table tr[data-zone-id] { cursor: pointer; }
+      #summary table tr[data-zone-id]:hover { background: #24243c; }
+      #summary table tr.selected { background: #2a3a5c; }
+      .faction-group {
+        border-left: 3px solid var(--faction-color, #445);
+        padding-left: 12px; margin-bottom: 20px;
+      }
+      .faction-group:last-child { margin-bottom: 0; }
+      .faction-title {
+        display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+        font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;
+        color: var(--faction-color, #aaccff); font-weight: 600;
+      }
+      .faction-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faction-color, #aaccff); flex-shrink: 0; }
+      .faction-group table { margin-bottom: 0; }
       @media (max-width: 720px) { .hist-grid { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body>
     <h1>Балансировочный симулятор экспедиций</h1>
+    <div class="nav"><a href="./balance-items.html">Баланс предметов →</a></div>
     <div class="hint">
-      Гоняет Monte Carlo по реальному CombatEngine (тот же код, что и игра). Собери билд, выбери зону,
-      запусти. Та же логика доступна из консоли: <code>npm run balance -- &lt;zoneId&gt;</code>.
-    </div>
-
-    <div class="panel">
-      <h2>Зона</h2>
-      <div class="row">
-        <label for="zone">Зона</label>
-        <select id="zone" class="item-select"></select>
-      </div>
-      <div id="zoneMeta" class="zone-meta"></div>
+      Гоняет Monte Carlo по реальному CombatEngine (тот же код, что и игра) по всем зонам сразу. Собери билд,
+      запусти, кликни по строке в таблице для подробностей по зоне.
     </div>
 
     <div class="panel">
       <h2>Билд героя</h2>
+      <div class="row">
+        <label for="buildPreset">Заготовка</label>
+        <select id="buildPreset" class="item-select"></select>
+      </div>
       <div id="slots"></div>
     </div>
 
@@ -78,18 +95,22 @@
       <h2>Прогон</h2>
       <div class="row">
         <label for="trials">Прогонов</label>
-        <input id="trials" type="number" value="3000" min="100" max="200000" step="100" />
+        <input id="trials" type="number" value="1000" min="100" max="200000" step="100" />
       </div>
       <div class="actions">
-        <button id="runOne">Запустить на зоне</button>
-        <button id="runAll" class="secondary">Сравнить по всем зонам</button>
+        <button id="run">Запустить по всем зонам</button>
       </div>
       <div id="progress" class="progress"></div>
     </div>
 
     <div class="panel">
-      <h2>Результат</h2>
-      <div id="results"></div>
+      <h2>Результаты по зонам</h2>
+      <div id="summary"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Подробности</h2>
+      <div id="details"></div>
     </div>
 
     <script type="module" src="/src/balance/main.ts"></script>

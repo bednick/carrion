@@ -1,8 +1,12 @@
 {
   "id": "rune_skeleton",
   "name": "Рунный скелет",
-  "health": 10,
+  "tier": "uncommon",
+  "health": 30,
   "attacks": [
-    { "damage": 5, "interval": 1.25 }
+    {
+      "damage": 2,
+      "interval": 4.2
+    }
   ]
 }

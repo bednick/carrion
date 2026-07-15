@@ -1,8 +1,16 @@
 {
   "id": "swaddled_horror",
   "name": "Спелёнутый ужас",
-  "health": 20,
+  "tier": "legendary",
+  "health": 50,
   "attacks": [
-    { "damage": 5, "interval": 1.75 }
+    {
+      "damage": 12,
+      "interval": 1.0
+    },
+    {
+      "damage": 12,
+      "interval": 1.2
+    }
   ]
 }

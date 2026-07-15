@@ -6,23 +6,33 @@
   "star": 2,
   "fights": { "min": 13, "max": 15 },
   "mob_pool": [
-    { "mob_id": "rune_skeleton", "weight": 30 },
-    { "mob_id": "rune_hound", "weight": 25 },
-    { "mob_id": "rune_archer", "weight": 15 },
-    { "mob_id": "bone_construct", "weight": 12 },
-    { "mob_id": "bone_centipede", "weight": 12 },
-    { "mob_id": "bone_battlemage", "weight": 6 }
+    { "mob_id": "rune_skeleton", "weight": 100 },
+    { "mob_id": "rune_hound", "weight": 100 },
+    { "mob_id": "rune_archer", "weight": 50 },
+    { "mob_id": "bone_construct", "weight": 50 },
+    { "mob_id": "bone_centipede", "weight": 50 },
+    { "mob_id": "bone_battlemage", "weight": 40 }
   ],
   "mob_loot": {
     "gold": { "min": 0, "max": 0 },
-    "items": []
+    "items": [
+      { "item_id": "leech_bead", "chance": 0.10, "rarity": "uncommon" },
+      { "item_id": "vulture_amulet", "chance": 0.10, "rarity": "uncommon" },
+      { "item_id": "thread_charm", "chance": 0.10, "rarity": "uncommon" },
+      { "item_id": "barrier_amulet", "chance": 0.10, "rarity": "uncommon" }
+    ]
   },
   "boss": {
     "mob_id": "bone_summoner",
     "loot": {
       "gold": { "min": 800, "max": 1200 },
       "essence": {"rare":  {"min": 10, "max": 20}},
-      "items": []
+      "items": [
+        { "item_id": "leech_bead", "chance": 0.10, "rarity": "rare" },
+        { "item_id": "vulture_amulet", "chance": 0.10, "rarity": "rare" },
+        { "item_id": "thread_charm", "chance": 0.10, "rarity": "rare" },
+        { "item_id": "barrier_amulet", "chance": 0.10, "rarity": "rare" }
+      ]
     }
   }
 }

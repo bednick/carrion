@@ -1,9 +1,15 @@
 {
   "id": "bone_stub",
   "name": "Костяной обрубок",
-  "health": 10,
+  "tier": "rare",
+  "health": 20,
   "attacks": [
-    { "damage": 5, "interval": 1.0 }
+    {
+      "damage": 1,
+      "interval": 2
+    }
   ],
-  "ui": { "scale": 0.8 }
+  "ui": {
+    "scale": 0.8
+  }
 }

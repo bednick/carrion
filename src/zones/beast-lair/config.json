@@ -6,22 +6,30 @@
   "star": 2,
   "fights": { "min": 9, "max": 11 },
   "mob_pool": [
-    { "mob_id": "dire_wolf", "weight": 40 },
-    { "mob_id": "hyena", "weight": 25 },
-    { "mob_id": "boar", "weight": 15 },
-    { "mob_id": "she_wolf", "weight": 12 },
-    { "mob_id": "beast_den", "weight": 8 }
+    { "mob_id": "dire_wolf", "weight": 100 },
+    { "mob_id": "hyena", "weight": 100 },
+    { "mob_id": "boar", "weight": 50 },
+    { "mob_id": "she_wolf", "weight": 50 },
+    { "mob_id": "beast_den", "weight": 40 }
   ],
   "mob_loot": {
     "gold": { "min": 0, "max": 0 },
-    "items": []
+    "items": [
+      { "item_id": "heavy_gloves", "chance": 0.10, "rarity": "uncommon" },
+      { "item_id": "light_gloves", "chance": 0.10, "rarity": "uncommon" },
+      { "item_id": "comfortable_gloves", "chance": 0.10, "rarity": "uncommon" }
+    ]
   },
   "boss": {
     "mob_id": "pack_leader",
     "loot": {
       "gold": { "min": 800, "max": 1200 },
       "essence": {"rare":  {"min": 10, "max": 20}},
-      "items": []
+      "items": [
+        { "item_id": "heavy_gloves", "chance": 0.10, "rarity": "rare" },
+        { "item_id": "light_gloves", "chance": 0.10, "rarity": "rare" },
+        { "item_id": "comfortable_gloves", "chance": 0.10, "rarity": "rare" }
+      ]
     }
   }
 }

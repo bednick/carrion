@@ -1,6 +1,7 @@
 {
   "id": "headless_knight",
   "name": "Рыцарь без головы",
+  "tier": "legendary",
   "health": 50,
   "attacks": [
     { "damage": 4, "interval": 1.75 }

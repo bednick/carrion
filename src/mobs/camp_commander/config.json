@@ -1,12 +1,20 @@
 {
   "id": "camp_commander",
   "name": "Командир лагеря",
-  "health": 20,
+  "tier": "legendary",
+  "health": 75,
   "attacks": [
-    { "damage": 5, "interval": 1.5 }
+    {
+      "damage": 10,
+      "interval": 7
+    }
   ],
-  "defense": { "armor": 0.4 },
+  "defense": {
+    "armor": 0.7
+  },
   "phases": [
-    { "id": "camp_commander_light" }
+    {
+      "id": "camp_commander_light"
+    }
   ]
 }

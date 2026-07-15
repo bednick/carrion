@@ -1,8 +1,0 @@
-{
-  "id": "heavy_shield",
-  "name": "Тяжёлый щит",
-  "slots": ["hand_left"],
-  "type": "shield",
-  "base_value": 10,
-  "tags": ["shield", "block"]
-}

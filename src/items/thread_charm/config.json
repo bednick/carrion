@@ -1,8 +1,0 @@
-{
-  "id": "thread_charm",
-  "name": "Оберег на волоске",
-  "slots": ["amulet"],
-  "type": "accessory",
-  "base_value": 10,
-  "tags": ["accessory", "last_stand"]
-}

@@ -47,8 +47,8 @@ export const ALL_ZONE_IDS = [
   'crypt',
   'beast-lair',
   'predator-pasture',
-  'marauder-lair',
   'abandoned-camp',
+  'marauder-lair',
   'battlefield',
 ];
 

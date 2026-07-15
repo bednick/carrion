@@ -1,11 +1,28 @@
 {
   "id": "she_wolf",
   "name": "Волчица-мать",
-  "health": 10,
+  "tier": "rare",
+  "health": 70,
   "attacks": [
-    { "damage": 5, "interval": 1.25 }
+    {
+      "damage": 3,
+      "interval": 6.6
+    }
   ],
+  "position": 2,
   "summons": [
-    { "mob_id": "dire_wolf", "trigger": { "type": "interval", "every": 3.0 } }
+    {
+      "mob_id": "dire_wolf",
+      "trigger": {
+        "type": "start"
+      }
+    },
+    {
+      "mob_id": "dire_wolf",
+      "trigger": {
+        "type": "interval",
+        "every": 6.0
+      }
+    }
   ]
 }

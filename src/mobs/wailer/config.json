@@ -1,9 +1,15 @@
 {
   "id": "wailer",
   "name": "Плакальщик",
-  "health": 10,
+  "tier": "uncommon",
+  "health": 50,
   "attacks": [
-    { "damage": 5, "interval": 2.0 }
+    {
+      "damage": 1,
+      "interval": 4.92
+    }
   ],
-  "ui": { "alpha": 0.5 }
+  "ui": {
+    "alpha": 0.5
+  }
 }

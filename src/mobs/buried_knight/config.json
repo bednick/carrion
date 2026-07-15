@@ -1,8 +1,12 @@
 {
   "id": "buried_knight",
   "name": "Погребённый латник",
-  "health": 10,
+  "tier": "rare",
+  "health": 50,
   "attacks": [
-    { "damage": 5, "interval": 1.5 }
+    {
+      "damage": 2,
+      "interval": 3.28
+    }
   ]
 }

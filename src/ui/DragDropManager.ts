@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Rarity, SlotType } from '../items/types';
 import type { ItemInstance } from '../items/types';
-import { getItemConfig } from '../items/registry';
+import { getItemBehavior } from '../items/registry';
 import { itemIconKey } from '../items/icons';
 
 const RARITY_COLORS: Record<Rarity, number> = {
@@ -176,7 +176,7 @@ export class DragDropManager {
     const sameSource = slotId === this.heldFrom;
     const compatible = sameSource
       || !slot.slotType
-      || getItemConfig(this.heldItem.item_id).slots.includes(slot.slotType);
+      || getItemBehavior(this.heldItem.item_id).slots.includes(slot.slotType);
     if (!compatible) return 'rejected';
 
     if (slot.item === null) {
@@ -229,8 +229,8 @@ export class DragDropManager {
   private canAccept(slot: SlotZone, item: ItemInstance): boolean {
     if (slot.item !== null && !slot.allowOccupied) return false;
     if (!slot.slotType) return true;
-    const cfg = getItemConfig(item.item_id);
-    return cfg.slots.includes(slot.slotType);
+    const beh = getItemBehavior(item.item_id);
+    return beh.slots.includes(slot.slotType);
   }
 
   // ─── Подсветка подходящих слотов ─────────────────────────────────────
@@ -240,11 +240,11 @@ export class DragDropManager {
     this.clearHighlights();
     if (!this.heldItem) return;
 
-    const cfg = getItemConfig(this.heldItem.item_id);
+    const beh = getItemBehavior(this.heldItem.item_id);
     for (const slot of this.slots.values()) {
       // «Область использования» = типизированный слот (экипировка/стойка),
       // подходящий предмету. Универсальные зоны (сундук, продажа) не подсвечиваем.
-      if (!slot.slotType || !cfg.slots.includes(slot.slotType)) continue;
+      if (!slot.slotType || !beh.slots.includes(slot.slotType)) continue;
 
       const r = slot.rect;
       const rect = this.scene.add

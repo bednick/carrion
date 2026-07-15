@@ -1,8 +1,21 @@
 {
   "id": "dire_wolf",
   "name": "Лютоволк",
-  "health": 10,
+  "tier": "uncommon",
+  "health": 35,
   "attacks": [
-    { "damage": 5, "interval": 0.75 }
+    {
+      "damage": 3,
+      "interval": 1.6
+    }
+  ],
+  "summons": [
+    {
+      "mob_id": "dire_wolf",
+      "count": 1,
+      "trigger": {
+        "type": "start"
+      }
+    }
   ]
 }

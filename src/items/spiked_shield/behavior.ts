@@ -7,6 +7,11 @@ import type { Rarity } from '../types';
 const THORNS_RATIO: Record<Rarity, number> = { common: 0.10, uncommon: 0.13, rare: 0.16, epic: 0.20, legendary: 0.20 };
 
 const behavior: ItemBehavior = {
+  name: 'Шипастый щит',
+  slots: ['hand_left'],
+  type: 'shield',
+  baseValue: 10,
+  tags: ['shield', 'thorns'],
   on: {
     damage: (e, ctx) => {
       if (e.target.side !== 'hero' || e.amount <= 0) return {};

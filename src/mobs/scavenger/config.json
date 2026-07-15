@@ -1,6 +1,7 @@
 {
   "id": "scavenger",
   "name": "Мусорщик",
+  "tier": "common",
   "health": 25,
   "attacks": [
     { "damage": 1, "interval": 1.25 }

@@ -1,11 +1,17 @@
 {
   "id": "unquiet_dead",
   "name": "Неупокоенный",
-  "health": 10,
+  "tier": "rare",
+  "health": 50,
   "attacks": [
-    { "damage": 5, "interval": 1.0 }
+    {
+      "damage": 1,
+      "interval": 2.87
+    }
   ],
   "phases": [
-    { "id": "unquiet_risen" }
+    {
+      "id": "unquiet_risen"
+    }
   ]
 }

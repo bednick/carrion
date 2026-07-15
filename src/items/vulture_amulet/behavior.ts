@@ -7,9 +7,14 @@ import type { Rarity } from '../types';
 // меняется по ходу боя, а hp конкретно этого врага уже обнулён к моменту kill (applyDamage
 // порождает kill только когда enemy.hp <= 0), так что читаем именно maxHp, не hp. legendary не
 // крафтится — повторяет epic (см. docs/content.items.amulet.md).
-const HEAL_PERCENT: Record<Rarity, number> = { common: 0.20, uncommon: 0.30, rare: 0.40, epic: 0.50, legendary: 0.50 };
+const HEAL_PERCENT: Record<Rarity, number> = { common: 0.10, uncommon: 0.15, rare: 0.20, epic: 0.25, legendary: 0.25 };
 
 const behavior: ItemBehavior = {
+  name: 'Амулет грифа',
+  slots: ['amulet'],
+  type: 'accessory',
+  baseValue: 10,
+  tags: ['accessory', 'on_kill', 'lifesteal'],
   on: {
     kill: (e, ctx) => {
       if (e.target.side !== 'enemy') return {};

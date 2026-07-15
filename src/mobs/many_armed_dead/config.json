@@ -1,11 +1,24 @@
 {
   "id": "many_armed_dead",
   "name": "Многорукий мертвец",
-  "health": 10,
+  "tier": "epic",
+  "health": 50,
   "attacks": [
-    { "damage": 5, "interval": 0.75 },
-    { "damage": 5, "interval": 1.0 },
-    { "damage": 5, "interval": 1.25 },
-    { "damage": 5, "interval": 1.5 }
+    {
+      "damage": 1,
+      "interval": 2.95
+    },
+    {
+      "damage": 1,
+      "interval": 3.28
+    },
+    {
+      "damage": 1,
+      "interval": 3.61
+    },
+    {
+      "damage": 1,
+      "interval": 3.94
+    }
   ]
 }

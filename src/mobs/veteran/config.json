@@ -1,8 +1,15 @@
 {
   "id": "veteran",
   "name": "Ветеран",
-  "health": 10,
+  "tier": "uncommon",
+  "health": 50,
   "attacks": [
-    { "damage": 5, "interval": 1.0 }
-  ]
+    {
+      "damage": 3,
+      "interval": 3.79
+    }
+  ],
+  "defense": {
+    "armor": 0.40
+  }
 }

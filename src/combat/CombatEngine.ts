@@ -363,7 +363,7 @@ export class CombatEngine {
         return [];
 
       case 'attack':
-        return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, armorPierce: e.armorPierce, origin: e.origin }];
+        return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, armorPierce: e.armorPierce, splash: e.splash, origin: e.origin }];
 
       case 'damage':
         return this.applyDamage(e.source, e.target, e.amount);
@@ -385,9 +385,10 @@ export class CombatEngine {
       case 'heal': {
         if (e.target.side === 'hero') {
           const hero = this.state.hero;
-          const amount = Math.max(0, Math.round(e.amount));
-          hero.hp = Math.min(hero.maxHp, hero.hp + amount);
-          if (amount > 0) this.cb.onHeal?.(amount);
+          const requested = Math.max(0, Math.round(e.amount));
+          const applied = Math.min(requested, hero.maxHp - hero.hp);
+          hero.hp += applied;
+          if (applied > 0) this.cb.onHeal?.(applied);
         }
         return [];
       }

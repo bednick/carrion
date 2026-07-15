@@ -9,6 +9,11 @@ const HP_THRESHOLD = 0.3;
 const REDUCTION: Record<Rarity, number> = { common: 0.18, uncommon: 0.27, rare: 0.37, epic: 0.48, legendary: 0.6 };
 
 const behavior: ItemBehavior = {
+  name: 'Латы отчаяния',
+  slots: ['body'],
+  type: 'armor',
+  baseValue: 10,
+  tags: ['armor', 'last_stand'],
   on: {
     damage: (e, ctx) => {
       if (e.target.side !== 'hero') return {};

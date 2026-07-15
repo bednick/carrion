@@ -1,8 +1,12 @@
 {
   "id": "piglet",
   "name": "Поросёнок",
-  "health": 10,
+  "tier": "rare",
+  "health": 12,
   "attacks": [
-    { "damage": 5, "interval": 0.75 }
+    {
+      "damage": 1,
+      "interval": 1.3
+    }
   ]
 }

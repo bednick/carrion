@@ -1,14 +1,35 @@
 import type { ItemBehavior } from '../behavior';
-import { scaleByRarity } from '../scaleByRarity';
 
 const DMG_COLOR = '#ffcc44';
 
 // Мультихит: один клинок, два честных укола за взмах — оба в ту же цель. Каждый — свой `damage`,
-// лайфстил прокает дважды. Профиль — урон удара и темп (оба скейлятся, как у standardWeapon).
-const damage = (rarity: import('../types').Rarity) => Math.round(scaleByRarity(2, rarity, 1.3));
-const interval = (rarity: import('../types').Rarity) => scaleByRarity(0.8, rarity, 0.9);
+// лайфстил прокает дважды. damage — фиксированная таблица по тиру (2/3/4/5/6), interval подогнан
+// так, чтобы суммарный DPS двух ударов (`2·damage/interval`) рос ×1.3 за уровень редкости от
+// анкора common (4.5), см. src/items/factories.ts (standardWeapon) для того же приёма.
+const DAMAGE_BY_RARITY: Record<import('../types').Rarity, number> = {
+  common: 2,
+  uncommon: 3,
+  rare: 4,
+  epic: 5,
+  legendary: 6,
+};
+const INTERVAL_BY_RARITY: Record<import('../types').Rarity, number> = {
+  common: 0.889,
+  uncommon: 1.026,
+  rare: 1.052,
+  epic: 1.011,
+  legendary: 0.934,
+};
+
+const damage = (rarity: import('../types').Rarity) => DAMAGE_BY_RARITY[rarity];
+const interval = (rarity: import('../types').Rarity) => INTERVAL_BY_RARITY[rarity];
 
 const behavior: ItemBehavior = {
+  name: 'Рапира',
+  slots: ['hand_right'],
+  type: 'weapon',
+  baseValue: 10,
+  tags: ['weapon', 'light', 'fast', 'multihit'],
   attackInterval: interval,
   on: {
     attack_ready: (e, ctx) => {

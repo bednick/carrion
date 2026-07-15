@@ -1,4 +1,4 @@
-import type { Rarity, SlotType, ItemInstance } from './types';
+import type { Rarity, SlotType, ItemType, ItemInstance } from './types';
 import type { EventType, EventOf, EventResult } from '../combat/events';
 import type { EmergencyHealConfig } from '../combat/types';
 
@@ -52,8 +52,17 @@ export interface WeaponTimerMod {
   firstTickRatio?: number;
 }
 
+/** Идентичность + экономика предмета (бывший config.json) — обязательны для любого предмета. */
+export interface ItemIdentity {
+  name: string;
+  slots: SlotType[];
+  type: ItemType;
+  baseValue: number;
+  tags?: string[];
+}
+
 /**
- * Поведение предмета. Всё опционально — отсутствие поля = «ничего не делает».
+ * Поведение предмета. Всё, кроме identity-полей, опционально — отсутствие поля = «ничего не делает».
  * - `attackInterval` — делает предмет оружием: движок строит по нему поток стамины (секунды).
  * - `on` — хуки-трансформеры событий.
  * - `stats` — строки для тултипа (единый источник правды по статам).
@@ -66,7 +75,7 @@ export interface WeaponTimerMod {
  *   `CombatEngine.applyDamage`, не в `on`-хуке предмета (нужно мутируемое per-fight состояние,
  *   которого у стейтлес-хуков нет), см. `docs/content.items.amulet.md`.
  */
-export interface ItemBehavior {
+export interface ItemBehavior extends ItemIdentity {
   attackInterval?: (rarity: Rarity) => number;
   on?: EventHandlers;
   stats?: (rarity: Rarity) => StatLine[];
@@ -76,3 +85,6 @@ export interface ItemBehavior {
   barrierAmount?: (rarity: Rarity) => number;
   emergencyHeal?: (rarity: Rarity) => EmergencyHealConfig;
 }
+
+/** Часть `ItemBehavior` без identity-полей — то, что возвращают фабрики (`standardWeapon` и т.п.). */
+export type ItemCombatBehavior = Omit<ItemBehavior, keyof ItemIdentity>;

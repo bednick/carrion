@@ -1,15 +1,38 @@
 import type { ItemBehavior } from '../behavior';
-import { scaleByRarity } from '../scaleByRarity';
 
 const DMG_COLOR = '#ffcc44';
 
-const damage = (rarity: import('../types').Rarity) => Math.round(scaleByRarity(5, rarity, 1.5));
+// damage/interval — явная таблица по редкости: одноцелевой DPS (`damage/interval`) растёт ×1.3 за
+// уровень от анкора common (4.0); damage подобран под целые числа, interval — остаточная подгонка
+// точности (прошив второй цели даёт тот же `damage` бесплатно, в анкор не входит).
+const DAMAGE_BY_RARITY: Record<import('../types').Rarity, number> = {
+  common: 4,
+  uncommon: 5,
+  rare: 7,
+  epic: 9,
+  legendary: 11,
+};
+const INTERVAL_BY_RARITY: Record<import('../types').Rarity, number> = {
+  common: 1,
+  uncommon: 0.962,
+  rare: 1.036,
+  epic: 1.024,
+  legendary: 0.963,
+};
+
+const damage = (rarity: import('../types').Rarity) => DAMAGE_BY_RARITY[rarity];
+const interval = (rarity: import('../types').Rarity) => INTERVAL_BY_RARITY[rarity];
 
 // Прошив: бьёт основную цель и живого врага в строго соседней ячейке позади неё
 // (по board-слоту, не по индексу массива — те расходятся после призывов). Пустая ячейка
 // между целями блокирует прошив. Обе цели получают одинаковый урон.
 const behavior: ItemBehavior = {
-  attackInterval: () => 1.25,
+  name: 'Короткое копьё',
+  slots: ['hand_right'],
+  type: 'weapon',
+  baseValue: 10,
+  tags: ['weapon', 'pierce', 'slow'],
+  attackInterval: interval,
   on: {
     attack_ready: (e, ctx) => {
       if (e.source.side !== 'hero' || e.source.slot !== ctx.slot || e.origin.from !== 'engine') {
@@ -44,7 +67,7 @@ const behavior: ItemBehavior = {
   },
   stats: (rarity) => [
     { text: `Урон: ${damage(rarity)}`, color: DMG_COLOR },
-    { text: `Перезарядка: 1.25s`, color: DMG_COLOR },
+    { text: `Перезарядка: ${interval(rarity).toFixed(2)}s`, color: DMG_COLOR },
     { text: `Также наносит урон стоящему за целью противнику`, color: DMG_COLOR },
   ],
   baseDamage: damage,

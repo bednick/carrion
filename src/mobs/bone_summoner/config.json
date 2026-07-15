@@ -1,14 +1,27 @@
 {
   "id": "bone_summoner",
   "name": "Призыватель костей",
-  "health": 20,
+  "tier": "legendary",
+  "health": 60,
   "position": 2,
   "summon_placement": "front",
   "attacks": [
-    { "damage": 5, "interval": 1.25 },
-    { "damage": 5, "interval": 2.0 }
+    {
+      "damage": 1,
+      "interval": 1.531
+    },
+    {
+      "damage": 1,
+      "interval": 1.834
+    }
   ],
   "summons": [
-    { "mob_id": "rune_skeleton", "count": 2, "trigger": { "type": "start" } }
+    {
+      "mob_id": "rune_skeleton",
+      "count": 2,
+      "trigger": {
+        "type": "start"
+      }
+    }
   ]
 }

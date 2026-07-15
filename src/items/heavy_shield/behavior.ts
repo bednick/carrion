@@ -7,6 +7,11 @@ import type { Rarity } from '../types';
 const BLOCK_CHANCE: Record<Rarity, number> = { common: 0.25, uncommon: 0.30, rare: 0.35, epic: 0.40, legendary: 0.40 };
 
 const behavior: ItemBehavior = {
+  name: 'Тяжёлый щит',
+  slots: ['hand_left'],
+  type: 'shield',
+  baseValue: 10,
+  tags: ['shield', 'block'],
   on: {
     damage: (e, ctx) => {
       if (e.target.side !== 'hero') return {};

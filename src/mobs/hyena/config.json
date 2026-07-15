@@ -1,9 +1,25 @@
 {
   "id": "hyena",
   "name": "Гиена",
-  "health": 10,
+  "tier": "uncommon",
+  "health": 20,
   "attacks": [
-    { "damage": 5, "interval": 0.9 },
-    { "damage": 5, "interval": 1.1 }
+    {
+      "damage": 1,
+      "interval": 2.5
+    },
+    {
+      "damage": 1,
+      "interval": 2.1
+    }
+  ],
+  "summons": [
+    {
+      "mob_id": "hyena",
+      "count": 3,
+      "trigger": {
+        "type": "start"
+      }
+    }
   ]
 }

@@ -1,8 +1,0 @@
-{
-  "id": "desperate_plate",
-  "name": "Латы отчаяния",
-  "slots": ["body"],
-  "type": "armor",
-  "base_value": 10,
-  "tags": ["armor", "last_stand"]
-}

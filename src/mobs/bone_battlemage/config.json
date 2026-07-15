@@ -1,9 +1,16 @@
 {
   "id": "bone_battlemage",
   "name": "Костяной боевой маг",
-  "health": 10,
+  "tier": "epic",
+  "health": 75,
   "attacks": [
-    { "damage": 5, "interval": 1.0 },
-    { "damage": 5, "interval": 1.75 }
+    {
+      "damage": 10,
+      "interval": 10
+    },
+    {
+      "damage": 3,
+      "interval": 5
+    }
   ]
 }

@@ -10,6 +10,11 @@ const REDUCTION: Record<Rarity, number> = { common: 0.15, uncommon: 0.24, rare: 
 const INTERVAL_PENALTY: Record<Rarity, number> = { common: 0.08, uncommon: 0.11, rare: 0.15, epic: 0.20, legendary: 0.20 };
 
 const behavior: ItemBehavior = {
+  name: 'Тяжёлые латы',
+  slots: ['body'],
+  type: 'armor',
+  baseValue: 10,
+  tags: ['armor', 'slow'],
   on: {
     damage: (e, ctx) => {
       if (e.target.side !== 'hero') return {};

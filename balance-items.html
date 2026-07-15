@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Carrion — баланс предметов</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        background: #1a1a2e; color: #cccccc; font-family: 'Consolas', 'Menlo', monospace;
+        font-size: 13px; min-height: 100%;
+      }
+      body { padding: 24px; max-width: 1100px; margin: 0 auto; }
+      h1 { color: #ffcc44; font-size: 18px; margin-bottom: 4px; }
+      .hint { color: #8899aa; font-size: 12px; margin-bottom: 20px; }
+      .nav { margin-bottom: 16px; }
+      .nav a { color: #77aaff; text-decoration: none; font-size: 12px; }
+      .nav a:hover { text-decoration: underline; }
+      .panel {
+        background: #201f33; border: 1px solid #333355; border-radius: 6px;
+        padding: 16px; margin-bottom: 16px;
+      }
+      .panel h2 { color: #aaccff; font-size: 13px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+      .row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+      .row label { width: 120px; color: #8899aa; flex-shrink: 0; }
+      select {
+        background: #14141f; color: #eeeeee; border: 1px solid #444466; border-radius: 4px;
+        padding: 5px 8px; font-family: inherit; font-size: 12px;
+      }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #2a2a44; vertical-align: top; }
+      th { color: #8899aa; font-weight: normal; }
+      td.num { text-align: right; font-variant-numeric: tabular-nums; }
+      td.effects { color: #99cc99; font-size: 11.5px; }
+      td.tags { color: #8899aa; font-size: 11px; }
+      tr:hover td { background: #24243c; }
+    </style>
+  </head>
+  <body>
+    <h1>Баланс предметов</h1>
+    <div class="nav"><a href="./balance.html">← Симулятор экспедиций</a></div>
+    <div class="hint">
+      Характеристики предметов по типу. Урон и УВС считаются реальным кодом предмета
+      (<code>behavior.ts</code>), поэтому числа совпадают с игрой.
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <label for="rarity">Редкость</label>
+        <select id="rarity"></select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Оружие (hand_right)</h2>
+      <div id="weaponTable"></div>
+    </div>
+
+    <script type="module" src="/src/balance/items-main.ts"></script>
+  </body>
+</html>

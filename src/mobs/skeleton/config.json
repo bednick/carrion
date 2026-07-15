@@ -1,6 +1,7 @@
 {
   "id": "skeleton",
   "name": "Скелет",
+  "tier": "common",
   "health": 25,
   "attacks": [
     { "damage": 2, "interval": 1.25 }

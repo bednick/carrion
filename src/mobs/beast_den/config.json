@@ -1,14 +1,42 @@
 {
   "id": "beast_den",
   "name": "Звериная нора",
-  "health": 10,
+  "tier": "epic",
+  "health": 20,
   "position": 3,
   "summon_placement": "front",
   "attacks": [
-    { "damage": 5, "interval": 1.75 }
+    {
+      "damage": 1,
+      "interval": 5.2
+    }
   ],
   "summons": [
-    { "mob_id": "dire_wolf", "trigger": { "type": "interval", "every": 2.5 } },
-    { "mob_id": "hyena", "trigger": { "type": "interval", "every": 3.5 } }
+    {
+      "mob_id": "dire_wolf",
+      "trigger": {
+        "type": "start"
+      }
+    },
+     {
+      "mob_id": "hyena",
+      "trigger": {
+        "type": "start"
+      }
+    },
+    {
+      "mob_id": "dire_wolf",
+      "trigger": {
+        "type": "interval",
+        "every": 5.0
+      }
+    },
+    {
+      "mob_id": "hyena",
+      "trigger": {
+        "type": "interval",
+        "every": 7.0
+      }
+    }
   ]
 }

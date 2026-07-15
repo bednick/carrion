@@ -1,8 +1,9 @@
 {
   "id": "stubborn_veteran_risen",
   "name": "Упрямец (поднялся)",
+  "tier": "uncommon",
   "health": 10,
   "attacks": [
-    { "damage": 5, "interval": 1.0 }
+    { "damage": 6, "interval": 1.0 }
   ]
 }

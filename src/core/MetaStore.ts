@@ -1,5 +1,5 @@
 import type { QuestRecord } from '../quests/definitions';
-import { getItemConfig, hasItemConfig, ITEM_CONFIGS } from '../items/registry';
+import { getItemBehavior, hasItemBehavior, ITEM_BEHAVIORS } from '../items/registry';
 import type { EssenceTier, EssencePool } from '../items/types';
 import { EventBus } from './EventBus';
 
@@ -76,9 +76,9 @@ function emptyStand(): ArmorStand {
 
 /** Предмет валиден как стартовое оружие: существует, оружие, носится в правой руке. */
 function isValidStartWeapon(itemId: string): boolean {
-  if (!hasItemConfig(itemId)) return false;
-  const cfg = getItemConfig(itemId);
-  return cfg.type === 'weapon' && cfg.slots.includes('hand_right');
+  if (!hasItemBehavior(itemId)) return false;
+  const beh = getItemBehavior(itemId);
+  return beh.type === 'weapon' && beh.slots.includes('hand_right');
 }
 
 /** Три пустые стойки; в первой — стартовое оружие (по умолчанию `battle_staff`) в правой руке. */
@@ -183,13 +183,13 @@ export const MetaStore = {
   },
 
   // Удалённые/переименованные предметы (отсутствующие в реестре) выбрасываем из сейва,
-  // иначе getItemConfig(item_id) бросает и ломает UI (фильтры сундука, экипировку).
+  // иначе getItemBehavior(item_id) бросает и ломает UI (фильтры сундука, экипировку).
   purgeUnknownItems() {
-    state.chest = state.chest.filter((it) => hasItemConfig(it.item_id));
+    state.chest = state.chest.filter((it) => hasItemBehavior(it.item_id));
     for (const stand of state.armor_stands) {
       for (const slot of Object.keys(stand) as SlotId[]) {
         const it = stand[slot];
-        if (it && !hasItemConfig(it.item_id)) stand[slot] = null;
+        if (it && !hasItemBehavior(it.item_id)) stand[slot] = null;
       }
     }
   },
@@ -207,7 +207,7 @@ export const MetaStore = {
 
   /** Список id предметов, годных как стартовое оружие (weapon, слот hand_right). */
   listStartWeapons(): string[] {
-    return Object.keys(ITEM_CONFIGS).filter(isValidStartWeapon);
+    return Object.keys(ITEM_BEHAVIORS).filter(isValidStartWeapon);
   },
 
   get(): MetaState {

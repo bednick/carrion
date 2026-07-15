@@ -10,6 +10,11 @@ const THRESHOLD_RATIO = 0.3;
 const HEAL_PERCENT: Record<Rarity, number> = { common: 0.25, uncommon: 0.40, rare: 0.55, epic: 0.70, legendary: 0.70 };
 
 const behavior: ItemBehavior = {
+  name: 'Оберег на волоске',
+  slots: ['amulet'],
+  type: 'accessory',
+  baseValue: 10,
+  tags: ['accessory', 'last_stand'],
   emergencyHeal: (rarity) => ({ thresholdRatio: THRESHOLD_RATIO, healPercent: HEAL_PERCENT[rarity] }),
   stats: (rarity) => [
     {

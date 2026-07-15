@@ -1,9 +1,28 @@
 {
   "id": "rune_hound",
   "name": "Рунная гончая",
-  "health": 10,
+  "tier": "uncommon",
+  "health": 35,
   "attacks": [
-    { "damage": 5, "interval": 0.75 }
+    {
+      "damage": 1,
+      "interval": 1.5
+    },
+    {
+      "damage": 2,
+      "interval": 2.1
+    }
   ],
-  "ui": { "scale": 0.7 }
+  "summons": [
+    {
+      "mob_id": "rune_hound",
+      "count": 1,
+      "trigger": {
+        "type": "start"
+      }
+    }
+  ],
+  "ui": {
+    "scale": 0.7
+  }
 }

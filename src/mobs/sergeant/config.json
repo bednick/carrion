@@ -1,6 +1,7 @@
 {
   "id": "sergeant",
   "name": "Сержант",
+  "tier": "legendary",
   "health": 50,
   "attacks": [
     { "damage": 2, "interval": 1.25 }

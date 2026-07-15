@@ -1,12 +1,20 @@
 {
   "id": "brigadier",
   "name": "Бригадир",
-  "health": 20,
+  "tier": "legendary",
+  "health": 50,
   "attacks": [
-    { "damage": 5, "interval": 1.5 }
+    {
+      "damage": 8,
+      "interval": 2.68
+    }
   ],
-  "defense": { "thorns": 2 },
+  "defense": {
+    "thorns": 4
+  },
   "phases": [
-    { "id": "brigadier_light" }
+    {
+      "id": "brigadier_light"
+    }
   ]
 }

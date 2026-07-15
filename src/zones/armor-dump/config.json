@@ -12,16 +12,9 @@
   "mob_loot": {
     "gold": { "min": 0, "max": 10 },
     "items": [
+      { "item_id": "short_sword", "chance": 0.10 },
       { "item_id": "dagger", "chance": 0.10 },
-      { "item_id": "heavy_shield", "chance": 0.10 },
-      { "item_id": "buckler", "chance": 0.10 },
-      { "item_id": "spiked_shield", "chance": 0.10 },
-      { "item_id": "heavy_gloves", "chance": 0.10 },
-      { "item_id": "light_gloves", "chance": 0.10 },
-      { "item_id": "comfortable_gloves", "chance": 0.10 },
-      { "item_id": "broadaxe", "chance": 0.10 },
-      { "item_id": "rapier", "chance": 0.10 },
-      { "item_id": "short_spear", "chance": 0.10 }
+      { "item_id": "heavy_shield", "chance": 0.10 }
     ]
   },
   "boss": {
@@ -30,16 +23,9 @@
       "gold": { "min": 100, "max": 150 },
       "essence": {"uncommon":  {"min": 10, "max": 20}},
       "items": [
+        { "item_id": "short_sword", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "dagger", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "heavy_shield", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "buckler", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "spiked_shield", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "heavy_gloves", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "light_gloves", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "comfortable_gloves", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "broadaxe", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "rapier", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "short_spear", "chance": 0.10, "rarity": "uncommon" }
+        { "item_id": "heavy_shield", "chance": 0.10, "rarity": "uncommon" }
       ]
     }
   }

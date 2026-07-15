@@ -8,6 +8,11 @@ import type { Rarity, SlotType } from '../types';
 const INTERVAL_REDUCTION: Record<Rarity, number> = { common: 0.05, uncommon: 0.07, rare: 0.10, epic: 0.15, legendary: 0.15 };
 
 const behavior: ItemBehavior = {
+  name: 'Лёгкие перчатки',
+  slots: ['hand_left'],
+  type: 'gloves',
+  baseValue: 10,
+  tags: ['gloves', 'fast'],
   weaponTimerMod: (rarity: Rarity, targetSlot: SlotType) => {
     if (targetSlot !== 'hand_right') return undefined;
     return { intervalMult: 1 - INTERVAL_REDUCTION[rarity] };

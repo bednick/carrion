@@ -1,8 +1,0 @@
-{
-  "id": "vulture_amulet",
-  "name": "Амулет грифа",
-  "slots": ["amulet"],
-  "type": "accessory",
-  "base_value": 10,
-  "tags": ["accessory", "on_kill", "lifesteal"]
-}

@@ -1,8 +1,0 @@
-{
-  "id": "gleaming_plate",
-  "name": "Блестящие латы",
-  "slots": ["body"],
-  "type": "armor",
-  "base_value": 10,
-  "tags": ["armor"]
-}

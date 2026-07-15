@@ -11,19 +11,6 @@ export type ItemType = 'weapon' | 'armor' | 'shield' | 'accessory' | 'gloves';
 export type EssenceTier = 'uncommon' | 'rare' | 'epic';
 export type EssencePool = Record<EssenceTier, number>;
 
-/**
- * Идентичность + экономика предмета. Боевые статы и их скейл живут в `behavior.ts`
- * (фабрики `standardWeapon`/`standardArmor`/`standardShield`) — см. docs/combat-events.md §5.
- */
-export interface ItemConfig {
-  id: string;
-  name: string;
-  slots: SlotType[];
-  type: ItemType;
-  base_value: number;
-  tags?: string[];
-}
-
 export interface ItemInstance {
   item_id: string;
   rarity: Rarity;

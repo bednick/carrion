@@ -9,6 +9,11 @@ import { UNARMED_DAMAGE } from '../../combat/events';
 const COUNTER_CHANCE: Record<Rarity, number> = { common: 0.15, uncommon: 0.20, rare: 0.25, epic: 0.30, legendary: 0.30 };
 
 const behavior: ItemBehavior = {
+  name: 'Баклер',
+  slots: ['hand_left'],
+  type: 'shield',
+  baseValue: 10,
+  tags: ['shield', 'counter'],
   on: {
     damage: (e, ctx) => {
       if (e.target.side !== 'hero') return {};

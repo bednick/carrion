@@ -6,11 +6,11 @@
   "star": 2,
   "fights": { "min": 9, "max": 11 },
   "mob_pool": [
-    { "mob_id": "wild_horse", "weight": 35 },
-    { "mob_id": "foal", "weight": 20 },
-    { "mob_id": "mauler", "weight": 18 },
-    { "mob_id": "prowler", "weight": 15 },
-    { "mob_id": "herd_mare", "weight": 12 }
+    { "mob_id": "wild_horse", "weight": 100 },
+    { "mob_id": "foal", "weight": 0 },
+    { "mob_id": "mauler", "weight": 50 },
+    { "mob_id": "prowler", "weight": 20 },
+    { "mob_id": "herd_mare", "weight": 40 }
   ],
   "mob_loot": {
     "gold": { "min": 0, "max": 0 },

@@ -9,6 +9,11 @@ const REDUCTION: Record<Rarity, number> = { common: 0.07, uncommon: 0.11, rare: 
 const THORNS_RATIO: Record<Rarity, number> = { common: 0.08, uncommon: 0.11, rare: 0.14, epic: 0.18, legendary: 0.18 };
 
 const behavior: ItemBehavior = {
+  name: 'Шипастый нагрудник',
+  slots: ['body'],
+  type: 'armor',
+  baseValue: 10,
+  tags: ['armor', 'thorns'],
   on: {
     damage: (e, ctx) => {
       if (e.target.side !== 'hero') return {};

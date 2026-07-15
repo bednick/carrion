@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { FONT_FAMILY } from './theme';
-import { getItemConfig, getItemBehavior } from '../items/registry';
+import { getItemBehavior } from '../items/registry';
 import { salvageEssence, ESSENCE_TIERS } from '../items/craft';
 import { rewardIconKey, essenceIconKey } from './rewards';
 import type { ItemInstance, Rarity, EssenceTier } from '../items/types';
@@ -83,20 +83,28 @@ export class Tooltip {
     this.render([lines.map(l => ({ text: l.text, color: l.color ?? '#ffffff', icon: l.icon, iconRow: l.iconRow, parts: l.parts }))], x, y);
   }
 
+  /** Тултип моба: имя (цвет по tier) + бейдж босса в одной секции, характеристики — во второй
+   *  (тот же стиль, что у тултипа предмета — см. `buildItemSections`). */
+  showMob(data: { name: string; nameColor: string; isBoss?: boolean; stats: { text: string; color: string }[] }, x: number, y: number) {
+    this.currentItem = null;
+    const identity: Line[] = [{ text: data.name, color: data.nameColor }];
+    if (data.isBoss) identity.push({ text: 'БОСС', color: RARITY_COLORS.legendary });
+    this.render([identity, data.stats], x, y);
+  }
+
   /** Секции: [идентичность, характеристики, цены]. Пустые секции отбрасываются при рендере. */
   private buildItemSections(item: ItemInstance, ctx: ItemTooltipCtx): Line[][] {
-    const cfg = getItemConfig(item.item_id);
+    const beh = getItemBehavior(item.item_id);
     const full = !!this.ctrlKey?.isDown;
 
-    const identity: Line[] = [{ text: cfg.name, color: RARITY_COLORS[item.rarity] }];
+    const identity: Line[] = [{ text: beh.name, color: RARITY_COLORS[item.rarity] }];
     // Слоты несёт цвет имени и рамка слота — раскрываем только под Ctrl.
-    if (full) identity.push({ text: `Слоты: ${cfg.slots.join(', ')}`, color: '#aaaaaa' });
+    if (full) identity.push({ text: `Слоты: ${beh.slots.join(', ')}`, color: '#aaaaaa' });
 
     // Боевые статы — единый источник правды в behavior.ts (docs/combat-events.md §5).
-    const beh = getItemBehavior(item.item_id);
     const stats: Line[] = beh.stats ? beh.stats(item.rarity) : [];
 
-    const goldLines: Line[] = [{ text: `${cfg.base_value}`, color: '#ffcc00', icon: rewardIconKey('gold') }];
+    const goldLines: Line[] = [{ text: `${beh.baseValue}`, color: '#ffcc00', icon: rewardIconKey('gold') }];
     // Разбор даёт пул эссенции: все тиры в одну строку (иконка тира + количество, включая 0).
     const pool = salvageEssence(item);
     const essenceLines: Line[] = [{

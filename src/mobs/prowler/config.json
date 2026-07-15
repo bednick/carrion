@@ -1,9 +1,16 @@
 {
   "id": "prowler",
   "name": "Рыскун",
-  "health": 10,
+  "tier": "rare",
+  "health": 35,
   "attacks": [
-    { "damage": 5, "interval": 0.6 },
-    { "damage": 5, "interval": 0.7 }
+    {
+      "damage": 5,
+      "interval": 10
+    },
+    {
+      "damage": 4,
+      "interval": 8
+    }
   ]
 }

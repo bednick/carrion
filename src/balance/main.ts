@@ -3,8 +3,9 @@
 // числа тут и в консоли гарантированно совпадают, потому что это один и тот же код.
 
 import { ALL_ZONE_IDS, getZoneConfig } from '../zones/registry';
-import { ITEM_CONFIGS } from '../items/registry';
+import { ITEM_BEHAVIORS } from '../items/registry';
 import { emptySummary, mergeResult, runExpedition, HIST_BUCKETS, HIST_BUCKET_SIZE, type SimSummary } from './simulate';
+import { RARITIES, RARITY_LABEL } from './rarity';
 import type { ItemInstance, SlotType, Rarity } from '../items/types';
 import type { ZoneConfig } from '../zones/types';
 
@@ -18,38 +19,22 @@ const SLOTS: { id: SlotType; label: string }[] = [
   { id: 'amulet', label: 'Амулет' },
 ];
 
-const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-const RARITY_LABEL: Record<Rarity, string> = {
-  common: 'Обычный', uncommon: 'Необычный', rare: 'Редкий', epic: 'Эпический', legendary: 'Легендарный',
-};
-
-const zoneSelect = document.getElementById('zone') as HTMLSelectElement;
-const zoneMeta = document.getElementById('zoneMeta') as HTMLDivElement;
 const slotsContainer = document.getElementById('slots') as HTMLDivElement;
+const buildPresetSelect = document.getElementById('buildPreset') as HTMLSelectElement;
 const trialsInput = document.getElementById('trials') as HTMLInputElement;
-const runOneBtn = document.getElementById('runOne') as HTMLButtonElement;
-const runAllBtn = document.getElementById('runAll') as HTMLButtonElement;
+const runBtn = document.getElementById('run') as HTMLButtonElement;
 const progressEl = document.getElementById('progress') as HTMLDivElement;
-const resultsEl = document.getElementById('results') as HTMLDivElement;
+const summaryEl = document.getElementById('summary') as HTMLDivElement;
+const detailsEl = document.getElementById('details') as HTMLDivElement;
 
-// ─── Зона ───────────────────────────────────────────────────────────────────────────────────
+// ─── Заготовленные билды (tools/builds/*.json, локальные — в git не попадают) ──────────────
 
-for (const id of ALL_ZONE_IDS) {
-  const cfg = getZoneConfig(id);
-  const opt = document.createElement('option');
-  opt.value = id;
-  opt.textContent = `${cfg.name} (${'★'.repeat(cfg.star)}${'☆'.repeat(3 - cfg.star)}) — ${cfg.faction}`;
-  zoneSelect.appendChild(opt);
-}
-zoneSelect.value = 'dead-fields';
+type BuildPresetEquipment = Record<string, { item_id: string; rarity: Rarity }>;
 
-function updateZoneMeta() {
-  const cfg = getZoneConfig(zoneSelect.value);
-  const fights = cfg.fights ? `${cfg.fights.min}–${cfg.fights.max} рядовых боёв + босс` : 'только босс';
-  zoneMeta.textContent = `${fights} · моб-пул: ${cfg.mob_pool?.length ?? 0} записей · босс: ${cfg.boss.mob_id}`;
-}
-zoneSelect.addEventListener('change', updateZoneMeta);
-updateZoneMeta();
+const buildModules = import.meta.glob<{ default: BuildPresetEquipment }>('../../tools/builds/*.json', { eager: true });
+const BUILD_PRESETS: { id: string; equipment: BuildPresetEquipment }[] = Object.entries(buildModules)
+  .map(([path, mod]) => ({ id: path.split('/').pop()!.replace(/\.json$/, ''), equipment: mod.default }))
+  .sort((a, b) => a.id.localeCompare(b.id));
 
 // ─── Билд ───────────────────────────────────────────────────────────────────────────────────
 
@@ -70,11 +55,11 @@ for (const slot of SLOTS) {
   emptyOpt.value = '';
   emptyOpt.textContent = '— пусто —';
   itemSelect.appendChild(emptyOpt);
-  for (const [id, cfg] of Object.entries(ITEM_CONFIGS)) {
-    if (!cfg.slots.includes(slot.id)) continue;
+  for (const [id, beh] of Object.entries(ITEM_BEHAVIORS)) {
+    if (!beh.slots.includes(slot.id)) continue;
     const opt = document.createElement('option');
     opt.value = id;
-    opt.textContent = `${cfg.name} (${cfg.type})`;
+    opt.textContent = `${beh.name} (${beh.type})`;
     itemSelect.appendChild(opt);
   }
   row.appendChild(itemSelect);
@@ -104,6 +89,42 @@ function readEquipment(): Partial<Record<SlotType, ItemInstance>> {
   return equipment;
 }
 
+// ─── Заготовка билда: применяет выбранный preset на select'ы слотов (остаются редактируемыми) ─
+
+{
+  const manualOpt = document.createElement('option');
+  manualOpt.value = '';
+  manualOpt.textContent = '— вручную —';
+  buildPresetSelect.appendChild(manualOpt);
+  for (const preset of BUILD_PRESETS) {
+    const opt = document.createElement('option');
+    opt.value = preset.id;
+    opt.textContent = preset.id;
+    buildPresetSelect.appendChild(opt);
+  }
+}
+
+let applyingPreset = false;
+
+function applyBuildPreset(id: string) {
+  const preset = BUILD_PRESETS.find((p) => p.id === id);
+  applyingPreset = true;
+  for (const slot of SLOTS) {
+    const entry = preset?.equipment[slot.id];
+    itemSelects[slot.id]!.value = entry?.item_id ?? '';
+    raritySelects[slot.id]!.value = entry?.rarity ?? 'common';
+  }
+  applyingPreset = false;
+}
+
+buildPresetSelect.addEventListener('change', () => applyBuildPreset(buildPresetSelect.value));
+
+for (const slot of SLOTS) {
+  const resetPreset = () => { if (!applyingPreset) buildPresetSelect.value = ''; };
+  itemSelects[slot.id]!.addEventListener('change', resetPreset);
+  raritySelects[slot.id]!.addEventListener('change', resetPreset);
+}
+
 // ─── Прогон с чанками (не морозит вкладку на больших trials) ──────────────────────────────
 
 const BATCH = 200;
@@ -125,8 +146,7 @@ async function runBatched(
 }
 
 function setBusy(busy: boolean) {
-  runOneBtn.disabled = busy;
-  runAllBtn.disabled = busy;
+  runBtn.disabled = busy;
 }
 
 // ─── Рендер результатов ────────────────────────────────────────────────────────────────────
@@ -198,11 +218,12 @@ function renderHistogramSVG(hist: number[], total: number, mean: number | null, 
   `;
 }
 
-function renderSingle(zoneCfg: ZoneConfig, s: SimSummary) {
+function renderDetails(zoneCfg: ZoneConfig, s: SimSummary) {
   const winrate = (s.wins / s.trials * 100);
   const avgBossStartHp = s.bossStartHpCount > 0 ? s.bossStartHpSum / s.bossStartHpCount : null;
   const avgBossEndHp = s.bossEndHpCount > 0 ? s.bossEndHpSum / s.bossEndHpCount : null;
-  let html = `<div class="stat-grid">
+  let html = `<h3 class="details-title">${zoneCfg.name} (${'★'.repeat(zoneCfg.star)}${'☆'.repeat(3 - zoneCfg.star)}) — ${zoneCfg.faction}</h3>`;
+  html += `<div class="stat-grid">
     ${statTile(`${winrate.toFixed(1)}%`, 'Winrate')}
     ${statTile(`${(s.deaths / s.trials * 100).toFixed(1)}%`, 'Смерть до босса')}
     ${statTile(`${avgBossStartHp !== null ? avgBossStartHp.toFixed(1) : '—'} / 100`, 'HP перед боссом (среднее)')}
@@ -223,29 +244,90 @@ function renderSingle(zoneCfg: ZoneConfig, s: SimSummary) {
     }
     html += '</table>';
   }
-  resultsEl.innerHTML = html;
-  void zoneCfg;
+  detailsEl.innerHTML = html;
 }
 
-async function onRunOne() {
-  setBusy(true);
-  const zoneCfg = getZoneConfig(zoneSelect.value);
-  const equipment = readEquipment();
-  const trials = Math.max(1, Number(trialsInput.value) || 3000);
-  resultsEl.innerHTML = '';
-  const s = await runBatched(equipment, zoneCfg, trials, (done) => {
-    progressEl.textContent = `${done} / ${trials}...`;
+// Фиксированный порядок фракций (см. docs/factions.md) + цвет для визуального разделения секций.
+// Слоты категориальной палитры (dataviz-скилл, references/palette.md, dark-режим), проверены
+// validate_palette.js на поверхности #1a1a2e — все чек-и PASS, худшая соседняя ΔE 15.7.
+const FACTION_ORDER = ['Конница — Дикие звери', 'Магия — Нежить', 'Мародёры — Броня', 'Все три фракции'];
+const FACTION_COLOR: Record<string, string> = {
+  'Конница — Дикие звери': '#3987e5', // slot 1 blue
+  'Магия — Нежить': '#199e70',        // slot 2 aqua
+  'Мародёры — Броня': '#c98500',      // slot 3 yellow
+  'Все три фракции': '#9085e9',       // slot 5 violet — сборная финальная зона, не отдельная фракция
+};
+const FALLBACK_FACTION_COLOR = '#667788';
+
+function groupByFaction(rows: { zoneCfg: ZoneConfig; s: SimSummary }[]): { faction: string; rows: typeof rows }[] {
+  const groups = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const key = row.zoneCfg.faction;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(row);
+  }
+  const known = FACTION_ORDER.filter((f) => groups.has(f));
+  const rest = [...groups.keys()].filter((f) => !FACTION_ORDER.includes(f)).sort();
+  return [...known, ...rest].map((faction) => ({ faction, rows: groups.get(faction)! }));
+}
+
+// Фиксированная сетка колонок (table-layout: fixed в CSS) — одинаковая в каждой фракционной
+// таблице, иначе ширины колонок подгоняются под контент каждой таблицы отдельно и зоны разных
+// фракций не выстраиваются друг над другом.
+const ZONE_TABLE_COLGROUP = `<colgroup>
+  <col style="width:28%"><col style="width:10%"><col style="width:20%">
+  <col style="width:14%"><col style="width:14%"><col style="width:14%">
+</colgroup>`;
+
+function renderZoneTable(rows: { zoneCfg: ZoneConfig; s: SimSummary }[], selectedId: string | null): string {
+  let html = `<table>${ZONE_TABLE_COLGROUP}<tr><th>Зона</th><th>Звёзды</th><th>Winrate</th><th>HP до босса</th><th>HP после босса</th><th>Боёв пройдено</th></tr>`;
+  for (const { zoneCfg, s } of rows) {
+    const winrate = s.trials > 0 ? (s.wins / s.trials * 100) : 0;
+    const avgBossStartHp = s.bossStartHpCount > 0 ? (s.bossStartHpSum / s.bossStartHpCount).toFixed(1) : '—';
+    const avgBossEndHp = s.bossEndHpCount > 0 ? (s.bossEndHpSum / s.bossEndHpCount).toFixed(1) : '—';
+    const selected = zoneCfg.id === selectedId ? ' class="selected"' : '';
+    html += `<tr data-zone-id="${zoneCfg.id}"${selected}>
+      <td>${zoneCfg.name}</td>
+      <td>${'★'.repeat(zoneCfg.star)}${'☆'.repeat(3 - zoneCfg.star)}</td>
+      <td>${winrate.toFixed(1)}%<div class="winrate-bar"><div style="width:${winrate}%"></div></div></td>
+      <td>${avgBossStartHp}</td>
+      <td>${avgBossEndHp}</td>
+      <td>${(s.fightsSum / s.trials).toFixed(1)} / ${zoneCfg.fights ? ((zoneCfg.fights.min + zoneCfg.fights.max) / 2).toFixed(1) : '0'}</td>
+    </tr>`;
+  }
+  html += '</table>';
+  return html;
+}
+
+function renderSummaryTable(rows: { zoneCfg: ZoneConfig; s: SimSummary }[], selectedId: string | null) {
+  const groups = groupByFaction(rows);
+  let html = '';
+  for (const group of groups) {
+    const color = FACTION_COLOR[group.faction] ?? FALLBACK_FACTION_COLOR;
+    html += `<div class="faction-group" style="--faction-color: ${color}">
+      <div class="faction-title"><span class="dot"></span>${group.faction}</div>
+      ${renderZoneTable(group.rows, selectedId)}
+    </div>`;
+  }
+  summaryEl.innerHTML = html;
+
+  summaryEl.querySelectorAll<HTMLTableRowElement>('tr[data-zone-id]').forEach((tr) => {
+    tr.addEventListener('click', () => {
+      const zoneId = tr.dataset.zoneId!;
+      const found = rows.find((r) => r.zoneCfg.id === zoneId);
+      if (!found) return;
+      renderSummaryTable(rows, zoneId);
+      renderDetails(found.zoneCfg, found.s);
+    });
   });
-  progressEl.textContent = `Готово: ${trials} прогонов.`;
-  renderSingle(zoneCfg, s);
-  setBusy(false);
 }
 
-async function onRunAll() {
+async function onRun() {
   setBusy(true);
   const equipment = readEquipment();
-  const trials = Math.max(1, Number(trialsInput.value) || 3000);
-  resultsEl.innerHTML = '';
+  const trials = Math.max(1, Number(trialsInput.value) || 1000);
+  summaryEl.innerHTML = '';
+  detailsEl.innerHTML = '<div class="details-hint">Кликните по строке в таблице, чтобы увидеть подробности по зоне.</div>';
   const rows: { zoneCfg: ZoneConfig; s: SimSummary }[] = [];
   for (const id of ALL_ZONE_IDS) {
     const zoneCfg = getZoneConfig(id);
@@ -255,26 +337,8 @@ async function onRunAll() {
     rows.push({ zoneCfg, s });
   }
   progressEl.textContent = `Готово: ${ALL_ZONE_IDS.length} зон × ${trials} прогонов.`;
-
-  let html = '<table><tr><th>Зона</th><th>Звёзды</th><th>Фракция</th><th>Winrate</th><th>HP до босса</th><th>HP после босса</th><th>Боёв пройдено</th></tr>';
-  for (const { zoneCfg, s } of rows) {
-    const winrate = s.trials > 0 ? (s.wins / s.trials * 100) : 0;
-    const avgBossStartHp = s.bossStartHpCount > 0 ? (s.bossStartHpSum / s.bossStartHpCount).toFixed(1) : '—';
-    const avgBossEndHp = s.bossEndHpCount > 0 ? (s.bossEndHpSum / s.bossEndHpCount).toFixed(1) : '—';
-    html += `<tr>
-      <td>${zoneCfg.name}</td>
-      <td>${'★'.repeat(zoneCfg.star)}${'☆'.repeat(3 - zoneCfg.star)}</td>
-      <td>${zoneCfg.faction}</td>
-      <td>${winrate.toFixed(1)}%<div class="winrate-bar"><div style="width:${winrate}%"></div></div></td>
-      <td>${avgBossStartHp}</td>
-      <td>${avgBossEndHp}</td>
-      <td>${(s.fightsSum / s.trials).toFixed(1)}</td>
-    </tr>`;
-  }
-  html += '</table>';
-  resultsEl.innerHTML = html;
+  renderSummaryTable(rows, null);
   setBusy(false);
 }
 
-runOneBtn.addEventListener('click', () => void onRunOne());
-runAllBtn.addEventListener('click', () => void onRunAll());
+runBtn.addEventListener('click', () => void onRun());

@@ -9,6 +9,11 @@ const CRIT_CHANCE: Record<Rarity, number> = { common: 0.05, uncommon: 0.10, rare
 const CRIT_MULT = 1.5;
 
 const behavior: ItemBehavior = {
+  name: 'Тяжёлые перчатки',
+  slots: ['hand_left'],
+  type: 'gloves',
+  baseValue: 10,
+  tags: ['gloves', 'crit'],
   on: {
     attack: (e, ctx) => {
       if (e.source.side !== 'hero' || e.source.slot !== 'hand_right') return {};

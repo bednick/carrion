@@ -1,12 +1,22 @@
 {
   "id": "boar",
   "name": "Кабан-секач",
-  "health": 10,
+  "tier": "rare",
+  "health": 75,
   "summon_placement": "back",
   "attacks": [
-    { "damage": 5, "interval": 0.75 }
+    {
+      "damage": 6,
+      "interval": 2.4
+    }
   ],
   "summons": [
-    { "mob_id": "piglet", "count": 2, "trigger": { "type": "start" } }
+    {
+      "mob_id": "piglet",
+      "count": 2,
+      "trigger": {
+        "type": "start"
+      }
+    }
   ]
 }

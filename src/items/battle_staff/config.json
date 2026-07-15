@@ -1,8 +1,0 @@
-{
-  "id": "battle_staff",
-  "name": "Боевой посох",
-  "slots": ["hand_right"],
-  "type": "weapon",
-  "base_value": 10,
-  "tags": ["weapon", "heavy", "slow"]
-}

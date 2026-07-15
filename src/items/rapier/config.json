@@ -1,8 +1,0 @@
-{
-  "id": "rapier",
-  "name": "Рапира",
-  "slots": ["hand_right"],
-  "type": "weapon",
-  "base_value": 10,
-  "tags": ["weapon", "light", "fast", "multihit"]
-}

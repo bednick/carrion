@@ -1,8 +1,13 @@
 {
   "id": "cleaver_enraged",
   "name": "Секач (озверел)",
-  "health": 10,
+  "tier": "uncommon",
+  "health": 30,
   "attacks": [
-    { "damage": 5, "interval": 1.0 }
-  ]
+    {
+      "damage": 5,
+      "interval": 1.9
+    }
+  ],
+  "defense": {}
 }

@@ -9,6 +9,11 @@ import type { Rarity, SlotType } from '../types';
 const FIRST_TICK_RATIO: Record<Rarity, number> = { common: 0.5, uncommon: 0.6, rare: 0.7, epic: 0.8, legendary: 0.8 };
 
 const behavior: ItemBehavior = {
+  name: 'Удобные перчатки',
+  slots: ['hand_left'],
+  type: 'gloves',
+  baseValue: 10,
+  tags: ['gloves'],
   weaponTimerMod: (rarity: Rarity, targetSlot: SlotType) => {
     if (targetSlot !== 'hand_right') return undefined;
     return { firstTickRatio: FIRST_TICK_RATIO[rarity] };

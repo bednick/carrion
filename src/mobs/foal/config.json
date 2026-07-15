@@ -1,9 +1,12 @@
 {
   "id": "foal",
   "name": "Жеребёнок",
-  "health": 10,
+  "tier": "uncommon",
+  "health": 22,
   "attacks": [
-    { "damage": 5, "interval": 0.75 },
-    { "damage": 5, "interval": 0.9 }
+    {
+      "damage": 1,
+      "interval": 0.9
+    }
   ]
 }

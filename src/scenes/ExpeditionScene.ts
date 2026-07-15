@@ -5,11 +5,11 @@ import { EventBus } from '../core/EventBus';
 import { getZoneConfig, zoneBgKey, ZONE_BG_VARIANTS, BG_LAYERS, type BgLayer } from '../zones/registry';
 import { CombatEngine } from '../combat/CombatEngine';
 import { rollLootTable, buildRewardOptions, type RewardOption } from '../combat/loot';
-import { getItemConfig } from '../items/registry';
+import { getItemBehavior } from '../items/registry';
 import { sumMeta } from '../items/meta';
 import { spawnFloater } from '../ui/Floater';
 import { SoundManager } from '../core/SoundManager';
-import { Tooltip } from '../ui/Tooltip';
+import { Tooltip, RARITY_COLORS as RARITY_TEXT_COLORS } from '../ui/Tooltip';
 import { DragDropManager } from '../ui/DragDropManager';
 import type { CombatState, EnemyState, SummonPlan } from '../combat/types';
 import { BOARD_SLOTS, placementAnchor } from '../combat/types';
@@ -25,6 +25,12 @@ import { ESSENCE_TIERS } from '../items/craft';
 import { QuestTracker } from '../ui/QuestTracker';
 import { ResourceHUD } from '../ui/ResourceHUD';
 import { VolumeControl } from '../ui/VolumeControl';
+
+// Та же палитра, что у характеристик предметов в тултипе (src/items/factories.ts,
+// src/items/spiked_cuirass/behavior.ts) — тултип моба должен выглядеть единообразно с ними.
+const DMG_COLOR = '#ffcc44';
+const DEF_COLOR = '#44aaff';
+const THORNS_COLOR = '#ff8844';
 
 /** Нормализует моба (или его форму-override) в EnemySpec для движка. */
 function resolveSpec(ref: PhaseOverride, isBoss: boolean): EnemySpec {
@@ -214,6 +220,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.carryoverBelt = data.carryoverBelt ?? [];
     this.carryoverQueue = data.carryoverQueue ?? [];
     this.carryoverHp = data.carryoverHp ?? null;
+    this.retreatDialogOpen = false;
   }
 
   create() {
@@ -659,17 +666,19 @@ export class ExpeditionScene extends Phaser.Scene {
       const eCapture = e;
       sprite.on('pointerover', () => {
         const def = eCapture.defense;
-        const defParts: string[] = [];
-        if (def?.armor) defParts.push(`Броня ${Math.round(def.armor * 100)}%`);
-        if (def?.dodge) defParts.push(`Уклон ${Math.round(def.dodge * 100)}%`);
-        if (def?.thorns) defParts.push(`Шипы ${def.thorns}`);
-        this.tooltip.showText([
-          eCapture.name,
-          `HP: ${Math.max(0, eCapture.hp)}/${eCapture.maxHp}`,
-          `ATK: ${eCapture.attackTimers.map(t => `${t.damage}/${(t.interval / 1000).toFixed(1)}s`).join(', ')}`,
-          defParts.length ? defParts.join(' · ') : '',
-          eCapture.isBoss ? 'БОСС' : '',
-        ].filter(Boolean), x + 50, 140);
+        const stats: { text: string; color: string }[] = [];
+        const multi = eCapture.attackTimers.length > 1;
+        eCapture.attackTimers.forEach((t, i) => {
+          const suf = multi ? ` ${i + 1}` : '';
+          stats.push({ text: `Урон${suf}: ${t.damage}`, color: DMG_COLOR });
+          stats.push({ text: `Перезарядка${suf}: ${(t.interval / 1000).toFixed(1)}s`, color: DMG_COLOR });
+        });
+        if (def?.armor) stats.push({ text: `Защита: ${Math.round(def.armor * 100)}%`, color: DEF_COLOR });
+        if (def?.dodge) stats.push({ text: `Уклон: ${Math.round(def.dodge * 100)}%`, color: DEF_COLOR });
+        if (def?.thorns) stats.push({ text: `Шипы: ${def.thorns}`, color: THORNS_COLOR });
+
+        const nameColor = RARITY_TEXT_COLORS[getMobConfig(eCapture.id).tier ?? 'common'];
+        this.tooltip.showMob({ name: eCapture.name, nameColor, isBoss: eCapture.isBoss, stats }, x + 50, 140);
       });
       sprite.on('pointerout', () => this.tooltip.hide());
 
@@ -1365,7 +1374,7 @@ export class ExpeditionScene extends Phaser.Scene {
         }).setOrigin(0.5, 0));
       } else {
         this.victoryContainer.add(this.add.image(x, cardY - 28, itemIconKey(opt.item.item_id)).setDisplaySize(72, 72));
-        this.victoryContainer.add(this.add.text(x, cardY + 34, getItemConfig(opt.item.item_id).name, {
+        this.victoryContainer.add(this.add.text(x, cardY + 34, getItemBehavior(opt.item.item_id).name, {
           fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
           align: 'center', wordWrap: { width: CARD_W - 16 },
         }).setOrigin(0.5, 0));

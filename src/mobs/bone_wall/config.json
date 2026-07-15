@@ -1,7 +1,8 @@
 {
   "id": "bone_wall",
   "name": "Костяная стена",
-  "health": 10,
+  "tier": "rare",
+  "health": 40,
   "attacks": [],
   "ui": { "scale": 1.2 }
 }

@@ -1,27 +1,26 @@
 import type { Rarity } from './types';
-import type { ItemBehavior } from './behavior';
+import type { ItemCombatBehavior } from './behavior';
 import { scaleByRarity } from './scaleByRarity';
 import { mitigateDamage } from '../combat/mitigation';
 
 const DMG_COLOR = '#ffcc44';
 const DEF_COLOR = '#44aaff';
 
-export interface WeaponOpts {
+export interface WeaponRarityStats {
   damage: number;
-  interval: number; // секунды при common
-  /** Кривые скейла по редкости: damage — множитель (heavy >1), interval — множитель (light <1). */
-  scale?: { damage?: number; interval?: number };
+  interval: number; // секунды
 }
+
+export type WeaponOpts = Record<Rarity, WeaponRarityStats>;
 
 /**
  * Обычное оружие: объявляет поток стамины (`attackInterval`) и авторит атаку на `attack_ready`.
- * Урон и интервал скейлятся по редкости заданными кривыми.
+ * Урон и интервал задаются явной таблицей по редкости (не формулой-скейлом) — так проще подогнать
+ * DPS вручную под целые числа урона на каждом тире, не гоняясь за наименьшим общим кратным степеней.
  */
-export function standardWeapon(opts: WeaponOpts): ItemBehavior {
-  const dScale = opts.scale?.damage ?? 1.5;
-  const iScale = opts.scale?.interval ?? 1.0;
-  const interval = (rarity: Rarity) => scaleByRarity(opts.interval, rarity, iScale);
-  const damage = (rarity: Rarity) => Math.round(scaleByRarity(opts.damage, rarity, dScale));
+export function standardWeapon(opts: WeaponOpts): ItemCombatBehavior {
+  const interval = (rarity: Rarity) => opts[rarity].interval;
+  const damage = (rarity: Rarity) => opts[rarity].damage;
 
   return {
     attackInterval: interval,
@@ -55,7 +54,7 @@ export interface ArmorOpts {
 
 /** Броня: мультипликативно снижает входящий по герою урон (стакается с другой бронёй по порядку,
  *  никогда не обнуляет удар целиком — см. `mitigateDamage`). */
-export function standardArmor(opts: ArmorOpts): ItemBehavior {
+export function standardArmor(opts: ArmorOpts): ItemCombatBehavior {
   const scale = opts.scale ?? 1.5;
   const cap = opts.cap ?? 0.6;
   const pct = (rarity: Rarity) => Math.min(cap, scaleByRarity(opts.pct, rarity, scale));
@@ -77,7 +76,7 @@ export interface ShieldOpts {
 }
 
 /** Щит: с шансом полностью отклоняет входящий урон — заглушает `damage` и спавнит `block`. */
-export function standardShield(opts: ShieldOpts): ItemBehavior {
+export function standardShield(opts: ShieldOpts): ItemCombatBehavior {
   const scale = opts.scale ?? 1.0;
   const chance = (rarity: Rarity) => Math.min(1, scaleByRarity(opts.block, rarity, scale));
 

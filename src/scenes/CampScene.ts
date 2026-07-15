@@ -6,7 +6,7 @@ import { initQuestSystem } from '../core/QuestSystem';
 import { QUEST_DEFS } from '../quests/definitions';
 import type { ItemInstance, SlotId } from '../core/MetaStore';
 import { ARMOR_STAND_COUNT } from '../core/MetaStore';
-import { getItemConfig } from '../items/registry';
+import { getItemBehavior } from '../items/registry';
 import { craftPreview, salvageEssence, formatEssence, ESSENCE_TIERS } from '../items/craft';
 import type { Rarity, SlotType, EssencePool } from '../items/types';
 import { itemIconKey } from '../items/icons';
@@ -318,11 +318,11 @@ export class CampScene extends Phaser.Scene {
       const x = rowStartX + col * (CARD_W + GAP);
       const y = startY + row * (CARD_H + GAP);
 
-      const cfg = getItemConfig(id);
+      const beh = getItemBehavior(id);
       const card = this.add.rectangle(x, y, CARD_W, CARD_H, 0x1a1a2a)
         .setStrokeStyle(2, 0x666666).setDepth(91).setInteractive({ useHandCursor: true });
       const icon = this.add.image(x, y - 24, itemIconKey(id)).setDisplaySize(56, 56).setDepth(92);
-      const label = this.add.text(x, y + 32, cfg.name, {
+      const label = this.add.text(x, y + 32, beh.name, {
         fontSize: '11px', fontFamily: FONT_FAMILY, color: '#dddddd', align: 'center',
         wordWrap: { width: CARD_W - 12 },
       }).setOrigin(0.5, 0).setDepth(92);
@@ -904,10 +904,10 @@ export class CampScene extends Phaser.Scene {
   /** Диалог подтверждения перед разборкой — предмет теряется безвозвратно. */
   private confirmSalvage(item: ItemInstance, onConfirm: () => void) {
     this.tooltip.hide();
-    const cfg = getItemConfig(item.item_id);
+    const beh = getItemBehavior(item.item_id);
     const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.7).setDepth(190).setInteractive();
     const box = this.add.rectangle(640, 400, 420, 150, 0x1e1a0a).setDepth(191).setStrokeStyle(2, 0x886622);
-    const text = this.add.text(640, 378, `Разобрать «${cfg.name}»?\nПредмет будет утерян, взамен — эссенция.`, {
+    const text = this.add.text(640, 378, `Разобрать «${beh.name}»?\nПредмет будет утерян, взамен — эссенция.`, {
       fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffddaa', align: 'center',
     }).setOrigin(0.5).setDepth(192);
     const yesBtn = this.add.rectangle(590, 434, 130, 34, 0x5a3a1a).setDepth(191).setInteractive({ useHandCursor: true });
@@ -1278,11 +1278,11 @@ export class CampScene extends Phaser.Scene {
         item: null,
         onRemove: () => null,
         onAccept: (it) => {
-          const cfg = getItemConfig(it.item_id);
-          MetaStore.addGold(cfg.base_value);
+          const beh = getItemBehavior(it.item_id);
+          MetaStore.addGold(beh.baseValue);
           EventBus.emit('item_sold');
           const ptr = this.input.activePointer;
-          spawnIconFloater(this, rewardIconKey('gold'), `+${cfg.base_value}`, ptr.x, ptr.y, '#ffcc00');
+          spawnIconFloater(this, rewardIconKey('gold'), `+${beh.baseValue}`, ptr.x, ptr.y, '#ffcc00');
           this.refreshHUD();
           this.time.delayedCall(0, () => this.rebuildPanel());
         },
@@ -1361,22 +1361,22 @@ export class CampScene extends Phaser.Scene {
     }
     if (this.panelState === 'dealer') {
       return (inst, idx) => {
-        const cfg = getItemConfig(inst.item_id);
+        const beh = getItemBehavior(inst.item_id);
         MetaStore.removeFromChest(idx);
-        MetaStore.addGold(cfg.base_value);
+        MetaStore.addGold(beh.baseValue);
         EventBus.emit('item_sold');
         const ptr = this.input.activePointer;
-        spawnIconFloater(this, rewardIconKey('gold'), `+${cfg.base_value}`, ptr.x, ptr.y, '#ffcc00');
+        spawnIconFloater(this, rewardIconKey('gold'), `+${beh.baseValue}`, ptr.x, ptr.y, '#ffcc00');
         this.refreshHUD();
         this.rebuildPanel();
       };
     }
     if (this.panelState === 'chest') {
       return (inst, idx) => {
-        const cfg = getItemConfig(inst.item_id);
+        const beh = getItemBehavior(inst.item_id);
         const si = this.selectedStandIndex;
         const stand = MetaStore.getArmorStand(si);
-        const slot = (cfg.slots as SlotId[]).find(s => !stand[s]);
+        const slot = (beh.slots as SlotId[]).find(s => !stand[s]);
         if (slot) {
           MetaStore.removeFromChest(idx);
           MetaStore.setArmorStandSlot(si, slot, inst);
@@ -1485,8 +1485,8 @@ export class CampScene extends Phaser.Scene {
     const filteredItems: { item: ItemInstance; origIdx: number }[] = [];
     meta.chest.forEach((item, idx) => {
       if (showFilters && this.chestSlotFilter) {
-        const cfg = getItemConfig(item.item_id);
-        if (!cfg.slots.includes(this.chestSlotFilter)) return;
+        const beh = getItemBehavior(item.item_id);
+        if (!beh.slots.includes(this.chestSlotFilter)) return;
       }
       if (showFilters && this.chestRarityFilter && item.rarity !== this.chestRarityFilter) return;
       filteredItems.push({ item, origIdx: idx });

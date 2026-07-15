@@ -1,6 +1,7 @@
 {
   "id": "henchman",
   "name": "Подручный",
+  "tier": "common",
   "health": 50,
   "attacks": [
     { "damage": 1, "interval": 1.0 }
