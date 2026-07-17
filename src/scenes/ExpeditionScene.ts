@@ -1217,6 +1217,8 @@ export class ExpeditionScene extends Phaser.Scene {
         }
         const g = this.enemyGraphics[enemyIdx];
         if (!g) return;
+        // Спрайт исчезает без pointerout — тултип с его статами иначе остаётся висеть.
+        this.tooltip.hide();
         // Босс на финальной смерти — затемняем (поверх ляжет экран победы). Обычный моб — убираем.
         if (enemy.isBoss) {
           // Гасим отложенный сброс вспышки от добивающего удара — иначе он снимет затемнение.
