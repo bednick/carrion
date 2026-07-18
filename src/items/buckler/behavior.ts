@@ -5,7 +5,6 @@ import { UNARMED_DAMAGE } from '../../combat/events';
 // Баклер: не блокирует вообще — урон проходит целиком. Независимый шанс контрудара роллится
 // на каждый входящий удар (не гейтится блоком) — отдельная реализация строки матрицы факций
 // «Контрудар» (docs/factions.md), не довесок к «Безусловной митигации» (docs/content.items.hand_left.md).
-// Плоская таблица по редкости (не scaleByRarity) — тот же приём, что у перчаток/heavy_shield.
 const COUNTER_CHANCE: Record<Rarity, number> = { common: 0.15, uncommon: 0.20, rare: 0.25, epic: 0.30, legendary: 0.30 };
 
 const behavior: ItemBehavior = {

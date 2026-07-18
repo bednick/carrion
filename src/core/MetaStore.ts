@@ -53,6 +53,9 @@ export interface MetaState {
   armor_stands: ArmorStand[]; // ровно ARMOR_STAND_COUNT стоек-пресетов
   active_stand: number;       // индекс последней выбранной стойки (0..ARMOR_STAND_COUNT-1)
   run_speed: number;          // ускорение последнего забега (1|2|4) — восстанавливается в новом
+  // Рекорд endless-зоны (battlefield, docs/content.zones.format.md): сколько мобов подряд убито
+  // за лучший забег. Цель игры в этой зоне — превзойти это число, не «пройти» зону.
+  battlefield_best_depth: number;
 
   stats: PlayerStats;
   quests: {
@@ -141,6 +144,7 @@ function createDefault(): MetaState {
     armor_stands: defaultStands(pendingStartWeapon),
     active_stand: 0,
     run_speed: 1,
+    battlefield_best_depth: 0,
     stats: emptyStats(),
     quests: {
       active: [{ id: 'dead_fields_clear', progress: 0, target: 1 }],
@@ -170,6 +174,7 @@ export const MetaStore = {
       armor_stands: normalizeStands(parsed.armor_stands),
       active_stand: clampStand(parsed.active_stand),
       run_speed: clampRunSpeed(parsed.run_speed),
+      battlefield_best_depth: parsed.battlefield_best_depth ?? defaults.battlefield_best_depth,
       // Поверхностного merge достаточно: каждое поле stats независимо, а недостающие
       // (в старых сейвах) добираются из emptyStats(). Версионирование схемы не ведём.
       stats: { ...defaults.stats, ...(parsed.stats ?? {}) },
@@ -256,6 +261,14 @@ export const MetaStore = {
       state.completed_areas.push(zoneId);
       this.save();
     }
+  },
+
+  /** true, если depth — новый рекорд endless-зоны (battlefield, см. ExpeditionScene). */
+  recordBattlefieldDepth(depth: number): boolean {
+    const isRecord = depth > state.battlefield_best_depth;
+    if (isRecord) state.battlefield_best_depth = depth;
+    this.save();
+    return isRecord;
   },
 
   /** Центр (battlefield) открыт, когда все 9 обычных зон зачищены. */

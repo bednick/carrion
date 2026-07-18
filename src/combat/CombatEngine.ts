@@ -444,6 +444,10 @@ export class CombatEngine {
     const hero = this.state.hero;
     let dmg = amount;
 
+    // Проклятие endless-зон (docs/content.zones.format.md) — масштабирует сырой урон до барьера,
+    // как и любой другой источник урона по герою (в т.ч. шипы моба).
+    if (hero.damageTakenMult !== 1) dmg = Math.round(dmg * hero.damageTakenMult);
+
     // Барьер (docs/content.items.amulet.md) — временный пул перед HP, тает первым.
     if (hero.barrier > 0) {
       const absorbed = Math.min(hero.barrier, dmg);
@@ -535,7 +539,7 @@ export class CombatEngine {
     this.state.hero.unarmedTimer = 0;
   }
 
-  static buildInitialHero(equipment: Partial<Record<SlotType, ItemInstance>>): HeroState {
+  static buildInitialHero(equipment: Partial<Record<SlotType, ItemInstance>>, damageTakenMult = 1): HeroState {
     const { barrierMax, emergencyHeal } = buildHeroResources(equipment);
     return {
       maxHp: 100,
@@ -547,6 +551,7 @@ export class CombatEngine {
       barrierMax,
       emergencyHeal,
       emergencyHealUsed: false,
+      damageTakenMult,
     };
   }
 

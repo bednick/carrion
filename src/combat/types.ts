@@ -69,6 +69,11 @@ export interface HeroState {
   // на каждый buildInitialHero (новый бой), не на смену фазы одного боя.
   emergencyHeal?: EmergencyHealConfig;
   emergencyHealUsed: boolean;
+  // Множитель входящего по герою урона («проклятие» endless-зон, docs/content.zones.format.md):
+  // 1 = без штрафа. В отличие от barrier/emergencyHeal НЕ сбрасывается каждый buildInitialHero —
+  // растёт с числом пройденных боёв, вызывающая сторона (ExpeditionScene) сама переносит его между
+  // боями одной экспедиции.
+  damageTakenMult: number;
 }
 
 export type CombatPhase = 'fighting' | 'walking' | 'done' | 'dead';

@@ -14,6 +14,13 @@ const RARITY_COLORS: Record<Rarity, number> = {
 
 /** Цвет подсветки слотов, в которые взятый в руку предмет можно положить. */
 const HIGHLIGHT_COLOR = 0xffcc44;
+const HIGHLIGHT_FILL_ALPHA = 0.18;
+const HIGHLIGHT_STROKE_ALPHA = 0.9;
+const HIGHLIGHT_TWEEN_RANGE: [number, number] = [0.95, 0.4];
+// Приглушённая версия — для слотов, куда предмет кладётся не по типу (например, вход крафта).
+const HIGHLIGHT_FILL_ALPHA_DIM = 0.08;
+const HIGHLIGHT_STROKE_ALPHA_DIM = 0.5;
+const HIGHLIGHT_TWEEN_RANGE_DIM: [number, number] = [0.6, 0.25];
 
 export interface SlotZone {
   id: string;
@@ -21,6 +28,12 @@ export interface SlotZone {
   allowOccupied?: boolean;
   /** Целевой слот для «руки» (стойка, кузница). Сундук — не placeable: туда предмет уходит как в мешок. */
   placeable?: boolean;
+  /**
+   * Слот принимает предмет не по типу, а по другому критерию (например, вход улучшения —
+   * по возможности повысить редкость). Если задан и возвращает true для предмета в руке,
+   * слот подсвечивается тусклее, чем обычные типизированные слоты.
+   */
+  alwaysHighlight?: (item: ItemInstance) => boolean;
   rect: Phaser.Geom.Rectangle;
   item: ItemInstance | null;
   onAccept: (item: ItemInstance, fromId: string) => void;
@@ -242,19 +255,24 @@ export class DragDropManager {
 
     const beh = getItemBehavior(this.heldItem.item_id);
     for (const slot of this.slots.values()) {
-      // «Область использования» = типизированный слот (экипировка/стойка),
-      // подходящий предмету. Универсальные зоны (сундук, продажа) не подсвечиваем.
-      if (!slot.slotType || !beh.slots.includes(slot.slotType)) continue;
+      // «Область использования» = типизированный слот (экипировка/стойка), подходящий предмету,
+      // либо слот, принимающий любой предмет (вход улучшения) — тот подсвечивается тусклее.
+      const typedMatch = !!slot.slotType && beh.slots.includes(slot.slotType);
+      if (!typedMatch && !slot.alwaysHighlight?.(this.heldItem)) continue;
+
+      const fillAlpha = typedMatch ? HIGHLIGHT_FILL_ALPHA : HIGHLIGHT_FILL_ALPHA_DIM;
+      const strokeAlpha = typedMatch ? HIGHLIGHT_STROKE_ALPHA : HIGHLIGHT_STROKE_ALPHA_DIM;
+      const [from, to] = typedMatch ? HIGHLIGHT_TWEEN_RANGE : HIGHLIGHT_TWEEN_RANGE_DIM;
 
       const r = slot.rect;
       const rect = this.scene.add
-        .rectangle(r.centerX, r.centerY, r.width, r.height, HIGHLIGHT_COLOR, 0.18)
-        .setStrokeStyle(2, HIGHLIGHT_COLOR, 0.9)
+        .rectangle(r.centerX, r.centerY, r.width, r.height, HIGHLIGHT_COLOR, fillAlpha)
+        .setStrokeStyle(2, HIGHLIGHT_COLOR, strokeAlpha)
         .setDepth(250)
         .setOrigin(0.5);
       this.scene.tweens.add({
         targets: rect,
-        alpha: { from: 0.95, to: 0.4 },
+        alpha: { from, to },
         duration: 650,
         yoyo: true,
         repeat: -1,

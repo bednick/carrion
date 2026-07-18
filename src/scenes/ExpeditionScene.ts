@@ -173,6 +173,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private heroAtkBars: { fill: Phaser.GameObjects.Rectangle; bg: Phaser.GameObjects.Rectangle }[] = [];
   private progressFill!: Phaser.GameObjects.Rectangle;
   private progressText!: Phaser.GameObjects.Text;
+  // Текст «Проклятие: N%» по центру под прогресс-баром — только у endless-зон (см. buildProgressBar).
+  private curseText?: Phaser.GameObjects.Text;
   private speedBtns: Phaser.GameObjects.Rectangle[] = [];
   private isPaused = false;
   // Отдельно от isPaused: не даёт открыть второй диалог поверх первого повторным кликом
@@ -241,6 +243,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.standTabs = [];
     this.heroAtkBars = [];
     this.enemyGraphics = [];
+    this.curseText = undefined;
     this.isPaused = false;
     // Часы сцены переживают её рестарт — не оставляем this.time замороженным между прогонами.
     this.time.paused = false;
@@ -304,6 +307,15 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private generateFightPlan() {
+    // Endless-зона (см. docs/content.zones.format.md) — рядовые бои идут без предела, fightPlan
+    // не строим вовсе (см. startNextFight/beginFight/onFightEnd, ветка this.zoneCfg.endless).
+    if (this.zoneCfg.endless) {
+      this.totalFights = 0;
+      this.fightPlan = [];
+      this.currentFightIdx = 0;
+      return;
+    }
+
     // Boss-only зона (пустой mob_pool или нет mob_loot) ⇒ рядовых боёв нет, сразу босс.
     const hasMobs = (this.zoneCfg.mob_pool?.length ?? 0) > 0 && !!this.zoneCfg.mob_loot;
     let count = 0;
@@ -345,9 +357,32 @@ export class ExpeditionScene extends Phaser.Scene {
     this.progressText = this.add.text(640, barY + barH / 2, '', {
       fontSize: '11px', fontFamily: FONT_FAMILY, color: '#aaaaaa',
     }).setOrigin(0.5).setDepth(2);
+
+    // Уровень проклятья зоны (endless, docs/content.zones.format.md) — по центру, под прогрессом.
+    if (this.zoneCfg.endless) {
+      const curseY = barY + barH + 14;
+      this.curseText = this.add.text(640, curseY, '', {
+        fontSize: '11px', fontFamily: FONT_FAMILY, color: '#cc88ff',
+      }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: false });
+      this.curseText.on('pointerover', () => {
+        const pct = Math.round(this.zoneCfg.endless!.curse_per_fight * this.currentFightIdx);
+        this.tooltip.showLines([
+          { text: 'Уровень проклятья зоны', color: '#cc88ff' },
+          { text: `Входящий по персонажу урон увеличен на ${pct}%`, color: '#bbbbbb' },
+        ], 640 - 110, curseY + 10);
+      });
+      this.curseText.on('pointerout', () => this.tooltip.hide());
+      this.updateCurseReadout();
+    }
   }
 
   private updateProgressBar() {
+    if (this.zoneCfg.endless) {
+      // Нет предела длины — заливку прогресса скрываем (делить не на что), только счётчик боёв.
+      this.progressFill.setVisible(false);
+      this.progressText.setText(`Бой ${this.currentFightIdx} из ???`);
+      return;
+    }
     const progress = this.currentFightIdx / this.totalFights;
     const maxW = 864;
     this.progressFill.setSize(Math.max(4, progress * maxW), 14);
@@ -709,24 +744,37 @@ export class ExpeditionScene extends Phaser.Scene {
       // Фолбэк — цветной прямоугольник, если спрайта нет.
       const spriteKey = `mob-${e.id}`;
       let sprite: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Sprite;
-      let nameY: number;
+      let dispH: number;
       let halfW: number; // половина ширины модельки — чтобы ставить полосы призыва справа от неё
       if (this.textures.exists(spriteKey)) {
         const img = this.textures.get(spriteKey).getSourceImage() as HTMLImageElement;
         const maxW = e.isBoss ? 210 : 150;
         const maxH = e.isBoss ? 165 : 130;
         const sc = Math.min(maxW / img.width, maxH / img.height) * (getMobConfig(e.id).ui?.scale ?? 1);
-        const dispH = img.height * sc;
+        dispH = img.height * sc;
         sprite = this.add.sprite(x, 287, spriteKey).setOrigin(0.5, 1).setDisplaySize(img.width * sc, dispH).setDepth(5);
-        nameY = 287 - dispH - 12;
         halfW = (img.width * sc) / 2;
       } else {
-        sprite = this.add.rectangle(x, 219, 70, 90, color).setDepth(5);
-        nameY = 274;
+        dispH = 90;
+        sprite = this.add.rectangle(x, 287, 70, dispH, color).setOrigin(0.5, 1).setDepth(5);
         halfW = 35;
       }
       const uiAlpha = getMobConfig(e.id).ui?.alpha;
       if (uiAlpha !== undefined) sprite.setAlpha(uiAlpha);
+
+      // Подпись имени и полоски ударов подвязаны к одной "анкорной" высоте над линией земли (287):
+      // не ниже MIN_LABEL_H (чуть выше стандартного не-босс моба) и не выше MAX_LABEL_H
+      // (крупные мобы упираются в потолок и подпись/полоски оказываются поверх спрайта).
+      const STANDARD_MOB_H = 130;
+      const MIN_LABEL_H = STANDARD_MOB_H + 10;
+      const MAX_LABEL_H = 190;
+      const LABEL_GAP = 12;
+      const BAR_GAP = 20;
+      const BAR_STEP = 14;
+      const refH = Math.min(Math.max(dispH, MIN_LABEL_H), MAX_LABEL_H);
+      const anchorY = 287 - refH;
+      const nameY = anchorY - LABEL_GAP;
+
       const nameText = this.add.text(x, nameY, e.name, { fontSize: '10px', fontFamily: FONT_FAMILY, color: '#ddddaa' }).setOrigin(0.5);
       const hpBar = this.add.rectangle(x, 310, 80, 10, 0x333333).setOrigin(0.5);
       const hpFill = this.add.rectangle(x - 40, 310, 80, 10, 0xaa4444).setOrigin(0, 0.5);
@@ -734,7 +782,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
       const atkBars: { fill: Phaser.GameObjects.Rectangle; bg: Phaser.GameObjects.Rectangle }[] = [];
       for (let t = 0; t < e.attackTimers.length; t++) {
-        const ay = 130 - t * 14;
+        const ay = nameY - BAR_GAP - t * BAR_STEP;
         const bg = this.add.rectangle(x, ay, 80, 8, 0x222222).setOrigin(0.5);
         const fill = this.add.rectangle(x - 40, ay, 0, 8, 0xffaa00).setOrigin(0, 0.5);
         atkBars.push({ bg, fill });
@@ -1066,7 +1114,7 @@ export class ExpeditionScene extends Phaser.Scene {
     for (const s of EQUIP_SLOTS) {
       if (this.equipment[s]) heroEquip[s as SlotType] = this.equipment[s]!;
     }
-    const fresh = CombatEngine.buildInitialHero(heroEquip);
+    const fresh = CombatEngine.buildInitialHero(heroEquip, this.engine.state.hero.damageTakenMult);
     fresh.hp = Math.min(this.engine.state.hero.hp, fresh.maxHp);
     this.engine.state.hero = fresh;
     this.buildHeroAtkBars();
@@ -1128,6 +1176,13 @@ export class ExpeditionScene extends Phaser.Scene {
     void retreatLbl;
   }
 
+  // Обновляет текст с текущим % проклятья endless-зоны (см. buildProgressBar). No-op вне endless.
+  private updateCurseReadout() {
+    if (!this.zoneCfg.endless || !this.curseText) return;
+    const pct = Math.round(this.zoneCfg.endless.curse_per_fight * this.currentFightIdx);
+    this.curseText.setText(`Проклятие: ${pct}%`);
+  }
+
   // Подтверждение отступления: лут с ленты сохраняется, зона НЕ засчитывается.
   private confirmRetreat() {
     if (this.retreatDialogOpen) return;
@@ -1185,7 +1240,8 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private startNextFight() {
-    if (this.currentFightIdx >= this.fightPlan.length) {
+    // Endless-зона (docs/content.zones.format.md) — боёв без предела, fightPlan пуст и не означает конец.
+    if (!this.zoneCfg.endless && this.currentFightIdx >= this.fightPlan.length) {
       this.onExpeditionComplete();
       return;
     }
@@ -1204,7 +1260,12 @@ export class ExpeditionScene extends Phaser.Scene {
       if (this.equipment[s]) heroEquip[s as SlotType] = this.equipment[s]!;
     }
 
-    const hero = CombatEngine.buildInitialHero(heroEquip);
+    // Проклятие endless-зоны (docs/content.zones.format.md): растёт с числом уже пройденных
+    // боёв этой экспедиции (currentFightIdx) — свежий заход всегда начинает с 0%.
+    const curseMult = this.zoneCfg.endless
+      ? 1 + (this.zoneCfg.endless.curse_per_fight / 100) * this.currentFightIdx
+      : 1;
+    const hero = CombatEngine.buildInitialHero(heroEquip, curseMult);
     if (this.engine) {
       hero.hp = this.engine.state.hero.hp;
       hero.maxHp = this.engine.state.hero.maxHp;
@@ -1215,7 +1276,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.carryoverHp = null;
     }
 
-    const rootMobId = isBoss ? this.zoneCfg.boss.mob_id : this.rollMob().id;
+    const rootMobId = isBoss ? this.zoneCfg.boss!.mob_id : this.rollMob().id;
     const phases = resolvePhases(rootMobId, isBoss);
     const enemies: EnemyState[] = buildBoardEnemies(phases[0]);
     // Движку нужны фазы только если форм больше одной (иначе перехода нет).
@@ -1352,7 +1413,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private rollMob(): MobConfig {
     // Вызывается только когда есть рядовые бои (mob_pool непустой); пустой пул — страховка.
     const pool = this.zoneCfg.mob_pool ?? [];
-    if (pool.length === 0) return getMobConfig(this.zoneCfg.boss.mob_id);
+    if (pool.length === 0) return getMobConfig(this.zoneCfg.boss!.mob_id);
     const total = pool.reduce((s, e) => s + e.weight, 0);
     let rand = Math.random() * total;
     for (const entry of pool) {
@@ -1363,7 +1424,9 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private onFightEnd(_isBoss: boolean) {
-    const fightType = this.fightPlan[this.currentFightIdx];
+    // Endless-зона (docs/content.zones.format.md): каждый бой — рядовой, лута и конца как у обычных
+    // мобов, без fightPlan/boss.
+    const fightType = this.zoneCfg.endless ? 'mob' : this.fightPlan[this.currentFightIdx];
 
     const magicFind = sumMeta(this.equipment).magicFind;
     const floatX = this.enemyGraphics[0]?.sprite.x ?? 700;
@@ -1385,13 +1448,16 @@ export class ExpeditionScene extends Phaser.Scene {
       // (onExpeditionComplete → buildRewardOptions из boss.loot). Здесь ничего не начисляем.
       // Квесты на боссов идут через stat (mobs_killed); событие нужно для презентации
       // (SoundManager — фанфары победы над боссом).
-      EventBus.emit('boss_killed', this.zoneCfg.boss.mob_id);
+      EventBus.emit('boss_killed', this.zoneCfg.boss!.mob_id);
     }
 
     this.currentFightIdx++;
     this.updateProgressBar();
+    this.updateCurseReadout();
 
-    if (this.currentFightIdx >= this.fightPlan.length) {
+    if (this.zoneCfg.endless) {
+      this.scheduleDelayed(800, () => this.startWalking());
+    } else if (this.currentFightIdx >= this.fightPlan.length) {
       this.scheduleDelayed(1000, () => this.onExpeditionComplete());
     } else {
       this.scheduleDelayed(800, () => this.startWalking());
@@ -1411,22 +1477,62 @@ export class ExpeditionScene extends Phaser.Scene {
     }
     // Лут гарантирован: всё, что ещё на ленте, уходит в сундук — смерть его не отнимает.
     this.collectBeltToChest();
+
+    // Endless-зона (docs/content.zones.format.md): цель — рекорд глубины, а не «прохождение».
+    // Показываем полноэкранный recap вместо тоста+автоперехода — игроку нужно время прочитать числа.
+    if (this.zoneCfg.endless) {
+      const depth = this.currentFightIdx;
+      const isRecord = MetaStore.recordBattlefieldDepth(depth);
+      const best = MetaStore.get().battlefield_best_depth;
+      this.scheduleDelayed(1500, () => this.showDeathRecap(depth, isRecord, best));
+      return;
+    }
+
     this.showStatus('Герой пал! Лут сохранён.', 3000);
     this.scheduleDelayed(2000, () => {
       this.scene.start('CampScene');
     });
   }
 
+  // Экран смерти в endless-зоне: сколько убил в этом забеге / рекорд зоны. Не отмечает зону
+  // пройденной (completeArea не вызывается — endless-зона не «проходится», см. план).
+  private showDeathRecap(depth: number, isRecord: boolean, best: number) {
+    this.victoryContainer.setVisible(true);
+    this.victoryContainer.removeAll(true);
+
+    const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.85).setInteractive();
+    const title = this.add.text(640, 260, 'Ты пал', {
+      fontSize: '30px', fontFamily: FONT_FAMILY, color: '#ff6666',
+    }).setOrigin(0.5);
+    const depthLine = this.add.text(640, 316, `Убито мобов: ${depth}`, {
+      fontSize: '18px', fontFamily: FONT_FAMILY, color: '#dddddd',
+    }).setOrigin(0.5);
+    const recordLine = this.add.text(640, 348, isRecord ? 'Новый рекорд!' : `Рекорд зоны: ${best}`, {
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: isRecord ? '#ffdd44' : '#999999',
+    }).setOrigin(0.5);
+
+    const btn = this.add.rectangle(640, 420, 200, 44, 0x332222).setStrokeStyle(1, 0x885555)
+      .setInteractive({ useHandCursor: true });
+    const btnLbl = this.add.text(640, 420, 'В лагерь', {
+      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#ddaaaa',
+    }).setOrigin(0.5);
+    btn.on('pointerover', () => btn.setFillStyle(0x442a2a));
+    btn.on('pointerout', () => btn.setFillStyle(0x332222));
+    btn.on('pointerdown', () => this.scene.start('CampScene'));
+
+    this.victoryContainer.add([overlay, title, depthLine, recordLine, btn, btnLbl]);
+  }
+
   private onExpeditionComplete() {
     // Весь оставшийся лут с ленты гарантированно уходит в сундук.
     this.collectBeltToChest();
-    // Гарант-драфт: 5 карточек [золото, предмет·mob, предмет·boss, предмет·mob, эссенция],
-    // игрок берёт одну. Источники и заглушки — см. buildRewardOptions.
+    // Гарант-драфт: до 5 карточек [золото, предмет·mob, предмет·boss, предмет·mob, эссенция],
+    // игрок берёт одну. Недостающие источники не показываются — см. buildRewardOptions.
     const options = buildRewardOptions(this.zoneCfg.boss?.loot, this.zoneCfg.mob_loot);
     this.showRewardDraft(options);
   }
 
-  // Экран выбора награды после победы над боссом: 1 из 5 вариантов.
+  // Экран выбора награды после победы над боссом: 1 из до 5 вариантов.
   private showRewardDraft(options: RewardOption[]) {
     this.victoryContainer.setVisible(true);
     this.victoryContainer.removeAll(true);

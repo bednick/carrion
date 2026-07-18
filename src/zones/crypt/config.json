@@ -22,7 +22,16 @@
     "loot": {
       "gold": { "min": 3500, "max": 6500 },
       "essence": {"epic":  {"min": 10, "max": 20}},
-      "items": []
+      "items": [
+        { "item_id": "leech_bead", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "vulture_amulet", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "thread_charm", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "barrier_amulet", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "short_spear", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "broadaxe", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "rapier", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "buckler", "chance": 0.10, "rarity": "epic" }
+      ]
     }
   }
 }

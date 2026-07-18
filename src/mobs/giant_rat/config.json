@@ -6,5 +6,5 @@
   "attacks": [
     { "damage": 2, "interval": 2.5 }
   ],
-  "ui": { "scale": 1.2 }
+  "ui": { "scale": 0.7 }
 }

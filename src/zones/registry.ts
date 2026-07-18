@@ -34,7 +34,7 @@ export function getZoneLootItemIds(zoneId: string): string[] {
   const cfg = getZoneConfig(zoneId);
   const ids = [
     ...(cfg.mob_loot?.items ?? []).map(e => e.item_id),
-    ...(cfg.boss.loot?.items ?? []).map(e => e.item_id),
+    ...(cfg.boss?.loot?.items ?? []).map(e => e.item_id),
   ];
   return [...new Set(ids)];
 }

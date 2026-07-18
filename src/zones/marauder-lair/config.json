@@ -23,7 +23,15 @@
     "loot": {
       "gold": { "min": 3500, "max": 6500 },
       "essence": {"epic":  {"min": 10, "max": 20}},
-      "items": []
+      "items": [
+        { "item_id": "gleaming_plate", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "spiked_cuirass", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "desperate_plate", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "heavy_plate", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "short_sword", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "dagger", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "heavy_shield", "chance": 0.10, "rarity": "epic" }
+      ]
     }
   }
 }

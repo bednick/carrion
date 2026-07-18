@@ -282,17 +282,27 @@ const ZONE_TABLE_COLGROUP = `<colgroup>
 function renderZoneTable(rows: { zoneCfg: ZoneConfig; s: SimSummary }[], selectedId: string | null): string {
   let html = `<table>${ZONE_TABLE_COLGROUP}<tr><th>Зона</th><th>Звёзды</th><th>Winrate</th><th>HP до босса</th><th>HP после босса</th><th>Боёв пройдено</th></tr>`;
   for (const { zoneCfg, s } of rows) {
-    const winrate = s.trials > 0 ? (s.wins / s.trials * 100) : 0;
+    const selected = zoneCfg.id === selectedId ? ' class="selected"' : '';
+    // Endless-зона (docs/content.zones.format.md) не имеет победы/босса — вместо winrate/boss-HP
+    // показываем среднюю глубину (мобов убито за забег до смерти), она же «Боёв пройдено».
+    const winrateCell = zoneCfg.endless
+      ? '—'
+      : (() => {
+          const winrate = s.trials > 0 ? (s.wins / s.trials * 100) : 0;
+          return `${winrate.toFixed(1)}%<div class="winrate-bar"><div style="width:${winrate}%"></div></div>`;
+        })();
     const avgBossStartHp = s.bossStartHpCount > 0 ? (s.bossStartHpSum / s.bossStartHpCount).toFixed(1) : '—';
     const avgBossEndHp = s.bossEndHpCount > 0 ? (s.bossEndHpSum / s.bossEndHpCount).toFixed(1) : '—';
-    const selected = zoneCfg.id === selectedId ? ' class="selected"' : '';
+    const fightsCell = zoneCfg.endless
+      ? (s.fightsSum / s.trials).toFixed(1)
+      : `${(s.fightsSum / s.trials).toFixed(1)} / ${zoneCfg.fights ? ((zoneCfg.fights.min + zoneCfg.fights.max) / 2).toFixed(1) : '0'}`;
     html += `<tr data-zone-id="${zoneCfg.id}"${selected}>
       <td>${zoneCfg.name}</td>
       <td>${'★'.repeat(zoneCfg.star)}${'☆'.repeat(3 - zoneCfg.star)}</td>
-      <td>${winrate.toFixed(1)}%<div class="winrate-bar"><div style="width:${winrate}%"></div></div></td>
+      <td>${winrateCell}</td>
       <td>${avgBossStartHp}</td>
       <td>${avgBossEndHp}</td>
-      <td>${(s.fightsSum / s.trials).toFixed(1)} / ${zoneCfg.fights ? ((zoneCfg.fights.min + zoneCfg.fights.max) / 2).toFixed(1) : '0'}</td>
+      <td>${fightsCell}</td>
     </tr>`;
   }
   html += '</table>';

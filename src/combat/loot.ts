@@ -12,9 +12,6 @@ export type RewardOption =
   | { kind: 'essence'; essence: Partial<Record<EssenceTier, number>> }
   | { kind: 'item'; item: ItemInstance };
 
-/** Заглушка на случай отсутствующего лута: предмет-карточку заменяет золото на 42. */
-export const REWARD_GOLD_STUB = 42;
-
 function randInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
@@ -49,37 +46,37 @@ function rollEssence(cfg: EssenceLoot): Partial<Record<EssenceTier, number>> {
   return out;
 }
 
-function itemOrStub(item: ItemInstance | null): RewardOption {
-  return item ? { kind: 'item', item } : { kind: 'gold', gold: REWARD_GOLD_STUB };
+function itemOrNull(item: ItemInstance | null): RewardOption | null {
+  return item ? { kind: 'item', item } : null;
 }
 
 /**
- * Пять вариантов гарант-награды после победы над боссом (игрок берёт один):
+ * До пяти вариантов гарант-награды после победы над боссом (игрок берёт один):
  * [золото, предмет·mob, предмет·boss(центр), предмет·mob, эссенция].
  * - Золото — ролл boss.loot.gold; эссенция — ролл boss.loot.essence.
  * - Центральный предмет — взвешенно из boss.loot.items; боковые два — из mob_loot.items без повторов.
- * - Любой недостающий источник заменяется золотом-заглушкой (REWARD_GOLD_STUB).
+ * - Любой недостающий источник (нет лута/эссенции/предметов) просто не показывается карточкой.
  * См. docs/mechanics.md.
  */
 export function buildRewardOptions(bossLoot?: LootTable, mobLoot?: LootTable): RewardOption[] {
   const used = new Set<string>();
 
-  const gold: RewardOption = bossLoot
+  const gold: RewardOption | null = bossLoot
     ? { kind: 'gold', gold: randInt(bossLoot.gold.min, bossLoot.gold.max) }
-    : { kind: 'gold', gold: REWARD_GOLD_STUB };
+    : null;
 
   // Центр выбираем первым, чтобы боковые mob-предметы не дублировали его item_id.
-  const center = itemOrStub(bossLoot ? pickWeightedItem(bossLoot.items, used) : null);
-  const left = itemOrStub(mobLoot ? pickWeightedItem(mobLoot.items, used) : null);
-  const right = itemOrStub(mobLoot ? pickWeightedItem(mobLoot.items, used) : null);
+  const center = itemOrNull(bossLoot ? pickWeightedItem(bossLoot.items, used) : null);
+  const left = itemOrNull(mobLoot ? pickWeightedItem(mobLoot.items, used) : null);
+  const right = itemOrNull(mobLoot ? pickWeightedItem(mobLoot.items, used) : null);
 
   const essenceRoll = bossLoot?.essence ? rollEssence(bossLoot.essence) : null;
-  const essence: RewardOption =
+  const essence: RewardOption | null =
     essenceRoll && Object.values(essenceRoll).some((v) => (v ?? 0) > 0)
       ? { kind: 'essence', essence: essenceRoll }
-      : { kind: 'gold', gold: REWARD_GOLD_STUB };
+      : null;
 
-  return [gold, left, center, right, essence];
+  return [gold, left, center, right, essence].filter((o): o is RewardOption => o !== null);
 }
 
 const RARITY_ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];

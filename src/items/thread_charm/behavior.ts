@@ -6,8 +6,8 @@ import type { Rarity } from '../types';
 // живут в CombatEngine.applyDamage (нужно мутируемое per-fight состояние), см.
 // docs/content.items.amulet.md. Хил задан в % от heroMaxHp, не флэт-числом — считается от
 // текущего maxHp героя в момент срабатывания. legendary не крафтится, повторяет epic.
-const THRESHOLD_RATIO = 0.3;
-const HEAL_PERCENT: Record<Rarity, number> = { common: 0.25, uncommon: 0.40, rare: 0.55, epic: 0.70, legendary: 0.70 };
+const THRESHOLD_RATIO = 0.2;
+const HEAL_PERCENT: Record<Rarity, number> = { common: 0.05, uncommon: 0.10, rare: 0.15, epic: 0.20, legendary: 0.30 };
 
 const behavior: ItemBehavior = {
   name: 'Оберег на волоске',

@@ -7,8 +7,11 @@ import { QUEST_DEFS } from '../quests/definitions';
 import type { ItemInstance, SlotId } from '../core/MetaStore';
 import { ARMOR_STAND_COUNT } from '../core/MetaStore';
 import { getItemBehavior } from '../items/registry';
-import { craftPreview, salvageEssence, formatEssence, ESSENCE_TIERS, itemSellPrice } from '../items/craft';
-import type { Rarity, SlotType, EssencePool } from '../items/types';
+import {
+  craftPreview, salvageEssence, formatEssence, ESSENCE_TIERS, ESSENCE_NAMES, itemSellPrice, essenceBuyCost,
+  ESSENCE_EXCHANGE_RATE, ESSENCE_EXCHANGE_TARGET, emptyEssence,
+} from '../items/craft';
+import type { Rarity, SlotType, EssencePool, EssenceTier } from '../items/types';
 import { itemIconKey } from '../items/icons';
 import { resourceTag, goldTag } from '../ui/priceTag';
 import { rewardIconKey, essenceIconKey, essenceIconKeyByRarity } from '../ui/rewards';
@@ -104,7 +107,8 @@ const TIER_HEX: Record<string, string> = {
 };
 
 function zoneNameColor(cfg: ZoneConfig): string {
-  if (cfg.id === 'battlefield') return TIER_HEX.legendary;
+  // Endless-зона (battlefield) без boss/наград-выбора — легендарный цвет как высший тир.
+  if (cfg.endless || !cfg.boss) return TIER_HEX.legendary;
   const ess = cfg.boss.loot?.essence;
   const tier = ess ? Object.keys(ess)[0] : undefined;
   return (tier && TIER_HEX[tier]) || '#ffffff';
@@ -135,10 +139,13 @@ export class CampScene extends Phaser.Scene {
   private tooltip!: Tooltip;
   private panelContainer!: Phaser.GameObjects.Container;
   private hoverLabel!: Phaser.GameObjects.Text;
-  private smithCraftItem: ItemInstance | null = null;
+  /** Предмет во входном слоте улучшения (вкладка «Экипировка»). */
+  private upgradeInputItem: ItemInstance | null = null;
   /** Готовый предмет после улучшения — лежит в правой ячейке, пока игрок не заберёт его drag'ом. */
-  private smithResultItem: ItemInstance | null = null;
+  private upgradeResultItem: ItemInstance | null = null;
   private smithHammerMode = false;
+  /** Сколько эссенции покупать за один клик «Купить», по тирам (вкладка «Кузнец»). */
+  private essenceBuyQty: Record<EssenceTier, number> = { uncommon: 1, rare: 1, epic: 1 };
   private dealerTab: 'shop' | 'quests' = 'quests';
   private panelState: 'smith' | 'dealer' | 'chest' | 'map' | null = null;
   private panelWheelHandler: ((...args: unknown[]) => void) | null = null;
@@ -153,6 +160,7 @@ export class CampScene extends Phaser.Scene {
   private resourceHUD!: ResourceHUD;
   private fluteSlider: SliderPopup | null = null;
   private dealerAlert: Phaser.GameObjects.Container | null = null;
+  private dealerBlinkHint: Phaser.GameObjects.Image | null = null;
   private firstExpeditionHint: Phaser.GameObjects.Image | null = null;
 
   constructor() {
@@ -509,11 +517,12 @@ export class CampScene extends Phaser.Scene {
       200, 522, 340, 285,
       'Кузнец', () => this.openSmithPanel(),
     );
-    this.addNPCWithSprite(
+    this.dealerBlinkHint = this.addNPCWithSprite(
       1090, 604, 80, 120, 'npc-dealer',
       1125, 540, 250, 240,
       'Скупщик', () => this.openDealerPanel(),
-    );
+      true,
+    ) ?? null;
     this.buildDealerAlert(1090, 604 - 120 / 2 - 18);
   }
 
@@ -539,7 +548,9 @@ export class CampScene extends Phaser.Scene {
 
   private refreshDealerAlert() {
     if (!this.dealerAlert) return;
-    this.dealerAlert.setVisible(MetaStore.get().quests.pending_reward.length > 0);
+    const hasReward = MetaStore.get().quests.pending_reward.length > 0;
+    this.dealerAlert.setVisible(hasReward);
+    this.dealerBlinkHint?.setVisible(hasReward);
   }
 
   // Есть ли среди активных (ещё не выполненных) квестов такой, чью цель можно
@@ -563,7 +574,8 @@ export class CampScene extends Phaser.Scene {
     textureKey: string,
     zoneX: number, zoneY: number, zoneW: number, zoneH: number,
     name: string, onClick: () => void,
-  ) {
+    withBlinkHint = false,
+  ): Phaser.GameObjects.Image | undefined {
     // Тень под ногами
     this.add.ellipse(spriteX, spriteY + spriteH / 2, spriteW * 0.9, 14, 0x000000, 0.45);
 
@@ -572,6 +584,21 @@ export class CampScene extends Phaser.Scene {
       .setDisplaySize(spriteW + 6, spriteH + 6)
       .setTintFill(0xffffff)
       .setVisible(false);
+
+    // Тот же слой, что и hover-обводка, но мигает сама по себе (как firstExpeditionHint
+    // у героя) — привлекает внимание к НПС независимо от наведения. Видимость снаружи.
+    let blinkHint: Phaser.GameObjects.Image | undefined;
+    if (withBlinkHint) {
+      blinkHint = this.add.image(spriteX, spriteY, textureKey)
+        .setDisplaySize(spriteW + 6, spriteH + 6)
+        .setTintFill(0xffffff)
+        .setVisible(false);
+      this.tweens.add({
+        targets: blinkHint,
+        alpha: { from: 1, to: 0 },
+        duration: 620, yoyo: true, repeat: -1, ease: 'Sine.inOut',
+      });
+    }
 
     this.add.image(spriteX, spriteY, textureKey).setDisplaySize(spriteW, spriteH);
 
@@ -587,6 +614,8 @@ export class CampScene extends Phaser.Scene {
       this.hoverLabel.setText('');
     });
     zone.on('pointerdown', () => onClick());
+
+    return blinkHint;
   }
 
   // НПС-флейтист. По клику открывает ползунок громкости слоя флейты.
@@ -652,8 +681,8 @@ export class CampScene extends Phaser.Scene {
     }
     this.dragDrop?.destroy();
     this.dragDrop = null;
-    if (this.smithCraftItem) { MetaStore.addToChest(this.smithCraftItem); this.smithCraftItem = null; }
-    if (this.smithResultItem) { MetaStore.addToChest(this.smithResultItem); this.smithResultItem = null; }
+    if (this.upgradeInputItem) { MetaStore.addToChest(this.upgradeInputItem); this.upgradeInputItem = null; }
+    if (this.upgradeResultItem) { MetaStore.addToChest(this.upgradeResultItem); this.upgradeResultItem = null; }
     this.smithHammerMode = false;
     this.input.setDefaultCursor('default');
     this.input.off('pointermove', this.forceHammerCursor, this);
@@ -918,28 +947,6 @@ export class CampScene extends Phaser.Scene {
     return formatEssence(pool);
   }
 
-  /** Диалог подтверждения перед разборкой — предмет теряется безвозвратно. */
-  private confirmSalvage(item: ItemInstance, onConfirm: () => void) {
-    this.tooltip.hide();
-    const beh = getItemBehavior(item.item_id);
-    const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.7).setDepth(190).setInteractive();
-    const box = this.add.rectangle(640, 400, 420, 150, 0x1e1a0a).setDepth(191).setStrokeStyle(2, 0x886622);
-    const text = this.add.text(640, 378, `Разобрать «${beh.name}»?\nПредмет будет утерян, взамен — эссенция.`, {
-      fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffddaa', align: 'center',
-    }).setOrigin(0.5).setDepth(192);
-    const yesBtn = this.add.rectangle(590, 434, 130, 34, 0x5a3a1a).setDepth(191).setInteractive({ useHandCursor: true });
-    const yesLbl = this.add.text(590, 434, 'Разобрать', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffcc88' }).setOrigin(0.5).setDepth(192);
-    const noBtn  = this.add.rectangle(710, 434, 130, 34, 0x224422).setDepth(191).setInteractive({ useHandCursor: true });
-    const noLbl  = this.add.text(710, 434, 'Отмена', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(192);
-
-    const close = () => [overlay, box, text, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
-    // Отмена — выходим из режима разборки, возвращаем обычный курсор.
-    const cancel = () => { close(); this.exitSmithHammerMode(); };
-    yesBtn.on('pointerdown', () => { close(); onConfirm(); });
-    noBtn.on('pointerdown', () => cancel());
-    overlay.on('pointerdown', () => cancel());
-  }
-
   /** Разбирает предмет: эссенция в мету, всплывающие иконки на месте клика, обновление панели. */
   private performSalvage(item: ItemInstance, x: number, y: number, keepHammer: boolean) {
     const pool = this.smithCalcEssence(item);
@@ -983,13 +990,235 @@ export class CampScene extends Phaser.Scene {
     this.rebuildPanel();
   }
 
+  // Кузнец: покупка эссенции за золото (верхние 2/3) + разборка предметов на эссенцию
+  // (нижняя треть, отделена линией — см. divider в buildUpgradePanel). Улучшение — на
+  // вкладке «Экипировка» (см. buildUpgradePanel), сюда её не рисуем.
   private buildSmithContent() {
     const cx = 379;
-    const S = 52;
-    const inputX = 315, arrowX = 380, resultX = 445;
-    const slotY = 375;
-    const item = this.smithCraftItem;
-    const resultItem = this.smithResultItem;
+    const toAdd: Phaser.GameObjects.GameObject[] = [];
+    const meta = MetaStore.get();
+
+    // Сетка строк: 3 покупки + 2 обмена в одном списке, диапазон 140-502 (до разделителя блока «Разобрать»).
+    // Расстояние между строками = зазор между ячейками сундука (SIZE=52, GAP=6 в buildSharedChestPane).
+    const ROW_H = 40, ROW_GAP = 6, ROW_SPACING = ROW_H + ROW_GAP;
+    // Доп. отступ сверху и снизу от разделителя между группами (покупка/обмен), поверх обычного ROW_SPACING.
+    const GROUP_PAD = 14;
+    // Разделитель блока «Разобрать» ниже в этом методе — считаем сетку строк снизу вверх от него,
+    // чтобы отступ от последней строки обмена до него был таким же, как GROUP_PAD между группами.
+    const BOTTOM_DIVIDER_Y = 502;
+
+    const exchangePairs = ESSENCE_TIERS
+      .map((from): [EssenceTier, EssenceTier | null] => [from, ESSENCE_EXCHANGE_TARGET[from]])
+      .filter((p): p is [EssenceTier, EssenceTier] => p[1] !== null);
+
+    const lastExchangeY = BOTTOM_DIVIDER_Y - GROUP_PAD - ROW_H / 2;
+    const exchangeYStart = lastExchangeY - (exchangePairs.length - 1) * ROW_SPACING;
+    const lastBuyY = exchangeYStart - ROW_H - 2 * GROUP_PAD;
+    const ROW_Y_START = lastBuyY - (ESSENCE_TIERS.length - 1) * ROW_SPACING;
+
+    // Строки покупки эссенции за золото, одна на тир (от слабой к сильной).
+    ESSENCE_TIERS.forEach((tier, i) => {
+      const rowY = ROW_Y_START + i * ROW_SPACING;
+      const qty = this.essenceBuyQty[tier];
+      const cost = essenceBuyCost(tier, qty);
+      const canAfford = meta.gold >= cost;
+      const maxQty = Math.min(99, Math.max(1, Math.floor(meta.gold / essenceBuyCost(tier, 1))));
+      const atMax = qty >= maxQty;
+      const name = ESSENCE_NAMES[tier];
+      const label = name.charAt(0).toUpperCase() + name.slice(1);
+
+      const rowBg = this.add.rectangle(cx + 7, rowY, 356, ROW_H, 0x222233).setStrokeStyle(1, 0x444455);
+      const icon = this.add.image(cx - 160, rowY, essenceIconKey(tier)).setDisplaySize(20, 20);
+      const rowLabel = this.add.text(cx - 142, rowY, `${label} эссенция`, {
+        fontSize: '12px', fontFamily: FONT_FAMILY, color: TIER_HEX[tier],
+      }).setOrigin(0, 0.5);
+
+      // Степпер количества: число в рамке + мелкие кнопки-стрелки ▲/▼ (клавиатурного
+      // ввода в проекте нет — canvas Phaser, а не DOM).
+      const qtyBox = this.add.rectangle(cx + 36, rowY, 32, 26, 0x1a1a26).setStrokeStyle(1, 0x555566);
+      const qtyLbl = this.add.text(cx + 36, rowY, `${qty}`, {
+        fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffffff',
+      }).setOrigin(0.5);
+      const arrowUp = this.add.text(cx + 57, rowY - 7, '▲', {
+        fontSize: '9px', fontFamily: FONT_FAMILY, color: atMax ? '#444455' : '#aaaacc',
+      }).setOrigin(0.5).setInteractive({ useHandCursor: !atMax });
+      const arrowDown = this.add.text(cx + 57, rowY + 7, '▼', {
+        fontSize: '9px', fontFamily: FONT_FAMILY, color: '#aaaacc',
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      arrowUp.on('pointerdown', () => this.changeEssenceBuyQty(tier, 1));
+      arrowDown.on('pointerdown', () => this.changeEssenceBuyQty(tier, -1));
+
+      const priceTag = goldTag(this, cost, { iconSize: 14, fontSize: 12, originX: 0 }).setPosition(cx + 66, rowY);
+
+      const buyBtn = this.add.rectangle(cx + 158, rowY, 50, 26, canAfford ? 0x224422 : 0x332222)
+        .setStrokeStyle(1, canAfford ? 0x44aa44 : 0x664444)
+        .setInteractive({ useHandCursor: true });
+      const buyLbl = this.add.text(cx + 158, rowY, 'Купить', {
+        fontSize: '11px', fontFamily: FONT_FAMILY, color: canAfford ? '#aaffaa' : '#886666',
+      }).setOrigin(0.5);
+      buyBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+        if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не покупает
+        this.tryBuyEssence(tier, qty, ptr.x, ptr.y);
+      });
+
+      toAdd.push(rowBg, icon, rowLabel, qtyBox, qtyLbl, arrowUp, arrowDown, priceTag, buyBtn, buyLbl);
+    });
+
+    // Разделитель между группой покупки и группой обмена — с равным отступом (GROUP_PAD)
+    // от последней строки покупки и от первой строки обмена.
+    const groupDividerY = lastBuyY + ROW_H / 2 + GROUP_PAD;
+    toAdd.push(this.add.rectangle(cx + 7, groupDividerY, 356, 1, 0x333344));
+
+    // Строки обмена дорогой эссенции на дешёвую (rare→uncommon, epic→rare) — сразу под покупкой,
+    // тот же список. Курс специально невыгодный (ESSENCE_EXCHANGE_RATE), без золота.
+    exchangePairs.forEach(([from, to], j) => {
+      const rowY = exchangeYStart + j * ROW_SPACING;
+      const owned = meta.essence[from];
+      const canExchange = owned >= 1;
+      const output = ESSENCE_EXCHANGE_RATE;
+      const fromLabel = ESSENCE_NAMES[from].charAt(0).toUpperCase() + ESSENCE_NAMES[from].slice(1);
+
+      const rowBg = this.add.rectangle(cx + 7, rowY, 356, ROW_H, 0x222233).setStrokeStyle(1, 0x444455);
+
+      const exchangeBtn = this.add.rectangle(cx + 7, rowY, 50, 26, canExchange ? 0x224422 : 0x332222)
+        .setStrokeStyle(1, canExchange ? 0x44aa44 : 0x664444)
+        .setInteractive({ useHandCursor: true });
+      const exchangeLbl = this.add.text(cx + 7, rowY, 'Обменять', {
+        fontSize: '9px', fontFamily: FONT_FAMILY, color: canExchange ? '#aaffaa' : '#886666', align: 'center',
+      }).setOrigin(0.5);
+      exchangeBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+        if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не меняет
+        this.tryExchangeEssence(from, to, ptr.x, ptr.y);
+      });
+
+      // Слева от кнопки — что получаем: «+3 [icon] Необычная».
+      const toLabel = ESSENCE_NAMES[to].charAt(0).toUpperCase() + ESSENCE_NAMES[to].slice(1);
+      const getParts = this.layoutIconRow(
+        `+${output}`, TIER_HEX[to], essenceIconKey(to), toLabel, TIER_HEX[to], rowY, cx - 125, true,
+      );
+
+      // Справа от кнопки — что отдаём: «-1 [icon] Редкая».
+      const giveParts = this.layoutIconRow(
+        '-1', TIER_HEX[from], essenceIconKey(from), fromLabel, TIER_HEX[from], rowY, cx + 40, false,
+      );
+
+      toAdd.push(rowBg, exchangeBtn, exchangeLbl, ...getParts, ...giveParts);
+    });
+
+    // Разделитель — та же линия, что и у блока улучшения на вкладке «Экипировка»
+    // (buildUpgradePanel: divider на top-2, top=504), чтобы совпадать между вкладками.
+    const divider = this.add.rectangle(cx, 502, 340, 1, 0x333344);
+    toAdd.push(divider);
+
+    // Кнопка-переключатель режима разборки (курсор-молот): пока включена, клик по предмету
+    // в общем сундуке (см. getChestClickHandler) сразу разбирает его без подтверждения.
+    // По центру нижней трети панели (между разделителем 502 и нижним краем панели 660).
+    const hammerActive = this.smithHammerMode;
+    const btnY = 582;
+    const BTN_W = 220, BTN_H = 44;
+    const hammerBtn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, hammerActive ? 0x5a3a1a : 0x2a2a1a)
+      .setStrokeStyle(hammerActive ? 2 : 1, hammerActive ? 0xffaa44 : 0x446644)
+      .setInteractive({ useHandCursor: true });
+    const hammerG = this.add.image(cx - BTN_W / 2 + 30, btnY, 'hammer').setDisplaySize(24, 24);
+    const hammerLbl = this.add.text(cx - BTN_W / 2 + 54, btnY, 'Разобрать', {
+      fontSize: '15px', fontFamily: FONT_FAMILY,
+      color: hammerActive ? '#ffcc88' : '#aaddaa', align: 'center',
+    }).setOrigin(0, 0.5);
+    hammerBtn.on('pointerover', () => { if (!this.smithHammerMode) hammerBtn.setFillStyle(0x3a3a2a); });
+    hammerBtn.on('pointerout',  () => { if (!this.smithHammerMode) hammerBtn.setFillStyle(0x2a2a1a); });
+    hammerBtn.on('pointerdown', () => {
+      if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не переключает разборку
+      if (this.smithHammerMode) this.exitSmithHammerMode(); else this.enterSmithHammerMode();
+    });
+    toAdd.push(hammerBtn, hammerG, hammerLbl);
+
+    this.panelContainer.add(toAdd);
+  }
+
+  private changeEssenceBuyQty(tier: EssenceTier, delta: number) {
+    const unitPrice = essenceBuyCost(tier, 1);
+    const maxAffordable = Math.max(1, Math.floor(MetaStore.get().gold / unitPrice));
+    const next = Phaser.Math.Clamp(this.essenceBuyQty[tier] + delta, 1, Math.min(99, maxAffordable));
+    if (next === this.essenceBuyQty[tier]) return;
+    this.essenceBuyQty[tier] = next;
+    this.rebuildPanel();
+  }
+
+  /** Покупка эссенции у кузнеца за золото — альтернатива разборке предметов. */
+  private tryBuyEssence(tier: EssenceTier, qty: number, x?: number, y?: number) {
+    const cost = essenceBuyCost(tier, qty);
+    const meta = MetaStore.get();
+    if (meta.gold < cost) {
+      this.showMessage(`Недостаточно золота! Нужно ${cost}g`);
+      return;
+    }
+    MetaStore.spendGold(cost);
+    MetaStore.addEssence(tier, qty);
+    spawnIconFloater(this, rewardIconKey('gold'), `-${cost}`, x ?? 379, y ?? 300, '#ffcc00');
+    spawnIconFloater(this, essenceIconKey(tier), `+${qty}`, x ?? 379, y ?? 300, TIER_HEX[tier]);
+    this.essenceBuyQty[tier] = 1;
+    this.refreshHUD();
+    this.rebuildPanel();
+  }
+
+  /** Обмен дорогой эссенции на дешёвую по невыгодному курсу 1:ESSENCE_EXCHANGE_RATE, без золота. */
+  private tryExchangeEssence(from: EssenceTier, to: EssenceTier, x?: number, y?: number) {
+    const meta = MetaStore.get();
+    if (meta.essence[from] < 1) {
+      this.showMessage('Недостаточно эссенции!');
+      return;
+    }
+    const cost = emptyEssence();
+    cost[from] = 1;
+    MetaStore.spendEssence(cost);
+    const output = ESSENCE_EXCHANGE_RATE;
+    MetaStore.addEssence(to, output);
+    spawnIconFloater(this, essenceIconKey(from), '-1', x ?? 379, y ?? 300, TIER_HEX[from]);
+    spawnIconFloater(this, essenceIconKey(to), `+${output}`, x ?? 379, y ?? 300, TIER_HEX[to]);
+    this.refreshHUD();
+    this.rebuildPanel();
+  }
+
+  /**
+   * Строка «число + иконка + подпись» (например «+3 [icon] Необычная»).
+   * alignRight — anchorX это фиксированная колонка иконки (число растёт влево от неё, подпись
+   * вправо), так иконки в нескольких строках с разной длиной подписи стоят друг под другом.
+   * !alignRight — anchorX это левый край числа, всё растёт вправо (иконка не выравнивается
+   * между строками, но у неё и так постоянный текст числа слева, так что она уже совпадает).
+   */
+  private layoutIconRow(
+    numText: string, numColor: string, iconKey: string, labelText: string, labelColor: string,
+    rowY: number, anchorX: number, alignRight: boolean,
+  ): [Phaser.GameObjects.Text, Phaser.GameObjects.Image, Phaser.GameObjects.Text] {
+    const gap = 4, iconSize = 16;
+    const iconX = alignRight ? anchorX : 0; // при !alignRight досчитаем ниже, после ширины numLbl
+    const numLbl = this.add.text(0, rowY, numText, {
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: numColor,
+    }).setOrigin(alignRight ? 1 : 0, 0.5);
+    const icon = this.add.image(iconX, rowY, iconKey).setDisplaySize(iconSize, iconSize).setOrigin(0, 0.5);
+    const tierLbl = this.add.text(0, rowY, labelText, {
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: labelColor,
+    }).setOrigin(0, 0.5);
+
+    if (alignRight) {
+      numLbl.x = anchorX - gap;
+      tierLbl.x = anchorX + iconSize + gap;
+    } else {
+      numLbl.x = anchorX;
+      icon.x = anchorX + numLbl.width + gap;
+      tierLbl.x = anchorX + numLbl.width + gap + iconSize + gap;
+    }
+    return [numLbl, icon, tierLbl];
+  }
+
+  // Блок улучшения на вкладке «Экипировка», в нижней трети панели под стойкой брони:
+  // вход → выход, кнопка «Улучшить». Логика расчёта — craftPreview() из src/items/craft.ts.
+  private buildUpgradePanel(cx: number, top: number) {
+    const S = 44;
+    const inputX = cx - 54, arrowX = cx, resultX = cx + 54;
+    const slotY = top + 37;
+    const item = this.upgradeInputItem;
+    const resultItem = this.upgradeResultItem;
 
     // Превью улучшения одного предмета: следующая редкость + стоимость.
     // Пока в правой ячейке лежит неснятый результат, крафтить дальше нельзя — сначала забрать.
@@ -1014,17 +1243,19 @@ export class CampScene extends Phaser.Scene {
       }
     }
 
+    const divider = this.add.rectangle(cx, top - 2, 340, 1, 0x333344);
+
     // Входной слот
     const s1Bg = this.add.rectangle(inputX, slotY, S, S, 0x2a2a3a)
       .setStrokeStyle(2, item ? RARITY_COLORS[item.rarity] : 0x555566);
     const s1Content = item
-      ? this.add.image(inputX, slotY, itemIconKey(item.item_id)).setDisplaySize(40, 40)
-      : this.add.text(inputX, slotY, '+', { fontSize: '40px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
+      ? this.add.image(inputX, slotY, itemIconKey(item.item_id)).setDisplaySize(34, 34)
+      : this.add.text(inputX, slotY, '+', { fontSize: '32px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
 
     // "→"
     const arrowActive = !!(previewResult || resultItem);
     const arrowLbl = this.add.text(arrowX, slotY, '→', {
-      fontSize: '36px', fontFamily: FONT_FAMILY, color: arrowActive ? '#667766' : '#333344',
+      fontSize: '28px', fontFamily: FONT_FAMILY, color: arrowActive ? '#667766' : '#333344',
     }).setOrigin(0.5);
 
     // Слот результата: пока идёт выбор — полупрозрачное превью; после апгрейда — настоящий предмет, который можно забрать.
@@ -1032,31 +1263,32 @@ export class CampScene extends Phaser.Scene {
       .setStrokeStyle(2, resultItem ? RARITY_COLORS[resultItem.rarity] : previewResult ? RARITY_COLORS[previewResult.rarity] : 0x333344);
     let s3Content: Phaser.GameObjects.Image | null = null;
     if (resultItem) {
-      s3Content = this.add.image(resultX, slotY, itemIconKey(resultItem.item_id)).setDisplaySize(40, 40);
+      s3Content = this.add.image(resultX, slotY, itemIconKey(resultItem.item_id)).setDisplaySize(34, 34);
     } else if (previewResult) {
-      s3Content = this.add.image(resultX, slotY, itemIconKey(previewResult.item_id)).setDisplaySize(40, 40).setAlpha(0.3);
+      s3Content = this.add.image(resultX, slotY, itemIconKey(previewResult.item_id)).setDisplaySize(34, 34).setAlpha(0.3);
     }
 
-
-    // DragDrop: единственный входной слот + зона всей левой половины меню.
+    // DragDrop: входной слот принимает только перетаскивание (клик по предмету в сундуке
+    // на этой вкладке экипирует его на стойку — это основной сценарий, не конфликтуем с ним).
     if (this.dragDrop) {
       this.dragDrop.registerSlot({
-        id: 'smith_slot_0',
+        id: 'upgrade_input_slot',
         placeable: true,
+        alwaysHighlight: (it) => craftPreview(it, null).result !== null,
         rect: new Phaser.Geom.Rectangle(inputX - S / 2, slotY - S / 2, S, S),
         item: item ?? null,
-        onRemove: () => { const it = this.smithCraftItem; this.smithCraftItem = null; return it; },
-        onAccept: (it) => { this.smithCraftItem = it; EventBus.emit('item_placed_smith'); this.time.delayedCall(0, () => this.rebuildPanel()); },
+        onRemove: () => { const it = this.upgradeInputItem; this.upgradeInputItem = null; return it; },
+        onAccept: (it) => { this.upgradeInputItem = it; EventBus.emit('item_placed_smith'); this.time.delayedCall(0, () => this.rebuildPanel()); },
       });
       this.dragDrop.registerSlot({
-        id: 'smith_craft_zone',
+        id: 'upgrade_zone',
         placeable: true,
         allowOccupied: true,
-        rect: new Phaser.Geom.Rectangle(195, 212, 370, 440),
+        rect: new Phaser.Geom.Rectangle(cx - 170, top, 340, 150),
         item: null,
         onRemove: () => null,
         onAccept: (it) => {
-          if (!this.smithCraftItem) { this.smithCraftItem = it; EventBus.emit('item_placed_smith'); }
+          if (!this.upgradeInputItem) { this.upgradeInputItem = it; EventBus.emit('item_placed_smith'); }
           else { MetaStore.addToChest(it); this.showMessage('Слот занят'); }
           this.time.delayedCall(0, () => this.rebuildPanel());
         },
@@ -1064,10 +1296,10 @@ export class CampScene extends Phaser.Scene {
       // Слот результата — только забрать drag'ом, положить в него нельзя.
       if (resultItem) {
         this.dragDrop.registerSlot({
-          id: 'smith_result_slot',
+          id: 'upgrade_result_slot',
           rect: new Phaser.Geom.Rectangle(resultX - S / 2, slotY - S / 2, S, S),
           item: resultItem,
-          onRemove: () => { const it = this.smithResultItem; this.smithResultItem = null; return it; },
+          onRemove: () => { const it = this.upgradeResultItem; this.upgradeResultItem = null; return it; },
           onAccept: () => {},
         });
       }
@@ -1084,23 +1316,13 @@ export class CampScene extends Phaser.Scene {
       if (this.dragDrop) {
         s1Bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
           if (this.dragDrop?.isHolding()) return;
-          if (this.smithHammerMode) {
-            const it = this.smithCraftItem!;
-            const keepHammer = (ptr.event as MouseEvent).shiftKey;
-            const clickX = ptr.x, clickY = ptr.y;
-            this.confirmSalvage(it, () => {
-              this.smithCraftItem = null;
-              this.performSalvage(it, clickX, clickY, keepHammer);
-            });
-            return;
-          }
           this.pendingDrag = {
-            slotId: 'smith_slot_0', downX: ptr.x, downY: ptr.y,
-            fallback: () => { MetaStore.addToChest(this.smithCraftItem!); this.smithCraftItem = null; this.rebuildPanel(); },
+            slotId: 'upgrade_input_slot', downX: ptr.x, downY: ptr.y,
+            fallback: () => { MetaStore.addToChest(this.upgradeInputItem!); this.upgradeInputItem = null; this.rebuildPanel(); },
           };
         });
       } else {
-        s1Bg.on('pointerdown', () => { MetaStore.addToChest(this.smithCraftItem!); this.smithCraftItem = null; this.rebuildPanel(); });
+        s1Bg.on('pointerdown', () => { MetaStore.addToChest(this.upgradeInputItem!); this.upgradeInputItem = null; this.rebuildPanel(); });
       }
     }
 
@@ -1116,20 +1338,10 @@ export class CampScene extends Phaser.Scene {
       if (this.dragDrop) {
         s3Bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
           if (this.dragDrop?.isHolding()) return;
-          if (this.smithHammerMode) {
-            const it = this.smithResultItem!;
-            const keepHammer = (ptr.event as MouseEvent).shiftKey;
-            const clickX = ptr.x, clickY = ptr.y;
-            this.confirmSalvage(it, () => {
-              this.smithResultItem = null;
-              this.performSalvage(it, clickX, clickY, keepHammer);
-            });
-            return;
-          }
-          this.pendingDrag = { slotId: 'smith_result_slot', downX: ptr.x, downY: ptr.y };
+          this.pendingDrag = { slotId: 'upgrade_result_slot', downX: ptr.x, downY: ptr.y };
         });
       } else {
-        s3Bg.on('pointerdown', () => { MetaStore.addToChest(this.smithResultItem!); this.smithResultItem = null; this.rebuildPanel(); });
+        s3Bg.on('pointerdown', () => { MetaStore.addToChest(this.upgradeResultItem!); this.upgradeResultItem = null; this.rebuildPanel(); });
       }
     } else if (previewResult) {
       // Только превью следующего шага — без взаимодействия, кроме тултипа.
@@ -1140,18 +1352,14 @@ export class CampScene extends Phaser.Scene {
       s3Bg.on('pointerout', () => { this.tooltip.hide(); });
     }
 
-    // Две равнозначные кнопки в ряд: «Улучшить» и «Разобрать» (см. docs/ui.md).
-    const UP_W = 180, DIS_W = 150, BTN_GAP = 14;
-    const rowTotal = UP_W + BTN_GAP + DIS_W;
-    const upX = cx - rowTotal / 2 + UP_W / 2;
-    const disX = cx + rowTotal / 2 - DIS_W / 2;
-
     // Кнопка — всегда «Улучшить», активна только когда хватает ресурсов.
+    const btnY = slotY + S / 2 + 26;
+    const BTN_W = 170, BTN_H = 32;
     const btnEnabled = canCraft;
     const btnColor = btnEnabled ? 0x335533 : 0x222233;
-    const btn = this.add.rectangle(upX, 460, UP_W, 36, btnColor);
+    const btn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, btnColor);
     if (btnEnabled) btn.setInteractive({ useHandCursor: true });
-    const btnLbl = this.add.text(upX, 460, 'Улучшить', {
+    const btnLbl = this.add.text(cx, btnY, 'Улучшить', {
       fontSize: '13px', fontFamily: FONT_FAMILY,
       color: btnEnabled ? '#aaffaa' : '#555566', align: 'center',
     }).setOrigin(0.5);
@@ -1161,8 +1369,8 @@ export class CampScene extends Phaser.Scene {
         MetaStore.spendGold(goldCost);
         if (essenceCost) MetaStore.spendEssence(essenceCost);
         // Улучшенный предмет уходит в правую ячейку, входной слот освобождается.
-        this.smithResultItem = { item_id: previewResult!.item_id, rarity: previewResult!.rarity };
-        this.smithCraftItem = null;
+        this.upgradeResultItem = { item_id: previewResult!.item_id, rarity: previewResult!.rarity };
+        this.upgradeInputItem = null;
         EventBus.emit('item_crafted');
         EventBus.emit('items_combined');
         this.refreshHUD();
@@ -1184,45 +1392,23 @@ export class CampScene extends Phaser.Scene {
           if (need > 0) rows.push({ icon: essenceIconKey(tier), need, have: meta.essence[tier] });
         }
       }
-      let ry = 496;
+      let ry = btnY + BTN_H / 2 + 16;
       for (const row of rows) {
         const enough = row.have >= row.need;
         costLbls.push(resourceTag(this, row.icon, `${row.have} / ${row.need}`, {
-          iconSize: 15, fontSize: 11, originX: 0.5, color: enough ? '#88aa88' : '#dd5555',
-        }).setPosition(upX, ry));
-        ry += 18;
+          iconSize: 14, fontSize: 10, originX: 0.5, color: enough ? '#88aa88' : '#dd5555',
+        }).setPosition(cx, ry));
+        ry += 16;
       }
     } else if (craftError) {
-      costLbls.push(this.add.text(upX, 494, craftError, {
-        fontSize: '11px', fontFamily: FONT_FAMILY, color: '#886655', align: 'center',
-        wordWrap: { width: 210 },
+      costLbls.push(this.add.text(cx, btnY + BTN_H / 2 + 18, craftError, {
+        fontSize: '10px', fontFamily: FONT_FAMILY, color: '#886655', align: 'center',
+        wordWrap: { width: 220 },
       }).setOrigin(0.5));
     }
 
-    // Кнопка разборки (режим молота) — с подписью, наравне с «Улучшить».
-    const hammerActive = this.smithHammerMode;
-    const hammerBtn = this.add.rectangle(disX, 460, DIS_W, 36,
-      hammerActive ? 0x5a3a1a : 0x2a2a1a)
-      .setStrokeStyle(hammerActive ? 2 : 1, hammerActive ? 0xffaa44 : 0x446644)
-      .setInteractive({ useHandCursor: true });
-    const hammerG = this.add.image(disX - DIS_W / 2 + 24, 460, 'hammer').setDisplaySize(20, 20);
-    const hammerLbl = this.add.text(disX - DIS_W / 2 + 42, 460, 'Разобрать', {
-      fontSize: '13px', fontFamily: FONT_FAMILY,
-      color: hammerActive ? '#ffcc88' : '#aaddaa', align: 'center',
-    }).setOrigin(0, 0.5);
-    hammerBtn.on('pointerover', () => { if (!this.smithHammerMode) hammerBtn.setFillStyle(0x3a3a2a); });
-    hammerBtn.on('pointerout',  () => { if (!this.smithHammerMode) hammerBtn.setFillStyle(0x2a2a1a); });
-    hammerBtn.on('pointerdown', () => {
-      if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не переключает разборку
-      if (this.smithHammerMode) this.exitSmithHammerMode(); else this.enterSmithHammerMode();
-    });
-
     const toAdd: Phaser.GameObjects.GameObject[] = [
-      s1Bg, s1Content, arrowLbl,
-      s3Bg,
-      btn, btnLbl,
-      hammerBtn, hammerG, hammerLbl,
-      ...costLbls,
+      divider, s1Bg, s1Content, arrowLbl, s3Bg, btn, btnLbl, ...costLbls,
     ];
     if (s3Content) toAdd.push(s3Content);
     this.panelContainer.add(toAdd);
@@ -1322,8 +1508,10 @@ export class CampScene extends Phaser.Scene {
       }
     };
 
-    const stands = this.buildArmorStands(cx, 340, onStandSlotClick);
+    // Крест слотов по центру между табами стоек (y=210) и разделительной линией блока улучшения (y=502).
+    const stands = this.buildArmorStands(cx, 290, onStandSlotClick);
     this.panelContainer.add([...tabs, ...stands]);
+    this.buildUpgradePanel(cx, 504);
   }
 
   // Табы выбора активной стойки-пресета (1/2/3): переключают selectedStandIndex.
@@ -1353,24 +1541,14 @@ export class CampScene extends Phaser.Scene {
 
   private getChestClickHandler(): ((inst: ItemInstance, idx: number) => void) | undefined {
     if (this.panelState === 'smith') {
+      if (!this.smithHammerMode) return undefined; // без режима разборки клик по сундуку ничего не делает
       return (inst, idx) => {
-        if (this.smithHammerMode) {
-          // Сундук — без подтверждения: спрашиваем только за предметы прямо у кузнеца (2 слота стола).
-          const ptr = this.input.activePointer;
-          const keepHammer = !!(ptr?.event as MouseEvent)?.shiftKey;
-          const clickX = ptr?.x ?? 640, clickY = ptr?.y ?? 400;
-          MetaStore.removeFromChest(idx);
-          this.performSalvage(inst, clickX, clickY, keepHammer);
-          return;
-        }
-        if (!this.smithCraftItem) {
-          MetaStore.removeFromChest(idx);
-          this.smithCraftItem = inst;
-          EventBus.emit('item_placed_smith');
-          this.rebuildPanel();
-        } else {
-          this.showMessage('Слот занят — кликни слот чтобы убрать');
-        }
+        // Разборка — мгновенно, без подтверждения.
+        const ptr = this.input.activePointer;
+        const keepHammer = !!(ptr?.event as MouseEvent)?.shiftKey;
+        const clickX = ptr?.x ?? 640, clickY = ptr?.y ?? 400;
+        MetaStore.removeFromChest(idx);
+        this.performSalvage(inst, clickX, clickY, keepHammer);
       };
     }
     if (this.panelState === 'dealer') {
@@ -1644,15 +1822,6 @@ export class CampScene extends Phaser.Scene {
     for (const entry of MAP_ZONE_LAYOUT) {
       this.buildMapZoneNode(entry, meta.unlocked_areas, meta.completed_areas);
     }
-
-    // Экран завершения игры — карта показывает баннер, когда зачищена центральная зона.
-    if (meta.completed_areas.includes('battlefield')) {
-      const banner = this.add.text(640, 662, '🏆 Поле Битвы пало — игра пройдена!', {
-        fontSize: '15px', fontFamily: FONT_FAMILY, color: '#ffdd44',
-        backgroundColor: '#000000aa',
-      }).setOrigin(0.5).setPadding(8, 4, 8, 4);
-      this.panelContainer.add(banner);
-    }
   }
 
   // Направленные стрелки маршрута каждой фракции (из FACTION_ROUTES): задают порядок
@@ -1809,6 +1978,11 @@ export class CampScene extends Phaser.Scene {
           { text: cfg.name, color: zoneNameColor(cfg) },
         ];
         for (const l of wrapText(cfg.description ?? '')) lines.push({ text: l, color: '#bbbbbb' });
+        // Endless-зона (docs/content.zones.format.md) — цель рекордная, не «прохождение»: показываем
+        // лучший результат прямо в тултипе карты, не только на экране смерти.
+        if (cfg.endless) {
+          lines.push({ text: `Рекорд: ${MetaStore.get().battlefield_best_depth}`, color: '#cc88ff' });
+        }
         // Ряд иконок предметов зоны: найден (вынесен в сундук) → обычная иконка, иначе — затемнённая + «?».
         const itemIds = getZoneLootItemIds(entry.id);
         if (itemIds.length > 0) {

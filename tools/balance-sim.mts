@@ -43,18 +43,25 @@ function main() {
 
   const s = runMonteCarlo(equipment, zoneCfg, trials);
 
-  console.log(`Зона: ${zoneCfg.name} (${zoneId}), звёзд: ${zoneCfg.star}, боёв: ${zoneCfg.fights?.min ?? 0}-${zoneCfg.fights?.max ?? 0} + босс`);
+  if (zoneCfg.endless) {
+    console.log(`Зона: ${zoneCfg.name} (${zoneId}), звёзд: ${zoneCfg.star}, endless (проклятие +${zoneCfg.endless.curse_per_fight}%/бой)`);
+  } else {
+    console.log(`Зона: ${zoneCfg.name} (${zoneId}), звёзд: ${zoneCfg.star}, боёв: ${zoneCfg.fights?.min ?? 0}-${zoneCfg.fights?.max ?? 0} + босс`);
+  }
   console.log(`Сборка: ${buildPath ?? '(безоружный, без брони)'}`);
   console.log(`Прогонов: ${trials}`);
   console.log('---');
-  console.log(`Winrate: ${(s.wins / s.trials * 100).toFixed(1)}%`);
-  console.log(`Смерть до босса: ${(s.deaths / s.trials * 100).toFixed(1)}%`);
-  if (s.stalemates > 0) console.log(`⚠ Патовых ситуаций (>10 мин виртуального времени): ${(s.stalemates / s.trials * 100).toFixed(1)}%`);
-  console.log(`Средний остаток HP перед боссом: ${s.bossStartHpCount > 0 ? (s.bossStartHpSum / s.bossStartHpCount).toFixed(1) : '—'} / 100`);
-  console.log(`Средний остаток HP после победы над боссом: ${s.bossEndHpCount > 0 ? (s.bossEndHpSum / s.bossEndHpCount).toFixed(1) : '—'} / 100`);
-  console.log(`Среднее число пройденных рядовых боёв: ${(s.fightsSum / s.trials).toFixed(1)}`);
+  // Endless-зона не имеет победы/босса (docs/content.zones.format.md) — метрика тут глубина забега.
+  if (!zoneCfg.endless) {
+    console.log(`Winrate: ${(s.wins / s.trials * 100).toFixed(1)}%`);
+    console.log(`Смерть до босса: ${(s.deaths / s.trials * 100).toFixed(1)}%`);
+    console.log(`Средний остаток HP перед боссом: ${s.bossStartHpCount > 0 ? (s.bossStartHpSum / s.bossStartHpCount).toFixed(1) : '—'} / 100`);
+    console.log(`Средний остаток HP после победы над боссом: ${s.bossEndHpCount > 0 ? (s.bossEndHpSum / s.bossEndHpCount).toFixed(1) : '—'} / 100`);
+  }
+  if (s.stalemates > 0) console.log(`⚠ Патовых ситуаций (>10 мин виртуального времени или ${zoneCfg.endless ? 'предохранитель глубины' : ''}): ${(s.stalemates / s.trials * 100).toFixed(1)}%`);
+  console.log(`Среднее число пройденных ${zoneCfg.endless ? 'боёв (глубина забега)' : 'рядовых боёв'}: ${(s.fightsSum / s.trials).toFixed(1)}`);
   if (s.deaths > 0) {
-    console.log('Распределение смертей по номеру рядового боя:');
+    console.log(zoneCfg.endless ? 'Распределение смертей по глубине забега:' : 'Распределение смертей по номеру рядового боя:');
     for (const [fight, count] of Object.entries(s.deathAtFight).sort((a, b) => Number(a[0]) - Number(b[0]))) {
       console.log(`  после боя ${fight}: ${count} (${(count / s.trials * 100).toFixed(1)}%)`);
     }

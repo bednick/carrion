@@ -68,10 +68,33 @@ const RARITY_GOLD_VALUE: Record<Rarity, number> = {
   common: 10, uncommon: 100, rare: 1000, epic: 10000, legendary: 100000,
 };
 
+// Плата кузнецу за улучшение — пятая часть базовой цены редкости (цена продажи её не использует).
+const CRAFT_GOLD_DIVISOR = 5;
+
 /** Сколько золота стоит улучшение до данной редкости. */
 export function craftGoldCost(result: ItemInstance): number {
-  return RARITY_GOLD_VALUE[result.rarity] ?? 0;
+  return (RARITY_GOLD_VALUE[result.rarity] ?? 0) / CRAFT_GOLD_DIVISOR;
 }
+
+// Прямая покупка эссенции у кузнеца за золото — альтернатива разборке предметов.
+// Цена за 1 шт. = та же цифра, что и craftGoldCost за апгрейд до этого тира.
+export const ESSENCE_BUY_PRICE: Record<EssenceTier, number> = {
+  uncommon: 20, rare: 200, epic: 2000,
+};
+
+/** Сколько золота стоит купить qty эссенции данного тира. */
+export function essenceBuyCost(tier: EssenceTier, qty: number): number {
+  return ESSENCE_BUY_PRICE[tier] * qty;
+}
+
+// Обмен дорогой эссенции на дешёвую — специально невыгодный курс, нужен только чтобы
+// разменять излишек одного тира на нехватку другого, а не как основной источник ресурса.
+export const ESSENCE_EXCHANGE_RATE = 3;
+
+/** Тир, на который меняется данный (на один шаг вниз); null — меняться уже некуда. */
+export const ESSENCE_EXCHANGE_TARGET: Record<EssenceTier, EssenceTier | null> = {
+  uncommon: null, rare: 'uncommon', epic: 'rare',
+};
 
 /** Цена продажи скупщику — половина цены редкости предмета (docs/meta-progression.md). */
 export function itemSellPrice(item: ItemInstance): number {

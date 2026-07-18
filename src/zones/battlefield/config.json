@@ -1,11 +1,28 @@
 {
   "id": "battlefield",
   "name": "Поле Битвы",
-  "description": "Эпицентр трёх армий. Финал вырос из самой битвы: броня, звериная ярость, магия нежити.",
+  "description": "Эпицентр трёх армий. Каждый павший командир поднимается снова — и поле не отпускает, пока не падёшь ты.",
   "faction": "Все три фракции",
   "star": 3,
-  "mob_pool": [],
-  "boss": {
-    "mob_id": "sergeant_boss"
-  }
+  "mob_pool": [
+    { "mob_id": "overseer", "weight": 100 },
+    { "mob_id": "bone_battlemage", "weight": 100 },
+    { "mob_id": "herd_mare", "weight": 100 },
+    { "mob_id": "beast_den", "weight": 100 },
+    { "mob_id": "many_armed_dead", "weight": 100 },
+    { "mob_id": "cataphract", "weight": 100 },
+    { "mob_id": "rat_king", "weight": 100 },
+    { "mob_id": "dump_boss", "weight": 100 },
+    { "mob_id": "bone_summoner", "weight": 100 },
+    { "mob_id": "embalmer", "weight": 100 },
+    { "mob_id": "pack_leader", "weight": 100 },
+    { "mob_id": "herd_stallion", "weight": 100 },
+    { "mob_id": "brigadier", "weight": 100 },
+    { "mob_id": "camp_commander", "weight": 100 }
+  ],
+  "mob_loot": {
+    "gold": { "min": 50, "max": 100 },
+    "items": []
+  },
+  "endless": { "curse_per_fight": 5 }
 }

@@ -21,7 +21,14 @@
     "loot": {
       "gold": { "min": 3500, "max": 6500 },
       "essence": {"epic":  {"min": 10, "max": 20}},
-      "items": []
+      "items": [
+         { "item_id": "heavy_gloves", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "light_gloves", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "comfortable_gloves", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "battle_staff", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "war_pick", "chance": 0.10, "rarity": "epic" },
+        { "item_id": "spiked_shield", "chance": 0.10, "rarity": "epic" }
+      ]
     }
   }
 }
