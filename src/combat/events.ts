@@ -47,8 +47,11 @@ export type GameEvent = EventMeta &
     // переносит поле с `attack` на выведенный `damage` (см. `CombatEngine.apply`), `enemyDefend` его читает.
     // splash — true у побочных (не основной цели) тиков урона (напр. cleave `broadaxe`); движок переносит поле
     // так же, как armorPierce. Он-хит эффекты героя (лайфстил и т.п.) должны игнорировать splash: true.
+    // thorns — true у урона, порождённого самими шипами (моба или предмета героя). Шипы обеих сторон
+    // обязаны игнорировать входящий урон с этой меткой — иначе шипы моба и шипы героя отражают друг
+    // друга по кругу (гасится только предохранителем MAX_CASCADE, давая длинную серию урона по 1).
     | { type: 'attack'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean } // взмах, авторённый предметом
-    | { type: 'damage'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean } // экземпляр урона «в полёте»
+    | { type: 'damage'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; thorns?: boolean } // экземпляр урона «в полёте»
     | { type: 'block'; source: Side; target: Side; prevented: number } // урон полностью отклонён (щит)
     | { type: 'dodge'; source: Side; target: Side } // враг уклонился — входящий урон погашен
     | { type: 'counter'; source: Side; target: Side } // чисто презентационное: «это был контрудар», HP не трогает

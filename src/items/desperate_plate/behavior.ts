@@ -12,7 +12,6 @@ const behavior: ItemBehavior = {
   name: 'Латы отчаяния',
   slots: ['body'],
   type: 'armor',
-  baseValue: 10,
   tags: ['armor', 'last_stand'],
   on: {
     damage: (e, ctx) => {

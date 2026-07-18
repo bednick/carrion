@@ -12,7 +12,6 @@ const behavior: ItemBehavior = {
   name: 'Тяжёлые перчатки',
   slots: ['hand_left'],
   type: 'gloves',
-  baseValue: 10,
   tags: ['gloves', 'crit'],
   on: {
     attack: (e, ctx) => {

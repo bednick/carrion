@@ -30,7 +30,6 @@ const behavior: ItemBehavior = {
   name: 'Секира',
   slots: ['hand_right'],
   type: 'weapon',
-  baseValue: 10,
   tags: ['weapon', 'cleave', 'slow'],
   attackInterval: interval,
   on: {

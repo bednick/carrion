@@ -13,7 +13,6 @@ const behavior: ItemBehavior = {
   name: 'Амулет грифа',
   slots: ['amulet'],
   type: 'accessory',
-  baseValue: 10,
   tags: ['accessory', 'on_kill', 'lifesteal'],
   on: {
     kill: (e, ctx) => {

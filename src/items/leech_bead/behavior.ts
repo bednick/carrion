@@ -13,7 +13,6 @@ const behavior: ItemBehavior = {
   name: 'Пиявочная бусина',
   slots: ['amulet'],
   type: 'accessory',
-  baseValue: 10,
   tags: ['accessory', 'lifesteal', 'on_hit'],
   on: {
     damage: (e, ctx) => {

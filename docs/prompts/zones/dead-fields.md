@@ -42,34 +42,28 @@ Limited cold palette, approximately: #1a0a2e, #2a2a3e, #c8c8d8.
 
 ---
 
-## MID — `mid.png` (дальние силуэты, альфа, средняя скорость)
+## MID — пул объектов (`public/backgrounds/objects/mid/<slug>.png`, альфа, средняя скорость)
 
-> Не передний план. Мелкие далёкие объекты на линии горизонта, за спиной героя. Своей сплошной земли нет — только
-> силуэты, остальное прозрачно.
+> Мелкие далёкие объекты на линии горизонта, за спиной героя. Каждый объект — отдельный файл; движок сам тасует пул
+> и раскладывает объекты со случайным размером/промежутком на старте экспедиции
+> (`ZONE_BG_OBJECTS['dead-fields'].mid` в `src/zones/registry.ts`).
 
-**Вариант 1 (`mid.1.png`):**
-```
-Generate a pixel-art DISTANT MIDGROUND parallax layer for a dark-fantasy battle game — the "Dead Fields" zone.
-Hand-crafted dark fantasy pixel art, cold desaturated grey-purple palette.
-The background must be fully transparent — output a PNG with an alpha channel. Do NOT draw any sky, ground, floor, fog
-or haze; all empty space, including below the objects, must be transparent.
-Draw ONLY small far-away silhouettes lined up along an imaginary horizon in the lower-middle: bare leafless dead trees,
-broken siege-engine frames, leaning tattered banners, fallen stone pillars — faded dark grey-purple, little detail,
-spread out with wide empty transparent gaps. They must not touch the top edge or stand on any drawn ground.
-Show about 7–8 separate distinct silhouettes across the strip — every object different, with no repeated or duplicated shapes. Very wide horizontal strip, about 8:1 (roughly twice as wide as the other layers — a long thin band), seamlessly tileable left to right. Silhouette tones near #2a2a3e, #1a0a2e.
-```
+**Источник:** объекты нарезаны из старых composite-картинок `mid.1.png` (оставлена в `public/`, но больше не
+используется кодом; `mid.2.png` имела нестандартное разрешение и не резалась чисто — не использована) инструментом
+`tools/slice_objects.py`. Итоговый пул (10 файлов, часть — повтор похожего объекта под суффиксом `-2`):
 
-**Вариант 2 (`mid.2.png`):**
-```
-Generate a pixel-art DISTANT MIDGROUND parallax layer for a dark-fantasy battle game — the "Dead Fields" zone.
-Hand-crafted dark fantasy pixel art, cold desaturated grey-purple palette.
-Fully transparent background — output a PNG with an alpha channel. Do NOT draw any sky, ground, fog or haze fill; all
-empty space must be transparent.
-Draw ONLY small far-away silhouettes along the lower-middle horizon, a DIFFERENT set than usual: a leaning ruined
-gallows, a row of crooked grave crosses, a collapsed wagon, two thin dead saplings, a distant broken archway — faded
-dark grey-purple, minimal detail, with wide empty transparent gaps. Nothing touches the top edge; nothing stands on
-drawn ground. Show about 7–8 separate distinct silhouettes across the strip — every object different, with no repeated or duplicated shapes. Very wide horizontal strip, about 8:1 (roughly twice as wide as the other layers — a long thin band), seamlessly tileable. Silhouette tones near #2a2a3e, #1a0a2e.
-```
+| Файл                          | Объект                                    |
+|--------------------------------|-----------------------------------------------|
+| `mid/dead-tree.png`            | голое засохшее дерево                         |
+| `mid/siege-frame.png`          | сломанная рама осадного орудия (катапульта)   |
+| `mid/siege-frame-2.png`        | ещё одна катапульта                           |
+| `mid/tattered-banner.png`      | накренившийся истрёпанный флаг на древке      |
+| `mid/tattered-banner-2.png`    | ещё один флаг на древке                       |
+| `mid/thin-sapling.png`         | тонкий засохший росток                        |
+| `mid/fallen-pillar.png`        | упавшая/накренившаяся колонна                 |
+| `mid/fallen-pillar-2.png`      | ещё одна упавшая колонна                      |
+| `mid/ruined-gallows.png`       | голое ветвистое дерево (виселица издали)      |
+| `mid/collapsed-wagon.png`      | обломки повозки                               |
 
 ---
 
@@ -104,44 +98,28 @@ Very wide short horizontal band (8:1), seamlessly tileable left to right with no
 
 ---
 
-## FORE — `fore.png` (передний план, альфа, очень быстрый)
+## FORE — пул объектов (`public/backgrounds/objects/fore/<slug>.png`, альфа, очень быстрый)
 
-> Близко перед камерой, проносится быстрее всех; прячется в бою. Рендерится только в нижней ~½ экрана (полоса ~8:1):
-> **~7–8 средних силуэтов** стоят на нижней кромке и растут вверх, ничего **не свисает сверху** — кадрируют, а не
-> закрывают.
+> Близко перед камерой, проносится быстрее всех; прячется в бою. Рендерится только в нижней ~½ экрана: объекты
+> стоят на нижней кромке и растут вверх, ничего не свисает сверху. Каждый объект — отдельный файл; движок сам тасует
+> пул (повторы в одной раскладке допустимы) и раскладывает со случайным размером/промежутком
+> (`ZONE_BG_OBJECTS['dead-fields'].fore` в `src/zones/registry.ts`).
 
-**Вариант 1 (`fore.1.png`):**
-```
-Generate a pixel-art FOREGROUND parallax layer for a dark-fantasy battle game — the close foreground of the "Dead
-Fields" zone passing right in front of the camera. Hand-crafted dark fantasy pixel art, very dark cold palette.
-Fully transparent background — output a PNG with an alpha channel. Do NOT draw any sky, ground, fog or haze fill; all
-empty space must be transparent.
-IMPORTANT: this layer is shown only across the LOWER HALF of the screen, so every object must sit ON the bottom edge and
-grow UPWARD from it — nothing may hang down from the top, float detached in the air, or touch the top edge; keep the
-whole upper part of the strip fully transparent.
-Draw about 7–8 separate medium-sized near-black silhouettes standing along the bottom edge: big bare dead tree trunks
-with branches, chunks of broken siege wreckage, tall clumps of dead grass (vary these so there are roughly
-7–8 distinct objects across the strip — every object different, with no repeated or duplicated shapes). Minimal internal detail (very close to camera), with small transparent gaps
-between them so they read as separate silhouettes.
-Very wide horizontal strip, about 8:1 (roughly twice as wide as the other layers — a long thin band), seamlessly
-tileable left to right. Near-black tones #0a0a0f, #1a0a2e.
-```
+**Источник:** объекты нарезаны из старых composite-картинок `fore.1.png`/`fore.2.png` (оставлены в `public/`, но
+больше не используются кодом) инструментом `tools/slice_objects.py` (с `--trim-bottom`). Часть силуэтов в этих
+картинках физически перекрывалась (не только через общую полосу-подложку) — такие куски приняты как один составной
+объект пула, а не разрезаны вручную. Итоговый пул меньше, чем у beast-lair (6 файлов вместо ~8–9 из промптов ниже —
+объекты вроде obelisk/cart-wheel/reeds/banner-pole из исходных промптов либо не отделились чисто, либо не были
+нарисованы отдельно от других силуэтов):
 
-**Вариант 2 (`fore.2.png`):**
-```
-Generate a pixel-art FOREGROUND parallax layer for a dark-fantasy battle game — the close foreground of the "Dead
-Fields" zone. Hand-crafted dark fantasy pixel art, very dark cold palette.
-Fully transparent background — output a PNG with an alpha channel. No sky, ground, fog or haze; all empty space
-transparent.
-IMPORTANT: this layer is shown only across the LOWER HALF of the screen — every object sits ON the bottom edge and grows
-UPWARD; nothing hangs from the top, floats detached, or touches the top edge; keep the upper part of the strip fully
-transparent.
-Draw about 7–8 separate medium-sized near-black silhouettes along the bottom edge, a DIFFERENT set: a leaning broken
-stone obelisk, a toppled cart wheel, drooping dead reeds, a snapped banner pole (vary these to roughly 7–8
-distinct objects across the strip — every object different, with no repeated or duplicated shapes). Minimal internal detail, with small transparent gaps between them.
-Very wide horizontal strip, about 8:1 (roughly twice as wide as the other layers — a long thin band), seamlessly
-tileable left to right. Near-black tones #0a0a0f, #1a0a2e.
-```
+| Файл                            | Объект                                       |
+|-----------------------------------|--------------------------------------------------|
+| `fore/bare-dead-trunk.png`        | голый мёртвый ствол дерева                       |
+| `fore/bare-dead-trunk-2.png`      | ещё один ствол (со сломанным столбом рядом)      |
+| `fore/bare-dead-trunk-3.png`      | ещё один ствол                                   |
+| `fore/dead-grass-clump.png`       | высокий пучок сухой травы/рогоза                 |
+| `fore/dead-grass-clump-2.png`     | ещё один пучок травы                             |
+| `fore/siege-wreckage.png`         | обломки осадного орудия                          |
 
 ---
 

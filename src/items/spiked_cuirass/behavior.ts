@@ -12,12 +12,14 @@ const behavior: ItemBehavior = {
   name: 'Шипастый нагрудник',
   slots: ['body'],
   type: 'armor',
-  baseValue: 10,
   tags: ['armor', 'thorns'],
   on: {
     damage: (e, ctx) => {
       if (e.target.side !== 'hero') return {};
       const reduced = mitigateDamage(e.amount, REDUCTION[ctx.rarity]);
+      // Урон, порождённый чужими шипами (моба), сами шипы не отражают — иначе шипы моба и героя
+      // отражают друг друга по кругу до предохранителя каскада.
+      if (e.thorns) return { replace: [{ ...e, amount: reduced }] };
       const reflected = Math.round(reduced * THORNS_RATIO[ctx.rarity]);
       if (reflected <= 0) return { replace: [{ ...e, amount: reduced }] };
       return {
@@ -27,6 +29,7 @@ const behavior: ItemBehavior = {
           source: { side: 'hero', slot: ctx.slot },
           target: e.source,
           amount: reflected,
+          thorns: true,
           origin: e.origin,
         }],
       };

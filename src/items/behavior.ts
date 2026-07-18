@@ -52,12 +52,12 @@ export interface WeaponTimerMod {
   firstTickRatio?: number;
 }
 
-/** Идентичность + экономика предмета (бывший config.json) — обязательны для любого предмета. */
+/** Идентичность предмета (бывший config.json) — обязательны для любого предмета. Цена продажи
+ *  считается от редкости (`itemSellPrice` в craft.ts), не хранится на предмете. */
 export interface ItemIdentity {
   name: string;
   slots: SlotType[];
   type: ItemType;
-  baseValue: number;
   tags?: string[];
 }
 

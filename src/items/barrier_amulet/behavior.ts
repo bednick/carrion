@@ -11,7 +11,6 @@ const behavior: ItemBehavior = {
   name: 'Амулет барьера',
   slots: ['amulet'],
   type: 'accessory',
-  baseValue: 10,
   tags: ['accessory', 'barrier'],
   barrierAmount: (rarity) => BARRIER[rarity],
   stats: (rarity) => [

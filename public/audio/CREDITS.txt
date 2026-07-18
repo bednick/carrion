@@ -3,3 +3,7 @@
   - RPG Audio          (hero_attack, loot_pickup, disassemble, sell)
   - Impact Sounds      (hero_hurt, block, enemy_death, boss_victory)
   - Interface Sounds   (craft)
+
+equip.mp3 — freesound.org, community sample (item-equip-6904).
+anvil.mp3 — freesound.org, community sample (metal-impact-247482).
+chest_add.mp3 — freesound.org, community sample (colision-pie-con-armadura-79907).

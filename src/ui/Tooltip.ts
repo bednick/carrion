@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { FONT_FAMILY } from './theme';
 import { getItemBehavior } from '../items/registry';
-import { salvageEssence, ESSENCE_TIERS } from '../items/craft';
+import { salvageEssence, ESSENCE_TIERS, itemSellPrice } from '../items/craft';
 import { rewardIconKey, essenceIconKey } from './rewards';
 import type { ItemInstance, Rarity, EssenceTier } from '../items/types';
 
@@ -104,7 +104,7 @@ export class Tooltip {
     // Боевые статы — единый источник правды в behavior.ts (docs/combat-events.md §5).
     const stats: Line[] = beh.stats ? beh.stats(item.rarity) : [];
 
-    const goldLines: Line[] = [{ text: `${beh.baseValue}`, color: '#ffcc00', icon: rewardIconKey('gold') }];
+    const goldLines: Line[] = [{ text: `${itemSellPrice(item)}`, color: '#ffcc00', icon: rewardIconKey('gold') }];
     // Разбор даёт пул эссенции: все тиры в одну строку (иконка тира + количество, включая 0).
     const pool = salvageEssence(item);
     const essenceLines: Line[] = [{

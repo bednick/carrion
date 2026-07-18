@@ -335,13 +335,15 @@ export class CombatEngine {
 
     const spawn: GameEvent[] = [];
 
-    // thorns — отражает фикс в героя за сам факт удара (только на удар героя).
-    if (def.thorns && e.source.side === 'hero') {
+    // thorns — отражает фикс в героя за сам факт удара (только на удар героя, не на встречные
+    // шипы героя — иначе шипы моба и шипы героя отражают друг друга по кругу).
+    if (def.thorns && e.source.side === 'hero' && !e.thorns) {
       spawn.push({
         type: 'damage',
         source: { side: 'enemy', id: enemy.id, idx: e.target.idx },
         target: { side: 'hero' },
         amount: def.thorns,
+        thorns: true,
         origin,
       });
     }

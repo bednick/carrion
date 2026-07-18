@@ -266,6 +266,7 @@ export const MetaStore = {
   addToChest(item: ItemInstance) {
     state.chest.push(item);
     this.save();
+    EventBus.emit('item_stored');
   },
 
   removeFromChest(index: number): ItemInstance | null {

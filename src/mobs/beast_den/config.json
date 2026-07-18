@@ -5,12 +5,7 @@
   "health": 20,
   "position": 3,
   "summon_placement": "front",
-  "attacks": [
-    {
-      "damage": 1,
-      "interval": 5.2
-    }
-  ],
+  "attacks": [],
   "summons": [
     {
       "mob_id": "dire_wolf",
@@ -28,14 +23,14 @@
       "mob_id": "dire_wolf",
       "trigger": {
         "type": "interval",
-        "every": 5.0
+        "every": 5.5
       }
     },
     {
       "mob_id": "hyena",
       "trigger": {
         "type": "interval",
-        "every": 7.0
+        "every": 7.7
       }
     }
   ]

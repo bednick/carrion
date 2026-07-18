@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { FONT_FAMILY } from '../ui/theme';
 import { MetaStore } from '../core/MetaStore';
 import { EventBus } from '../core/EventBus';
-import { getZoneConfig, zoneBgKey, ZONE_BG_VARIANTS, BG_LAYERS, type BgLayer } from '../zones/registry';
+import { getZoneConfig, zoneBgKey, ZONE_BG_VARIANTS, BG_LAYERS, type BgLayer, ZONE_BG_OBJECTS, zoneObjKey, type ScatterLayer } from '../zones/registry';
 import { CombatEngine } from '../combat/CombatEngine';
 import { rollLootTable, buildRewardOptions, type RewardOption } from '../combat/loot';
 import { getItemBehavior } from '../items/registry';
@@ -184,6 +184,12 @@ export class ExpeditionScene extends Phaser.Scene {
   private pauseBtn: Phaser.GameObjects.Rectangle | null = null;
   private pauseIcon: Phaser.GameObjects.Text | null = null;
   private bgLayers: { sprite: Phaser.GameObjects.TileSprite; scrollFactor: number; offset: number; layer: BgLayer }[] = [];
+  // mid/fore, собранные из отдельных объектов общего пула (см. buildScatterLayer). Каждый объект
+  // рендерится двумя копиями (imgA/imgB), сдвинутыми на worldWidth, чтобы скролл был бесшовным без TileSprite.
+  private scatterLayers: {
+    layer: ScatterLayer; scrollFactor: number; offset: number; worldWidth: number;
+    entries: { imgA: Phaser.GameObjects.Image; imgB: Phaser.GameObjects.Image; localX: number }[];
+  }[] = [];
   private foreMaskRT: Phaser.GameObjects.RenderTexture | null = null;
 
   private enemyGraphics: (EnemyGraphic | null)[] = [];
@@ -242,6 +248,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.pauseBtn = null;
     this.pauseIcon = null;
     this.bgLayers = [];
+    this.scatterLayers = [];
     this.foreMaskRT = null;
 
     this.zoneCfg = getZoneConfig(this.zoneId);
@@ -449,8 +456,85 @@ export class ExpeditionScene extends Phaser.Scene {
       ts.tileScaleY = scale;
       this.bgLayers.push({ sprite: ts, scrollFactor: scroll, offset: 0, layer });
     }
-    const foreSprites = this.bgLayers.filter(l => l.layer === 'fore').map(l => l.sprite);
+
+    const objLayers = ZONE_BG_OBJECTS[folder];
+    if (objLayers) {
+      for (const layer of ['mid', 'fore'] as ScatterLayer[]) {
+        if (objLayers[layer]) this.buildScatterLayer(folder, layer);
+      }
+    }
+
+    const foreSprites: (Phaser.GameObjects.TileSprite | Phaser.GameObjects.Image)[] = [
+      ...this.bgLayers.filter(l => l.layer === 'fore').map(l => l.sprite),
+      ...this.scatterLayers.filter(l => l.layer === 'fore').flatMap(l => l.entries.flatMap(e => [e.imgA, e.imgB])),
+    ];
     this.buildForeMask(foreSprites);
+  }
+
+  // Диапазон числа объектов и целевой высоты (доля от h слоя) на mid/fore-полосу — случайного размера
+  // и расстояния между силуэтами добиваемся тасовкой пула и джиттером позиций (см. buildScatterLayer).
+  private static readonly SCATTER_COUNT: Record<ScatterLayer, [number, number]> = {
+    mid: [5, 7],
+    fore: [4, 6],
+  };
+  private static readonly SCATTER_SCALE: Record<ScatterLayer, [number, number]> = {
+    mid: [0.5, 0.9],
+    fore: [0.55, 1.0],
+  };
+  // Период бесшовного повтора scatter-слоёв (аналог тайлинга TileSprite, но руками — см. scrollBackground).
+  private static readonly SCATTER_WORLD_WIDTH = 1600;
+
+  // Раскладывает пул объектов зоны (ZONE_BG_OBJECTS) в случайную последовательность: тасовка, случайный
+  // размер (в пределах SCATTER_SCALE от h слоя) и случайный джиттер расстояния между объектами.
+  // Каждый объект — 2 Image (imgA/imgB, сдвинутые на worldWidth) для бесшовного скролла без TileSprite.
+  private buildScatterLayer(folder: string, layer: ScatterLayer) {
+    const slugs = ZONE_BG_OBJECTS[folder]?.[layer];
+    if (!slugs || slugs.length === 0) return;
+
+    const r = ExpeditionScene.LAYER_RENDER[layer];
+    const scroll = ExpeditionScene.ZONE_LAYER_SCROLL[folder]?.[layer] ?? r.scroll;
+    const worldWidth = ExpeditionScene.SCATTER_WORLD_WIDTH;
+    const [minCount, maxCount] = ExpeditionScene.SCATTER_COUNT[layer];
+    const count = Phaser.Math.Between(minCount, maxCount);
+    const [minScale, maxScale] = ExpeditionScene.SCATTER_SCALE[layer];
+    const groundY = r.cy + r.h / 2; // нижняя граница слоя — «линия земли» для силуэтов
+    const baseSpacing = worldWidth / count;
+
+    const sequence = this.pickScatterSequence(slugs, count, layer === 'mid');
+    const entries: { imgA: Phaser.GameObjects.Image; imgB: Phaser.GameObjects.Image; localX: number }[] = [];
+
+    sequence.forEach((slug, i) => {
+      const key = zoneObjKey(layer, slug);
+      if (!this.textures.exists(key)) return;
+      const src = this.textures.get(key).getSourceImage() as HTMLImageElement;
+      const targetH = Phaser.Math.FloatBetween(minScale, maxScale) * r.h;
+      const scale = targetH / src.height;
+      const jitter = Phaser.Math.FloatBetween(-0.3, 0.3) * baseSpacing;
+      const localX = i * baseSpacing + baseSpacing / 2 + jitter;
+
+      const imgA = this.add.image(localX, groundY, key).setOrigin(0.5, 1).setScale(scale).setDepth(r.depth);
+      const imgB = this.add.image(localX - worldWidth, groundY, key).setOrigin(0.5, 1).setScale(scale).setDepth(r.depth);
+      entries.push({ imgA, imgB, localX });
+    });
+
+    this.scatterLayers.push({ layer, scrollFactor: scroll, offset: 0, worldWidth, entries });
+  }
+
+  // Тасует пул в последовательность длины count. mid — без соседних повторов (силуэты на горизонте
+  // не должны дублироваться, style-guide), fore — повторы допустимы (объекты ближе, пул может быть меньше).
+  private pickScatterSequence(slugs: string[], count: number, avoidAdjacentRepeat: boolean): string[] {
+    const seq: string[] = [];
+    let pool = Phaser.Utils.Array.Shuffle([...slugs]);
+    let idx = 0;
+    for (let i = 0; i < count; i++) {
+      if (idx >= pool.length) { pool = Phaser.Utils.Array.Shuffle([...slugs]); idx = 0; }
+      if (avoidAdjacentRepeat && seq.length > 0 && seq[seq.length - 1] === pool[idx] && idx + 1 < pool.length) {
+        [pool[idx], pool[idx + 1]] = [pool[idx + 1], pool[idx]];
+      }
+      seq.push(pool[idx]);
+      idx++;
+    }
+    return seq;
   }
 
   // Радиальная кисть-«дыра» (создаётся один раз): альфа 0.9 в центре → 0 к краю.
@@ -471,7 +555,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   // Маска переднего плана: fore почти прозрачен (~10%) в мягких овалах вокруг героя и врагов,
   // оставаясь видимым по краям. fore скроллится сквозь статичную маску.
-  private buildForeMask(foreSprites: Phaser.GameObjects.TileSprite[]) {
+  private buildForeMask(foreSprites: (Phaser.GameObjects.TileSprite | Phaser.GameObjects.Image)[]) {
     if (foreSprites.length === 0) return;
     this.ensureHoleBrush();
     const rt = this.add.renderTexture(640, 400, 1280, 800).setVisible(false);
@@ -506,6 +590,16 @@ export class ExpeditionScene extends Phaser.Scene {
     for (const l of this.bgLayers) {
       l.offset += (BASE_PX_PER_SEC * l.scrollFactor * (dtMs / 1000)) / l.sprite.tileScaleX;
       l.sprite.tilePositionX = Math.round(l.offset);
+    }
+    // Scatter-слои (mid/fore) — координаты уже в экранных пикселях (без tileScaleX), заворачиваем
+    // каждый объект по модулю worldWidth и рисуем два сдвинутых экземпляра для бесшовности.
+    for (const l of this.scatterLayers) {
+      l.offset += BASE_PX_PER_SEC * l.scrollFactor * (dtMs / 1000);
+      for (const e of l.entries) {
+        const wrapped = Phaser.Math.Wrap(e.localX - l.offset, 0, l.worldWidth);
+        e.imgA.x = wrapped;
+        e.imgB.x = wrapped - l.worldWidth;
+      }
     }
   }
 
@@ -904,7 +998,7 @@ export class ExpeditionScene extends Phaser.Scene {
         rect: new Phaser.Geom.Rectangle(x - SIZE / 2, y - SIZE / 2, SIZE, SIZE),
         item: item ?? null,
         onRemove: () => { const it = this.equipment[slotId] ?? null; this.setEquip(slotId, undefined); return it; },
-        onAccept: (it) => { this.setEquip(slotId, it); },
+        onAccept: (it) => { this.setEquip(slotId, it); EventBus.emit('item_equipped'); },
       });
 
       this.equipSlotObjs.push({ bg, icon });

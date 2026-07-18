@@ -12,7 +12,6 @@ const behavior: ItemBehavior = {
   name: 'Удобные перчатки',
   slots: ['hand_left'],
   type: 'gloves',
-  baseValue: 10,
   tags: ['gloves'],
   weaponTimerMod: (rarity: Rarity, targetSlot: SlotType) => {
     if (targetSlot !== 'hand_right') return undefined;

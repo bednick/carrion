@@ -188,10 +188,12 @@ roadmap. Вне объёма этого прохода: ребаланс уже 
 ### Конфиг предмета
 
 Каждый предмет = `src/items/{item_id}/behavior.ts` + `icon.svg`. Отдельного `config.json` нет —
-идентичность и экономика (`name`, `slots`, `type`, `baseValue`, `tags`) объявлены прямо на объекте
+идентичность (`name`, `slots`, `type`, `tags`) объявлена прямо на объекте
 `ItemBehavior` в `behavior.ts`, вместе с боевыми статами и их скейлом по редкости (единый источник
 правды, см. [`combat-events.md`](combat-events.md) §5). Для простых предметов идентичность
 дописывается поверх фабрики (`standardWeapon`/`standardArmor`/`standardShield`) через спред.
+Цена продажи предмету не принадлежит — считается от редкости (`itemSellPrice` в `items/craft.ts`,
+см. [`meta-progression.md`](meta-progression.md)).
 
 **Оружие:**
 
@@ -203,7 +205,6 @@ const behavior: ItemBehavior = {
   name: 'Боевой посох',
   slots: ['hand_right'],
   type: 'weapon',
-  baseValue: 10,
   tags: ['weapon', 'heavy', 'slow'],
   ...standardWeapon({ damage: 5, interval: 1.0, scale: { damage: 1.5, interval: 1.0 } }),
 };
@@ -221,7 +222,6 @@ const behavior: ItemBehavior = {
   name: 'Блестящие латы',
   slots: ['body'],
   type: 'armor',
-  baseValue: 10,
   tags: ['armor'],
   ...standardArmor({ pct: 0.1 }),
 };
@@ -230,7 +230,7 @@ export default behavior;
 ```
 
 **Щит и аксессуар** — та же форма: `ItemBehavior`-объект с идентичностью (`name`/`slots`/`type`/
-`baseValue`/`tags`) и боевыми хуками (`on`, `stats`, …), которые для нестандартной механики пишутся
+`tags`) и боевыми хуками (`on`, `stats`, …), которые для нестандартной механики пишутся
 руками поверх фабрики или вместо неё — см. `src/items/heavy_shield/behavior.ts`,
 `src/items/vulture_amulet/behavior.ts`.
 

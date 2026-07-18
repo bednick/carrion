@@ -12,7 +12,6 @@ const behavior: ItemBehavior = {
   name: 'Баклер',
   slots: ['hand_left'],
   type: 'shield',
-  baseValue: 10,
   tags: ['shield', 'counter'],
   on: {
     damage: (e, ctx) => {

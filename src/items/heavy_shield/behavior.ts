@@ -10,7 +10,6 @@ const behavior: ItemBehavior = {
   name: 'Тяжёлый щит',
   slots: ['hand_left'],
   type: 'shield',
-  baseValue: 10,
   tags: ['shield', 'block'],
   on: {
     damage: (e, ctx) => {

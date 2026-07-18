@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ITEM_ICON_URLS, itemIconKey } from '../items/icons';
 import { SLOT_SILHOUETTE_URLS, slotSilhouetteKey, ZONE_DECOR_URLS, zoneDecorKey } from '../ui/silhouettes';
 import { REWARD_ICON_URLS, rewardIconKey } from '../ui/rewards';
-import { ZONE_BG_VARIANTS, zoneBgKey, type BgLayer } from '../zones/registry';
+import { ZONE_BG_VARIANTS, zoneBgKey, type BgLayer, ZONE_BG_OBJECTS, zoneObjKey, type ScatterLayer } from '../zones/registry';
 import { ALL_MOB_IDS } from '../mobs/registry';
 import { SOUND_FILES, MUSIC_FILES, soundVariants, soundAssetKey, musicVariants, musicAssetKey, type SoundKey, type MusicKey } from '../core/SoundRegistry';
 import { SoundManager } from '../core/SoundManager';
@@ -52,6 +52,20 @@ export class PreloadScene extends Phaser.Scene {
       for (const [layer, count] of Object.entries(layers)) {
         for (let n = 1; n <= (count ?? 0); n++) {
           this.load.image(zoneBgKey(folder, layer as BgLayer, n), `backgrounds/zones/${folder}/${layer}.${n}.png`);
+        }
+      }
+    }
+
+    // Общий плоский пул объектов mid/fore — каждый slug грузится один раз, даже если его
+    // использует несколько зон (ZONE_BG_OBJECTS).
+    const loadedObjKeys = new Set<string>();
+    for (const layers of Object.values(ZONE_BG_OBJECTS)) {
+      for (const [layer, slugs] of Object.entries(layers)) {
+        for (const slug of slugs ?? []) {
+          const key = zoneObjKey(layer as ScatterLayer, slug);
+          if (loadedObjKeys.has(key)) continue;
+          loadedObjKeys.add(key);
+          this.load.image(key, `backgrounds/objects/${layer}/${slug}.png`);
         }
       }
     }

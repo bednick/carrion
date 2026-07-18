@@ -62,10 +62,10 @@ export const BG_LAYERS: BgLayer[] = ['far', 'mid', 'near', 'fore'];
  * ВАЖНО: добавил файлы — обнови счётчик здесь (public нельзя перечислить автоматически).
  */
 export const ZONE_BG_VARIANTS: Record<string, Partial<Record<BgLayer, number>>> = {
-  'dead-fields': { far: 2, mid: 2, near: 2, fore: 2 },
+  'dead-fields': { far: 2, near: 2 },
   'armor-dump': { far: 2, near: 2 },
   'trampled-meadows': { far: 2, near: 2 },
-  'beast-lair': { far: 2, mid: 2, near: 2, fore: 2 },
+  'beast-lair': { far: 2, near: 2 },
   'abandoned-camp': { far: 2, near: 2 },
   'crypt': { far: 2, near: 1 },
   'mage-ruins': { far: 2, near: 2 },
@@ -74,9 +74,56 @@ export const ZONE_BG_VARIANTS: Record<string, Partial<Record<BgLayer, number>>> 
   'battlefield': { far: 2, near: 2 },
 };
 
-/** Ключ текстуры конкретного варианта слоя фона зоны. */
+/** Ключ текстуры конкретного варианта слоя фона зоны (только far/near — baked-варианты). */
 export function zoneBgKey(folder: string, layer: BgLayer, variant: number): string {
   return `zonebg-${folder}-${layer}-${variant}`;
+}
+
+/** Слои, состоящие из отдельных объектов, раскладываемых движком в случайную последовательность. */
+export type ScatterLayer = 'mid' | 'fore';
+
+/**
+ * Общий плоский пул объектов на mid/fore: `public/backgrounds/objects/<layer>/<slug>.png`.
+ * Один и тот же slug может использоваться в списках нескольких зон (шарится физически один файл).
+ * На старте экспедиции для каждого (зона, слой) движок тасует список и раскладывает объекты со
+ * случайным размером/расстоянием (см. ExpeditionScene.buildScatterLayer).
+ * ВАЖНО: добавил объект — обнови список здесь (public нельзя перечислить автоматически).
+ */
+export const ZONE_BG_OBJECTS: Record<string, Partial<Record<ScatterLayer, string[]>>> = {
+  'beast-lair': {
+    mid: [
+      'den-mound', 'skull-pile', 'clawed-trunk', 'gnawed-lance', 'hollow-log-den',
+      'bone-rack', 'cavalry-wreck', 'dead-sapling', 'antler-mound',
+      'den-mound-2', 'skull-pile-2', 'dead-sapling-2', 'bone-pile-2',
+    ],
+    fore: [
+      'clawed-bark-trunk', 'root-tangle', 'ribcage-propped', 'dark-brush',
+      'stump-den', 'mossy-log', 'drooping-bush', 'skull-stake',
+      'clawed-bark-trunk-2', 'root-tangle-2', 'ribcage-propped-2', 'dark-brush-2',
+      'stump-den-2', 'drooping-bush-2', 'bone-pile',
+    ],
+  },
+  'dead-fields': {
+    mid: [
+      'dead-tree', 'siege-frame', 'siege-frame-2', 'tattered-banner', 'tattered-banner-2',
+      'thin-sapling', 'fallen-pillar', 'fallen-pillar-2', 'ruined-gallows', 'collapsed-wagon',
+    ],
+    fore: [
+      'bare-dead-trunk', 'bare-dead-trunk-2', 'bare-dead-trunk-3',
+      'dead-grass-clump', 'dead-grass-clump-2', 'siege-wreckage',
+    ],
+  },
+  'mage-ruins': {
+    fore: [
+      'bare-dead-trunk', 'bare-dead-trunk-2', 'bare-dead-trunk-3',
+      'dead-grass-clump', 'dead-grass-clump-2', 'siege-wreckage',
+    ],
+  },
+};
+
+/** Ключ текстуры одиночного объекта из общего пула mid/fore. */
+export function zoneObjKey(layer: ScatterLayer, slug: string): string {
+  return `zoneobj-${layer}-${slug}`;
 }
 
 export const WIP_ZONE_IDS = new Set<string>([]);

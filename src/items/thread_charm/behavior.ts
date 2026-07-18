@@ -13,7 +13,6 @@ const behavior: ItemBehavior = {
   name: 'Оберег на волоске',
   slots: ['amulet'],
   type: 'accessory',
-  baseValue: 10,
   tags: ['accessory', 'last_stand'],
   emergencyHeal: (rarity) => ({ thresholdRatio: THRESHOLD_RATIO, healPercent: HEAL_PERCENT[rarity] }),
   stats: (rarity) => [

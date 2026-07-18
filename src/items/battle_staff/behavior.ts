@@ -6,7 +6,6 @@ const behavior: ItemBehavior = {
   name: 'Боевой посох',
   slots: ['hand_right'],
   type: 'weapon',
-  baseValue: 10,
   tags: ['weapon', 'heavy', 'slow'],
   ...standardWeapon({
     common: { damage: 8, interval: 1.455 },

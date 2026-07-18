@@ -13,7 +13,6 @@ const behavior: ItemBehavior = {
   name: 'Тяжёлые латы',
   slots: ['body'],
   type: 'armor',
-  baseValue: 10,
   tags: ['armor', 'slow'],
   on: {
     damage: (e, ctx) => {

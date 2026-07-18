@@ -7,7 +7,6 @@ const behavior: ItemBehavior = {
   name: 'Блестящие латы',
   slots: ['body'],
   type: 'armor',
-  baseValue: 10,
   tags: ['armor'],
   ...standardArmor({ pct: 0.1 }),
 };

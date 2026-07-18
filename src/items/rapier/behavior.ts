@@ -28,7 +28,6 @@ const behavior: ItemBehavior = {
   name: 'Рапира',
   slots: ['hand_right'],
   type: 'weapon',
-  baseValue: 10,
   tags: ['weapon', 'light', 'fast', 'multihit'],
   attackInterval: interval,
   on: {

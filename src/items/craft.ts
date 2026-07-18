@@ -60,14 +60,22 @@ export function salvageEssence(item: ItemInstance): EssencePool {
   return pool;
 }
 
-// Плата кузнецу в золоте за улучшение — по целевой редкости (docs/meta-progression.md).
-const UPGRADE_GOLD_COST: Partial<Record<Rarity, number>> = {
-  uncommon: 100, rare: 1000, epic: 10000,
+// Цена редкости в золоте — какая плата кузнецу нужна, чтобы получить предмет этой редкости
+// улучшением (×10 за тир, docs/meta-progression.md). common/legendary улучшением не достигаются
+// (common — стартовая, legendary только находится), но продолжают ту же геометрию — нужны как
+// база для цены продажи (см. `itemSellPrice`).
+const RARITY_GOLD_VALUE: Record<Rarity, number> = {
+  common: 10, uncommon: 100, rare: 1000, epic: 10000, legendary: 100000,
 };
 
 /** Сколько золота стоит улучшение до данной редкости. */
 export function craftGoldCost(result: ItemInstance): number {
-  return UPGRADE_GOLD_COST[result.rarity] ?? 0;
+  return RARITY_GOLD_VALUE[result.rarity] ?? 0;
+}
+
+/** Цена продажи скупщику — половина цены редкости предмета (docs/meta-progression.md). */
+export function itemSellPrice(item: ItemInstance): number {
+  return RARITY_GOLD_VALUE[item.rarity] / 2;
 }
 
 // Сколько эссенции целевого тира стоит улучшение (см. docs/meta-progression.md).

@@ -50,8 +50,9 @@ public/
   backgrounds/
     camp.png                      # лагерь
     map-texture.png               # карта
-    zones/<zone-folder>/          # фоны зон боя
-      far.png  mid.png  near.png
+    zones/<zone-folder>/          # фоны зон боя — far/near (baked, по вариантам)
+      far.1.png  far.2.png  near.1.png  near.2.png
+    objects/<layer>/<slug>.png    # mid/fore — общий плоский пул одиночных объектов (layer = mid|fore)
   sprites/
     characters/<char>/            # char ∈ strongman | vagabond | apprentice
       camp.png                    # стоп-кадр для CampScene (300×600)
@@ -69,17 +70,18 @@ public/
 - Имена анимаций фиксированы: `idle, walk, attack, hit, block, death` (+ `camp` для стоп-кадра).
 - **Ключи текстур в коде** (задаются в `PreloadScene`, имена путей в файлы → ключи):
 
-| Ассет                       | Путь                                       | Ключ текстуры                          |
-|-----------------------------|--------------------------------------------|----------------------------------------|
-| Фон зоны                    | `backgrounds/zones/<f>/<layer>.png`        | `zonebg-<f>-<layer>` (см. `zoneBgKey`) |
-| Лагерь/карта                | `backgrounds/camp.png`, `map-texture.png`  | `bg-camp`, `map-texture`               |
-| Стоп-кадр персонажа         | `sprites/characters/<c>/camp.png`          | `char-<c>`                             |
-| Боевая анимация             | `sprites/characters/<c>/<anim>.png`        | `char-<c>-<anim>`                      |
-| Моб                         | `sprites/mobs/<id>/<anim>.png`             | `mob-<id>-<anim>`                      |
-| Босс                        | `sprites/bosses/<id>/<anim>.png`           | `boss-<id>-<anim>`                     |
-| Оверлей экипировки          | `sprites/equipment/<slot>/<id>/<anim>.png` | `equip-<slot>-<id>-<anim>`             |
-| NPC                         | `sprites/npc/<name>.png`                   | `npc-<name>` (искл.: `chest-stand`)    |
-| Иконка предмета (инвентарь) | `src/items/<id>/icon.svg` (НЕ в public)    | `item_icon_<id>`                       |
+| Ассет                       | Путь                                       | Ключ текстуры                           |
+|-----------------------------|--------------------------------------------|-----------------------------------------|
+| Фон зоны (far/near)         | `backgrounds/zones/<f>/<layer>.<n>.png`    | `zonebg-<f>-<layer>-<n>` (`zoneBgKey`)  |
+| Объект mid/fore (общий пул) | `backgrounds/objects/<layer>/<slug>.png`   | `zoneobj-<layer>-<slug>` (`zoneObjKey`) |
+| Лагерь/карта                | `backgrounds/camp.png`, `map-texture.png`  | `bg-camp`, `map-texture`                |
+| Стоп-кадр персонажа         | `sprites/characters/<c>/camp.png`          | `char-<c>`                              |
+| Боевая анимация             | `sprites/characters/<c>/<anim>.png`        | `char-<c>-<anim>`                       |
+| Моб                         | `sprites/mobs/<id>/<anim>.png`             | `mob-<id>-<anim>`                       |
+| Босс                        | `sprites/bosses/<id>/<anim>.png`           | `boss-<id>-<anim>`                      |
+| Оверлей экипировки          | `sprites/equipment/<slot>/<id>/<anim>.png` | `equip-<slot>-<id>-<anim>`              |
+| NPC                         | `sprites/npc/<name>.png`                   | `npc-<name>` (искл.: `chest-stand`)     |
+| Иконка предмета (инвентарь) | `src/items/<id>/icon.svg` (НЕ в public)    | `item_icon_<id>`                        |
 
 > Боевые листы грузятся как обычные `image` и нарезаются в сцене **по числу кадров** (frameWidth = width / count) —
 > переэкспорт из Aseprite с другим размером не ломает нарезку, пока число кадров в ряду совпадает с art-spec.
@@ -90,17 +92,24 @@ public/
 > ВАЖНО: реальные размеры арта часто **не совпадают** с числами в `docs/`. Всегда читай фактические размеры файла (
 `System.Drawing` / Phaser `getSourceImage()`), не доверяй спеке.
 
-### Фоны зон боя — параллакс (far / mid / near)
+### Фоны зон боя — параллакс (far / mid / near / fore)
 
-- Путь: `public/backgrounds/zones/<folder>/{far,mid,near}.png`.
-- Модель слоёв: **FAR** — непрозрачная подложка (небо/горизонт); **MID** — альфа-оверлей (силуэты объектов, прозрачный
-  фон, без неба и без сплошной земли); **NEAR** — непрозрачный пол под ногами.
-- Подключение: добавить папку в `ZONE_BG_FOLDERS` (`src/zones/registry.ts`); прописать `"background": "<folder>"` в
-  `config.json` зоны; грузится в `PreloadScene` (ключи `zoneBgKey`); рендер в
-  `ExpeditionScene.buildParallaxBackground` — подбираемая таблица `[layer, centerY, height, depth, scrollFactor]`, depth
-  отрицательные (под бойцами).
-- Высоты слоёв задаются масштабированием по высоте текстуры (`h / src.height`), размеры не хардкодить. Скролл — только в
-  фазе `isWalking`.
+Папка зоны = её id (`src/zones/<id>/config.json`), никакого отдельного `"background"`-ключа нет.
+
+- **`far`/`near`** — непрозрачные, цельные картинки, **baked-варианты**: путь
+  `public/backgrounds/zones/<folder>/{far,near}.<n>.png`. Подключение: счётчик вариантов в `ZONE_BG_VARIANTS`
+  (`src/zones/registry.ts`) → грузится в `PreloadScene` (ключи `zoneBgKey`) → рендер в
+  `ExpeditionScene.buildParallaxBackground` как `TileSprite` (таблица `LAYER_RENDER`: `cy`/`h`/`depth`/`scroll`).
+  На старте экспедиции случайно выбирается один вариант на слой.
+- **`mid`/`fore`** — альфа-оверлеи (силуэты объектов, прозрачный фон, без неба и без сплошной земли), но **НЕ**
+  цельная картинка с несколькими объектами — это **общий плоский пул одиночных объектов**: один объект = один
+  PNG в `public/backgrounds/objects/<layer>/<slug>.png` (может переиспользоваться несколькими зонами).
+  Подключение: список slug'ов на зону в `ZONE_BG_OBJECTS` (`src/zones/registry.ts`) → грузится в `PreloadScene`
+  (ключи `zoneObjKey`) → на старте экспедиции движок тасует пул и раскладывает объекты со случайным размером и
+  промежутком в `ExpeditionScene.buildScatterLayer` (тоже по геометрии из `LAYER_RENDER`).
+  Подробности модели и шаблон промпта на один объект — `docs/prompts/_style-guide.md`.
+- Высоты слоёв задаются масштабированием по высоте текстуры (`h / src.height` для far/near, аналогично на объект
+  для mid/fore), размеры не хардкодить. Скролл — только в фазе `isWalking`.
 
 ### Персонажи и мобы — спрайт-листы
 
@@ -109,7 +118,8 @@ public/
 - Персонажи используют единый шаблон кадра и общие attachment points (голова/руки/торс/ноги) — оверлеи экипировки общие.
   Это жёсткое требование к консистентности кадров.
 - Загрузка: лист грузится как `this.load.image(key, url)` в `PreloadScene`; в сцене нарезается по числу кадров
-  (`ExpeditionScene.sliceCharSheet` — `frameWidth = width / count`, `frameHeight` = высота текстуры), где `count` берётся
+  (`ExpeditionScene.sliceCharSheet` — `frameWidth = width / count`, `frameHeight` = высота текстуры), где `count`
+  берётся
   из `CHAR_ANIM_FRAMES`. Затем анимации создаются `this.anims.create` (`generateFrameNumbers(key, {})`).
 - Добавить новую анимацию (`block`/`death`/новый персонаж): положить лист по конвенции, загрузить `image` в
   `PreloadScene`, убедиться что число кадров есть в `CHAR_ANIM_FRAMES` — нарезка и анимация подхватятся. Хардкодить

@@ -7,7 +7,7 @@ import { QUEST_DEFS } from '../quests/definitions';
 import type { ItemInstance, SlotId } from '../core/MetaStore';
 import { ARMOR_STAND_COUNT } from '../core/MetaStore';
 import { getItemBehavior } from '../items/registry';
-import { craftPreview, salvageEssence, formatEssence, ESSENCE_TIERS } from '../items/craft';
+import { craftPreview, salvageEssence, formatEssence, ESSENCE_TIERS, itemSellPrice } from '../items/craft';
 import type { Rarity, SlotType, EssencePool } from '../items/types';
 import { itemIconKey } from '../items/icons';
 import { resourceTag, goldTag } from '../ui/priceTag';
@@ -153,6 +153,7 @@ export class CampScene extends Phaser.Scene {
   private resourceHUD!: ResourceHUD;
   private fluteSlider: SliderPopup | null = null;
   private dealerAlert: Phaser.GameObjects.Container | null = null;
+  private firstExpeditionHint: Phaser.GameObjects.Image | null = null;
 
   constructor() {
     super({ key: 'CampScene' });
@@ -361,6 +362,22 @@ export class CampScene extends Phaser.Scene {
     this.add.ellipse(x, y + CAMP_CHAR_H / 2, CAMP_CHAR_W * 0.9, 20, 0x000000, 0.45);
     const outlineImg = this.add.image(x, y, HERO_SPRITE)
       .setDisplaySize(CAMP_CHAR_W + 6, CAMP_CHAR_H + 6).setTintFill(0xffffff).setVisible(false);
+
+    // Подсказка для игрока, который ещё ни разу не заходил в поход (zones_entered пуст):
+    // тот же слой, что и hover-обводка (тот же размер/тинт, под обычным спрайтом — так
+    // видна только рамка по краю силуэта), но мигает сама по себе. Продолжает мигать,
+    // пока игрок реально не зайдёт в экспедицию (тогда при следующем create() сцены
+    // zones_entered уже не пуст, и подсказка не создаётся) — наведение/клик её не гасят.
+    if (Object.keys(MetaStore.get().stats.zones_entered).length === 0) {
+      this.firstExpeditionHint = this.add.image(x, y, HERO_SPRITE)
+        .setDisplaySize(CAMP_CHAR_W + 6, CAMP_CHAR_H + 6).setTintFill(0xffffff);
+      this.tweens.add({
+        targets: this.firstExpeditionHint,
+        alpha: { from: 1, to: 0 },
+        duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+    }
+
     this.add.image(x, y, HERO_SPRITE).setDisplaySize(CAMP_CHAR_W, CAMP_CHAR_H);
 
     const hit = this.add.ellipse(x, y, CAMP_CHAR_W, CAMP_CHAR_H, 0x000000, 0)
@@ -805,7 +822,7 @@ export class CampScene extends Phaser.Scene {
           rect: new Phaser.Geom.Rectangle(x - SIZE / 2, y - SIZE / 2, SIZE, SIZE),
           item: inst ?? null,
           onRemove: () => { const it = MetaStore.getArmorStand(si)[sid] ?? null; MetaStore.setArmorStandSlot(si, sid, null); return it; },
-          onAccept: (it) => { MetaStore.setArmorStandSlot(si, sid, it); this.time.delayedCall(0, () => this.rebuildPanel()); },
+          onAccept: (it) => { MetaStore.setArmorStandSlot(si, sid, it); EventBus.emit('item_equipped'); this.time.delayedCall(0, () => this.rebuildPanel()); },
         });
       }
 
@@ -1002,12 +1019,12 @@ export class CampScene extends Phaser.Scene {
       .setStrokeStyle(2, item ? RARITY_COLORS[item.rarity] : 0x555566);
     const s1Content = item
       ? this.add.image(inputX, slotY, itemIconKey(item.item_id)).setDisplaySize(40, 40)
-      : this.add.text(inputX, slotY, '+', { fontSize: '20px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
+      : this.add.text(inputX, slotY, '+', { fontSize: '40px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
 
     // "→"
     const arrowActive = !!(previewResult || resultItem);
     const arrowLbl = this.add.text(arrowX, slotY, '→', {
-      fontSize: '18px', fontFamily: FONT_FAMILY, color: arrowActive ? '#667766' : '#333344',
+      fontSize: '36px', fontFamily: FONT_FAMILY, color: arrowActive ? '#667766' : '#333344',
     }).setOrigin(0.5);
 
     // Слот результата: пока идёт выбор — полупрозрачное превью; после апгрейда — настоящий предмет, который можно забрать.
@@ -1020,9 +1037,6 @@ export class CampScene extends Phaser.Scene {
       s3Content = this.add.image(resultX, slotY, itemIconKey(previewResult.item_id)).setDisplaySize(40, 40).setAlpha(0.3);
     }
 
-    // Подписи слотов
-    const lbl1 = this.add.text(inputX, slotY + 33, 'предмет', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
-    const lbl3 = this.add.text(resultX, slotY + 33, 'результат', { fontSize: '9px', fontFamily: FONT_FAMILY, color: arrowActive ? '#667766' : '#333344' }).setOrigin(0.5);
 
     // DragDrop: единственный входной слот + зона всей левой половины меню.
     if (this.dragDrop) {
@@ -1032,7 +1046,7 @@ export class CampScene extends Phaser.Scene {
         rect: new Phaser.Geom.Rectangle(inputX - S / 2, slotY - S / 2, S, S),
         item: item ?? null,
         onRemove: () => { const it = this.smithCraftItem; this.smithCraftItem = null; return it; },
-        onAccept: (it) => { this.smithCraftItem = it; this.time.delayedCall(0, () => this.rebuildPanel()); },
+        onAccept: (it) => { this.smithCraftItem = it; EventBus.emit('item_placed_smith'); this.time.delayedCall(0, () => this.rebuildPanel()); },
       });
       this.dragDrop.registerSlot({
         id: 'smith_craft_zone',
@@ -1042,7 +1056,7 @@ export class CampScene extends Phaser.Scene {
         item: null,
         onRemove: () => null,
         onAccept: (it) => {
-          if (!this.smithCraftItem) this.smithCraftItem = it;
+          if (!this.smithCraftItem) { this.smithCraftItem = it; EventBus.emit('item_placed_smith'); }
           else { MetaStore.addToChest(it); this.showMessage('Слот занят'); }
           this.time.delayedCall(0, () => this.rebuildPanel());
         },
@@ -1206,7 +1220,6 @@ export class CampScene extends Phaser.Scene {
     const toAdd: Phaser.GameObjects.GameObject[] = [
       s1Bg, s1Content, arrowLbl,
       s3Bg,
-      lbl1, lbl3,
       btn, btnLbl,
       hammerBtn, hammerG, hammerLbl,
       ...costLbls,
@@ -1278,11 +1291,11 @@ export class CampScene extends Phaser.Scene {
         item: null,
         onRemove: () => null,
         onAccept: (it) => {
-          const beh = getItemBehavior(it.item_id);
-          MetaStore.addGold(beh.baseValue);
+          const price = itemSellPrice(it);
+          MetaStore.addGold(price);
           EventBus.emit('item_sold');
           const ptr = this.input.activePointer;
-          spawnIconFloater(this, rewardIconKey('gold'), `+${beh.baseValue}`, ptr.x, ptr.y, '#ffcc00');
+          spawnIconFloater(this, rewardIconKey('gold'), `+${price}`, ptr.x, ptr.y, '#ffcc00');
           this.refreshHUD();
           this.time.delayedCall(0, () => this.rebuildPanel());
         },
@@ -1353,6 +1366,7 @@ export class CampScene extends Phaser.Scene {
         if (!this.smithCraftItem) {
           MetaStore.removeFromChest(idx);
           this.smithCraftItem = inst;
+          EventBus.emit('item_placed_smith');
           this.rebuildPanel();
         } else {
           this.showMessage('Слот занят — кликни слот чтобы убрать');
@@ -1361,12 +1375,12 @@ export class CampScene extends Phaser.Scene {
     }
     if (this.panelState === 'dealer') {
       return (inst, idx) => {
-        const beh = getItemBehavior(inst.item_id);
+        const price = itemSellPrice(inst);
         MetaStore.removeFromChest(idx);
-        MetaStore.addGold(beh.baseValue);
+        MetaStore.addGold(price);
         EventBus.emit('item_sold');
         const ptr = this.input.activePointer;
-        spawnIconFloater(this, rewardIconKey('gold'), `+${beh.baseValue}`, ptr.x, ptr.y, '#ffcc00');
+        spawnIconFloater(this, rewardIconKey('gold'), `+${price}`, ptr.x, ptr.y, '#ffcc00');
         this.refreshHUD();
         this.rebuildPanel();
       };

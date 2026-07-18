@@ -10,11 +10,12 @@ const behavior: ItemBehavior = {
   name: 'Шипастый щит',
   slots: ['hand_left'],
   type: 'shield',
-  baseValue: 10,
   tags: ['shield', 'thorns'],
   on: {
     damage: (e, ctx) => {
-      if (e.target.side !== 'hero' || e.amount <= 0) return {};
+      // e.thorns: урон уже порождён чужими шипами (моба) — не отражаем его снова, иначе шипы
+      // моба и героя отражают друг друга по кругу до предохранителя каскада.
+      if (e.target.side !== 'hero' || e.amount <= 0 || e.thorns) return {};
       const reflected = Math.round(e.amount * THORNS_RATIO[ctx.rarity]);
       if (reflected <= 0) return {};
       return {
@@ -23,6 +24,7 @@ const behavior: ItemBehavior = {
           source: { side: 'hero', slot: ctx.slot },
           target: e.source,
           amount: reflected,
+          thorns: true,
           origin: e.origin,
         }],
       };
