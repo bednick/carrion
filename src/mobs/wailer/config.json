@@ -5,8 +5,8 @@
   "health": 50,
   "attacks": [
     {
-      "damage": 1,
-      "interval": 4.92
+      "damage": 14,
+      "interval": 7.92
     }
   ],
   "ui": {

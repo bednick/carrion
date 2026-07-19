@@ -5,20 +5,20 @@
   "health": 50,
   "attacks": [
     {
-      "damage": 1,
-      "interval": 2.95
+      "damage": 5,
+      "interval": 1.95
     },
     {
-      "damage": 1,
-      "interval": 3.28
+      "damage": 5,
+      "interval": 2.38
     },
     {
-      "damage": 1,
-      "interval": 3.61
+      "damage": 6,
+      "interval": 5.61
     },
     {
-      "damage": 1,
-      "interval": 3.94
+      "damage": 9,
+      "interval": 4.94
     }
   ]
 }

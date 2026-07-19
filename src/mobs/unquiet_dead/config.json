@@ -5,8 +5,8 @@
   "health": 50,
   "attacks": [
     {
-      "damage": 1,
-      "interval": 2.87
+      "damage": 4,
+      "interval": 1.87
     }
   ],
   "phases": [

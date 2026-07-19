@@ -5,8 +5,11 @@
   "health": 50,
   "attacks": [
     {
-      "damage": 2,
-      "interval": 3.28
+      "damage": 12,
+      "interval": 5.28
     }
-  ]
+  ],
+  "defense": {
+    "armor": 0.3
+  }
 }

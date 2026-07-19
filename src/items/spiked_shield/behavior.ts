@@ -4,7 +4,7 @@ import type { Rarity } from '../types';
 // Шипастый щит: не блокирует вовсе (0% block) — безусловно отражает долю ЛЮБОГО дошедшего до
 // героя урона, без броска. Плоская таблица по редкости (не scaleByRarity) — тот же приём, что у
 // перчаток/heavy_shield/buckler, см. docs/content.items.hand_left.md, узел «реакция на удар».
-const THORNS_RATIO: Record<Rarity, number> = { common: 0.10, uncommon: 0.13, rare: 0.16, epic: 0.20, legendary: 0.20 };
+const THORNS_RATIO: Record<Rarity, number> = { common: 0.10, uncommon: 0.15, rare: 0.20, epic: 0.25, legendary: 0.25 };
 
 const behavior: ItemBehavior = {
   name: 'Шипастый щит',
