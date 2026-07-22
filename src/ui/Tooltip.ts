@@ -5,6 +5,18 @@ import { salvageEssence, ESSENCE_TIERS, itemSellPrice } from '../items/craft';
 import { rewardIconKey, essenceIconKey } from './rewards';
 import type { ItemInstance, Rarity, EssenceTier } from '../items/types';
 
+// Метрики тултипа (x1.6 от исходных — читаемость).
+const FONT_SIZE = 21;
+const PAD = 13;          // внутренний отступ бокса и стартовый x/y строк
+const LINE_GAP = 3;      // вертикальный зазор между строками
+const SECTION_GAP = 13;  // место под разделитель между секциями
+const ICON = 24;         // иконка ресурса перед строкой / в segments
+const ICON_GAP = 6;
+const ROW_ICON = 32;     // иконка предмета в iconRow
+const ROW_GAP = 8;
+const ROW_FRAME_PAD = 6; // рамка вокруг иконки iconRow
+const SEG_GAP = 19;
+
 export const RARITY_COLORS: Record<Rarity, string> = {
   common: '#ffffff',
   uncommon: '#55ff55',
@@ -130,7 +142,6 @@ export class Tooltip {
   private render(groups: Line[][], x: number, y: number) {
     this.clearDynamic();
 
-    const SECTION_GAP = 8; // вертикальное место под разделитель между секциями
     const sections = groups.filter(g => g.length > 0);
 
     let maxW = 0;
@@ -139,19 +150,16 @@ export class Tooltip {
 
     sections.forEach((group, gi) => {
       if (gi > 0) {
-        dividerYs.push(8 + totalH + SECTION_GAP / 2);
+        dividerYs.push(PAD + totalH + SECTION_GAP / 2);
         totalH += SECTION_GAP;
       }
       for (const line of group) {
-        const ICON = 15, ICON_GAP = 4;
-
         // Ряд иконок предметов зоны: найден → обычная иконка, не найден → затемнённая + «?».
         if (line.iconRow) {
-          const ROW_ICON = 20, ROW_GAP = 5;
-          let sx = 8;
+          let sx = PAD;
           for (const cell of line.iconRow) {
-            const cx = sx + ROW_ICON / 2, cy = 8 + totalH + ROW_ICON / 2;
-            const frame = this.scene.add.rectangle(cx, cy, ROW_ICON + 4, ROW_ICON + 4)
+            const cx = sx + ROW_ICON / 2, cy = PAD + totalH + ROW_ICON / 2;
+            const frame = this.scene.add.rectangle(cx, cy, ROW_ICON + ROW_FRAME_PAD, ROW_ICON + ROW_FRAME_PAD)
               .setStrokeStyle(1, 0xffffff, 0.8);
             this.decor.push(frame);
             const img = this.scene.add.image(cx, cy, cell.texture)
@@ -160,85 +168,84 @@ export class Tooltip {
             this.icons.push(img);
             if (!cell.discovered) {
               const q = this.scene.add.text(cx, cy, '?', {
-                fontSize: '13px', fontFamily: FONT_FAMILY, fontStyle: 'bold', color: '#ffffff',
+                fontSize: `${FONT_SIZE}px`, fontFamily: FONT_FAMILY, fontStyle: 'bold', color: '#ffffff',
               }).setOrigin(0.5);
               this.texts.push(q);
             }
-            sx += ROW_ICON + 4 + ROW_GAP;
+            sx += ROW_ICON + ROW_FRAME_PAD + ROW_GAP;
           }
-          maxW = Math.max(maxW, sx - ROW_GAP - 8);
-          totalH += ROW_ICON + 6;
+          maxW = Math.max(maxW, sx - ROW_GAP - PAD);
+          totalH += ROW_ICON + ROW_FRAME_PAD + LINE_GAP;
           continue;
         }
 
         // Ряд «иконка+число … иконка+число» в одну строку.
         if (line.segments) {
-          const SEG_GAP = 12;
-          let sx = 8;
+          let sx = PAD;
           let lineH = 0;
           for (const seg of line.segments) {
-            const t = this.scene.add.text(sx + ICON + ICON_GAP, 8 + totalH, seg.text, {
-              fontSize: '13px', fontFamily: FONT_FAMILY, color: seg.color,
+            const t = this.scene.add.text(sx + ICON + ICON_GAP, PAD + totalH, seg.text, {
+              fontSize: `${FONT_SIZE}px`, fontFamily: FONT_FAMILY, color: seg.color,
             });
             this.texts.push(t);
-            const img = this.scene.add.image(sx, 8 + totalH + t.height / 2, seg.icon)
+            const img = this.scene.add.image(sx, PAD + totalH + t.height / 2, seg.icon)
               .setDisplaySize(ICON, ICON).setOrigin(0, 0.5);
             this.icons.push(img);
             lineH = Math.max(lineH, t.height);
             sx += ICON + ICON_GAP + t.width + SEG_GAP;
           }
-          maxW = Math.max(maxW, sx - SEG_GAP - 8);
-          totalH += lineH + 2;
+          maxW = Math.max(maxW, sx - SEG_GAP - PAD);
+          totalH += lineH + LINE_GAP;
           continue;
         }
 
         // Строка из разноцветных/полужирных фрагментов подряд (подсветка слова в описании).
         if (line.parts) {
-          let sx = 8;
+          let sx = PAD;
           let lineH = 0;
           for (const part of line.parts) {
-            const t = this.scene.add.text(sx, 8 + totalH, part.text, {
-              fontSize: '13px', fontFamily: FONT_FAMILY, color: part.color,
+            const t = this.scene.add.text(sx, PAD + totalH, part.text, {
+              fontSize: `${FONT_SIZE}px`, fontFamily: FONT_FAMILY, color: part.color,
               fontStyle: part.bold ? 'bold' : undefined,
             });
             this.texts.push(t);
             lineH = Math.max(lineH, t.height);
             sx += t.width;
           }
-          maxW = Math.max(maxW, sx - 8);
-          totalH += lineH + 2;
+          maxW = Math.max(maxW, sx - PAD);
+          totalH += lineH + LINE_GAP;
           continue;
         }
 
-        const tx = line.icon ? 8 + ICON + ICON_GAP : 8;
-        const t = this.scene.add.text(tx, 8 + totalH, line.text, {
-          fontSize: '13px',
+        const tx = line.icon ? PAD + ICON + ICON_GAP : PAD;
+        const t = this.scene.add.text(tx, PAD + totalH, line.text, {
+          fontSize: `${FONT_SIZE}px`,
           fontFamily: FONT_FAMILY,
           color: line.color,
         });
         this.texts.push(t);
         if (line.icon) {
-          const img = this.scene.add.image(8, 8 + totalH + t.height / 2, line.icon)
+          const img = this.scene.add.image(PAD, PAD + totalH + t.height / 2, line.icon)
             .setDisplaySize(ICON, ICON).setOrigin(0, 0.5);
           this.icons.push(img);
         }
-        maxW = Math.max(maxW, (tx - 8) + t.width);
-        totalH += t.height + 2;
+        maxW = Math.max(maxW, (tx - PAD) + t.width);
+        totalH += t.height + LINE_GAP;
       }
     });
 
-    this.bg.setSize(maxW + 16, totalH + 16);
+    this.bg.setSize(maxW + PAD * 2, totalH + PAD * 2);
 
     for (const dy of dividerYs) {
-      const ln = this.scene.add.rectangle(8, dy, maxW, 1, 0x888888, 0.5).setOrigin(0, 0.5);
+      const ln = this.scene.add.rectangle(PAD, dy, maxW, 1, 0x888888, 0.5).setOrigin(0, 0.5);
       this.decor.push(ln);
     }
 
     this.container.removeAll(false);
     this.container.add([this.bg, ...this.decor, ...this.icons, ...this.texts]);
 
-    const cx = Math.max(8, Math.min(x, this.scene.scale.width - maxW - 24));
-    const cy = Math.max(8, Math.min(y, this.scene.scale.height - totalH - 24));
+    const cx = Math.max(PAD, Math.min(x, this.scene.scale.width - maxW - PAD * 3));
+    const cy = Math.max(PAD, Math.min(y, this.scene.scale.height - totalH - PAD * 3));
     this.container.setPosition(cx, cy).setVisible(true);
   }
 

@@ -43,17 +43,17 @@ interface MapZoneEntry {
 // Порядок снизу вверх обязан совпадать с FACTION_ROUTES (иначе стрелки укажут вниз).
 const MAP_ZONE_LAYOUT: MapZoneEntry[] = [
   // Нежить (Магия) — левая колонка
-  { id: 'dead-fields',       label: 'Мёртвые поля',        x: 450,  y: 574 },
-  { id: 'mage-ruins',        label: 'Руины магов',         x: 450,  y: 444, passPrice: 500 },
-  { id: 'crypt',             label: 'Склеп',               x: 450,  y: 314, passPrice: 5000 },
+  { id: 'dead-fields',       label: 'Мёртвые поля',        x: 440,  y: 574 },
+  { id: 'mage-ruins',        label: 'Руины магов',         x: 440,  y: 444, passPrice: 500 },
+  { id: 'crypt',             label: 'Склеп',               x: 440,  y: 314, passPrice: 5000 },
   // Звери (Конница) — центральная колонка
   { id: 'trampled-meadows',  label: 'Растоптанные луга',   x: 640,  y: 574, passPrice: 50 },
   { id: 'beast-lair',        label: 'Логово зверей',       x: 640,  y: 444, passPrice: 500 },
   { id: 'predator-pasture',  label: 'Пастбище хищников',   x: 640,  y: 314, passPrice: 5000 },
   // Мародёры — правая колонка
-  { id: 'armor-dump',        label: 'Свалка доспехов',     x: 830,  y: 574, passPrice: 50 },
-  { id: 'abandoned-camp',    label: 'Брошенный лагерь',    x: 830,  y: 444, passPrice: 500 },
-  { id: 'marauder-lair',     label: 'Логово мародёров',    x: 830,  y: 314, passPrice: 5000 },
+  { id: 'armor-dump',        label: 'Свалка доспехов',     x: 840,  y: 574, passPrice: 50 },
+  { id: 'abandoned-camp',    label: 'Брошенный лагерь',    x: 840,  y: 444, passPrice: 500 },
+  { id: 'marauder-lair',     label: 'Логово мародёров',    x: 840,  y: 314, passPrice: 5000 },
   // Финал — над центральной колонкой
   { id: 'battlefield',       label: 'Поле битвы',          x: 640,  y: 172 },
 ];
@@ -563,7 +563,7 @@ export class CampScene extends Phaser.Scene {
   // карте может быть несколько одновременно).
   private buildQuestMarker(x: number, y: number) {
     const mark = this.add.text(x, y, '?', {
-      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#ffdd44',
+      fontSize: '22px', fontFamily: FONT_FAMILY, color: '#ffdd44',
       fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5);
     this.panelContainer.add(mark);
@@ -1807,8 +1807,8 @@ export class CampScene extends Phaser.Scene {
 
   private buildMapContent() {
     const meta = MetaStore.get();
-    const bg = this.add.image(640, 380, 'map-texture').setDisplaySize(600, 620);
-    const border = this.add.rectangle(640, 380, 600, 620, 0x000000, 0).setStrokeStyle(2, 0x7a6040);
+    const bg = this.add.image(640, 380, 'map-texture').setDisplaySize(660, 620);
+    const border = this.add.rectangle(640, 380, 660, 620, 0x000000, 0).setStrokeStyle(2, 0x7a6040);
     const title = this.add.text(640, 100, 'Карта', {
       fontSize: '22px', fontFamily: FONT_FAMILY, color: '#3a2010',
       stroke: '#c8a86b', strokeThickness: 1,
@@ -1825,7 +1825,7 @@ export class CampScene extends Phaser.Scene {
   }
 
   // Направленные стрелки маршрута каждой фракции (из FACTION_ROUTES): задают порядок
-  // прохождения зон. Линия обрезается до краёв узлов (120×56), на конце — наконечник.
+  // прохождения зон. Линия обрезается до краёв узлов (170×80), на конце — наконечник.
   private buildMapConnections() {
     const pos = new Map(MAP_ZONE_LAYOUT.map(z => [z.id, { x: z.x, y: z.y }] as const));
     const EDGES: [string, string][] = [];
@@ -1835,7 +1835,7 @@ export class CampScene extends Phaser.Scene {
 
     const g = this.add.graphics();
     g.lineStyle(2.5, 0x7a5228, 0.85);
-    const HW = 60, HH = 28, PAD = 8, HEAD = 11;
+    const HW = 85, HH = 40, PAD = 8, HEAD = 11;
     for (const [a, b] of EDGES) {
       const pa = pos.get(a), pb = pos.get(b);
       if (!pa || !pb) continue;
@@ -1877,35 +1877,35 @@ export class CampScene extends Phaser.Scene {
       labelColor = '#ddddff';
     }
 
-    const node = this.add.rectangle(entry.x, entry.y, 120, 56, fillColor).setStrokeStyle(2, borderColor);
-    const nameText = this.add.text(entry.x, entry.y - 8, entry.label, {
-      fontSize: '11px', fontFamily: FONT_FAMILY, color: labelColor,
-      align: 'center', wordWrap: { width: 110 },
+    const node = this.add.rectangle(entry.x, entry.y, 170, 80, fillColor).setStrokeStyle(2, borderColor);
+    const nameText = this.add.text(entry.x, entry.y - 12, entry.label, {
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: labelColor,
+      align: 'center', wordWrap: { width: 160 },
     }).setOrigin(0.5);
     this.panelContainer.add([node, nameText]);
 
     if (isWip) {
-      this.panelContainer.add(this.add.text(entry.x, entry.y + 14, 'В разработке', {
-        fontSize: '9px', fontFamily: FONT_FAMILY, color: '#333344',
+      this.panelContainer.add(this.add.text(entry.x, entry.y + 20, 'В разработке', {
+        fontSize: '14px', fontFamily: FONT_FAMILY, color: '#333344',
       }).setOrigin(0.5));
       return;
     }
 
     if (this.zoneHasActiveQuest(entry.id)) {
-      this.buildQuestMarker(entry.x + 52, entry.y - 20);
+      this.buildQuestMarker(entry.x + 78, entry.y - 28);
     }
 
     if (isCompleted) {
-      this.panelContainer.add(this.add.text(entry.x, entry.y + 14, '✓ Пройдена', {
-        fontSize: '9px', fontFamily: FONT_FAMILY, color: '#44aa44',
+      this.panelContainer.add(this.add.text(entry.x, entry.y + 20, '✓ Пройдена', {
+        fontSize: '14px', fontFamily: FONT_FAMILY, color: '#44aa44',
       }).setOrigin(0.5));
     }
 
     if (!isUnlocked && !isCompleted) {
       // Центр открывается автоматически зачисткой трёх конечных зон — проходку не купить.
       if (isCenter) {
-        this.panelContainer.add(this.add.text(entry.x, entry.y + 14, '🔒 нужны 3 конечные зоны', {
-          fontSize: '9px', fontFamily: FONT_FAMILY, color: '#888888',
+        this.panelContainer.add(this.add.text(entry.x, entry.y + 20, '🔒 нужны 3 зоны', {
+          fontSize: '14px', fontFamily: FONT_FAMILY, color: '#888888',
         }).setOrigin(0.5));
         node.setInteractive({ useHandCursor: true });
         nameText.setInteractive({ useHandCursor: true });
@@ -1922,8 +1922,8 @@ export class CampScene extends Phaser.Scene {
       // Проходку можно купить только после прохождения предыдущей зоны маршрута.
       if (!zonePrereqMet(entry.id, completed)) {
         const prevLabel = zoneLabel(ZONE_PREREQ[entry.id]);
-        this.panelContainer.add(this.add.text(entry.x, entry.y + 14, '🔒 пройди прошлую зону', {
-          fontSize: '9px', fontFamily: FONT_FAMILY, color: '#886666',
+        this.panelContainer.add(this.add.text(entry.x, entry.y + 20, '🔒 пройди прошлую', {
+          fontSize: '14px', fontFamily: FONT_FAMILY, color: '#886666',
         }).setOrigin(0.5));
         node.setInteractive({ useHandCursor: true });
         nameText.setInteractive({ useHandCursor: true });
@@ -1944,11 +1944,11 @@ export class CampScene extends Phaser.Scene {
       const lockColor = canAfford ? '#ffdd88' : '#886666';
       node.setFillStyle(fillColor).setStrokeStyle(2, borderColor);
 
-      const lockLbl = this.add.text(entry.x - 20, entry.y + 14, '🔒', {
-        fontSize: '9px', fontFamily: FONT_FAMILY, color: lockColor,
+      const lockLbl = this.add.text(entry.x - 30, entry.y + 20, '🔒', {
+        fontSize: '14px', fontFamily: FONT_FAMILY, color: lockColor,
       }).setOrigin(0, 0.5);
-      const lockPrice = goldTag(this, entry.passPrice ?? 0, { iconSize: 12, fontSize: 9, color: lockColor })
-        .setPosition(entry.x - 4, entry.y + 14);
+      const lockPrice = goldTag(this, entry.passPrice ?? 0, { iconSize: 18, fontSize: 14, color: lockColor })
+        .setPosition(entry.x - 6, entry.y + 20);
       this.panelContainer.add([lockLbl, lockPrice]);
 
       node.setInteractive({ useHandCursor: true });
