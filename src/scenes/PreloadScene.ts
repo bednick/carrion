@@ -28,7 +28,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.svg(zoneDecorKey('belt'), ZONE_DECOR_URLS.belt, { width: 360, height: 104 });
     this.load.svg('hammer', 'hammer.svg', { width: 32, height: 32 });
     this.load.image('map-texture', 'backgrounds/map-texture.png');
-    this.load.image('bg-camp', 'backgrounds/camp.2.png');
+    this.load.image('bg-camp', 'backgrounds/camp.png');
     this.load.image('camp-fire', 'sprites/camp/campfire.2.png');
     this.load.image('npc-smith', 'sprites/npc/smith.png');
     this.load.image('npc-dealer', 'sprites/npc/dealer.png');
