@@ -28,6 +28,13 @@ import { VolumeControl } from '../ui/VolumeControl';
 import { SoundManager } from '../core/SoundManager';
 import { SliderPopup } from '../ui/SliderPopup';
 import { spawnIconFloater } from '../ui/Floater';
+import { CX, DX, GAME_W, GAME_H, rightX } from '../ui/layout';
+
+// Ширина, в которой нарисована композиция camp.png. Пока арт без бокового запаса (файл 1376×768) —
+// тянем картинку по ширине холста, как и раньше (это уже слегка сплющивало её). Когда придёт новый
+// camp.png шириной 1920 (центральные 1280×800 = историческая композиция, по 320px сценографии по бокам) —
+// поставить здесь 1920: картинка нарисуется 1:1, лишнее уйдёт за края холста, а центр совпадёт с текущим.
+const CAMP_BG_W = GAME_W;
 
 interface MapZoneEntry {
   id: string;
@@ -171,7 +178,7 @@ export class CampScene extends Phaser.Scene {
     initQuestSystem();
     this.tooltip = new Tooltip(this);
 
-    this.add.image(640, 400, 'bg-camp').setDisplaySize(1280, 800);
+    this.add.image(CX, 400, 'bg-camp').setDisplaySize(CAMP_BG_W, GAME_H);
     this.buildFire();
 
     this.buildHUD();
@@ -245,7 +252,7 @@ export class CampScene extends Phaser.Scene {
   }
 
   private buildHUD() {
-    this.add.text(640, 14, 'Лагерь', { fontSize: '22px', fontFamily: FONT_FAMILY, color: '#dddddd' }).setOrigin(0.5, 0);
+    this.add.text(CX, 14, 'Лагерь', { fontSize: '22px', fontFamily: FONT_FAMILY, color: '#dddddd' }).setOrigin(0.5, 0);
     this.resourceHUD = new ResourceHUD(this, this.tooltip);
 
     const coordText = this.add.text(10, 10, '', {
@@ -263,9 +270,9 @@ export class CampScene extends Phaser.Scene {
       { key: 'amb_flute', volume: SoundManager.getLayerVolume('amb_flute', 0.5) },
     ]);
 
-    const resetBtn = this.add.rectangle(1252, 785, 90, 22, 0x1a0000)
+    const resetBtn = this.add.rectangle(rightX(28), 785, 90, 22, 0x1a0000)
       .setStrokeStyle(1, 0x551111).setInteractive({ useHandCursor: true });
-    this.add.text(1252, 785, 'Сброс данных', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#663333' }).setOrigin(0.5);
+    this.add.text(rightX(28), 785, 'Сброс данных', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#663333' }).setOrigin(0.5);
     resetBtn.on('pointerover', () => resetBtn.setFillStyle(0x2a0000));
     resetBtn.on('pointerout',  () => resetBtn.setFillStyle(0x1a0000));
     resetBtn.on('pointerdown', () => this.confirmReset());
@@ -273,9 +280,9 @@ export class CampScene extends Phaser.Scene {
     // Дев-инструмент: балансировочный симулятор (balance.html) — открывается в новой вкладке.
     // Только для дев-сервера (import.meta.env.DEV) — в проде balance.html не собирается и не нужен игроку.
     if (import.meta.env.DEV) {
-      const balanceBtn = this.add.rectangle(1152, 785, 90, 22, 0x0a1a1a)
+      const balanceBtn = this.add.rectangle(rightX(128), 785, 90, 22, 0x0a1a1a)
         .setStrokeStyle(1, 0x225555).setInteractive({ useHandCursor: true });
-      this.add.text(1152, 785, 'Баланс-тул', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#337766' }).setOrigin(0.5);
+      this.add.text(rightX(128), 785, 'Баланс-тул', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#337766' }).setOrigin(0.5);
       balanceBtn.on('pointerover', () => balanceBtn.setFillStyle(0x143030));
       balanceBtn.on('pointerout',  () => balanceBtn.setFillStyle(0x0a1a1a));
       balanceBtn.on('pointerdown', () => window.open('./balance.html', '_blank'));
@@ -283,15 +290,15 @@ export class CampScene extends Phaser.Scene {
   }
 
   private confirmReset() {
-    const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.7).setDepth(90).setInteractive();
-    const box = this.add.rectangle(640, 400, 460, 160, 0x1e0a0a).setDepth(91).setStrokeStyle(2, 0x882222);
-    const text = this.add.text(640, 368, '⚠ Сбросить весь прогресс?\nЗолото, металл, сундук, снаряжение — всё удалится.\nДействие необратимо.', {
+    const overlay = this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0.7).setDepth(90).setInteractive();
+    const box = this.add.rectangle(CX, 400, 460, 160, 0x1e0a0a).setDepth(91).setStrokeStyle(2, 0x882222);
+    const text = this.add.text(CX, 368, '⚠ Сбросить весь прогресс?\nЗолото, металл, сундук, снаряжение — всё удалится.\nДействие необратимо.', {
       fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffaaaa', align: 'center',
     }).setOrigin(0.5).setDepth(92);
-    const yesBtn = this.add.rectangle(590, 432, 130, 34, 0x551111).setDepth(91).setInteractive({ useHandCursor: true });
-    const yesLbl = this.add.text(590, 432, 'Сбросить', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ff6666' }).setOrigin(0.5).setDepth(92);
-    const noBtn  = this.add.rectangle(710, 432, 130, 34, 0x224422).setDepth(91).setInteractive({ useHandCursor: true });
-    const noLbl  = this.add.text(710, 432, 'Отмена', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(92);
+    const yesBtn = this.add.rectangle(CX - 50, 432, 130, 34, 0x551111).setDepth(91).setInteractive({ useHandCursor: true });
+    const yesLbl = this.add.text(CX - 50, 432, 'Сбросить', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ff6666' }).setOrigin(0.5).setDepth(92);
+    const noBtn  = this.add.rectangle(CX + 70, 432, 130, 34, 0x224422).setDepth(91).setInteractive({ useHandCursor: true });
+    const noLbl  = this.add.text(CX + 70, 432, 'Отмена', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(92);
 
     const close = () => [overlay, box, text, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
     yesBtn.on('pointerdown', () => { close(); this.showStartWeaponPicker(); });
@@ -304,11 +311,11 @@ export class CampScene extends Phaser.Scene {
   private showStartWeaponPicker() {
     const weaponIds = MetaStore.listStartWeapons();
 
-    const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.88).setDepth(90).setInteractive();
-    const title = this.add.text(640, 190, 'Выбери стартовое оружие', {
+    const overlay = this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0.88).setDepth(90).setInteractive();
+    const title = this.add.text(CX, 190, 'Выбери стартовое оружие', {
       fontSize: '20px', fontFamily: FONT_FAMILY, color: '#ffdd44',
     }).setOrigin(0.5).setDepth(92);
-    const hint = this.add.text(640, 218, 'Common — единственный предмет на стойке новой игры', {
+    const hint = this.add.text(CX, 218, 'Common — единственный предмет на стойке новой игры', {
       fontSize: '11px', fontFamily: FONT_FAMILY, color: '#888888',
     }).setOrigin(0.5).setDepth(92);
 
@@ -323,7 +330,7 @@ export class CampScene extends Phaser.Scene {
       const row = Math.floor(i / COLS);
       const rowCount = Math.min(COLS, weaponIds.length - row * COLS);
       const rowTotal = rowCount * CARD_W + (rowCount - 1) * GAP;
-      const rowStartX = 640 - rowTotal / 2 + CARD_W / 2;
+      const rowStartX = CX - rowTotal / 2 + CARD_W / 2;
       const x = rowStartX + col * (CARD_W + GAP);
       const y = startY + row * (CARD_H + GAP);
 
@@ -355,7 +362,7 @@ export class CampScene extends Phaser.Scene {
   }
 
   private buildHoverLabel() {
-    this.hoverLabel = this.add.text(640, 780, '', {
+    this.hoverLabel = this.add.text(CX, 780, '', {
       fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaaaaa',
     }).setOrigin(0.5).setDepth(10);
   }
@@ -365,7 +372,9 @@ export class CampScene extends Phaser.Scene {
     // Исходник 300×600, отображается в 80×120 (как у НПС). Позиция — как раньше (индекс силача).
     const CAMP_CHAR_W = 80;
     const CAMP_CHAR_H = 120;
-    const x = 560, y = 540;
+    // Объекты лагеря выверены по фону в дизайновых 1280 — сдвигаем их вместе с фоном на DX
+    // (src/ui/layout.ts), иначе на широком холсте силач съедет с поленьев.
+    const x = 560 + DX, y = 540;
 
     this.add.ellipse(x, y + CAMP_CHAR_H / 2, CAMP_CHAR_W * 0.9, 20, 0x000000, 0.45);
     const outlineImg = this.add.image(x, y, HERO_SPRITE)
@@ -418,7 +427,7 @@ export class CampScene extends Phaser.Scene {
     }
 
     // Параметры размещения — основание пламени на поленьях.
-    const FX = 656, FY = 638, W = 150, H = 120;
+    const FX = 656 + DX, FY = 638, W = 150, H = 120;
 
     // --- свечение: радиальный градиент с ADD, медленно пульсирует ---
     this.ensureFireGlowTexture();
@@ -469,7 +478,7 @@ export class CampScene extends Phaser.Scene {
   // Координаты/размер силача — из buildCampfire (индекс 1: 560,540, 80×120).
   private buildFireLightOnStrongman(fx: number, fy: number) {
     if (!this.textures.exists('char-strongman')) return;
-    const SM_X = 560, SM_Y = 540, SM_W = 80, SM_H = 120;
+    const SM_X = 560 + DX, SM_Y = 540, SM_W = 80, SM_H = 120;
 
     // Свет идёт со стороны костра (справа-снизу от силача) — сдвигаем отсвет к этому краю.
     const dx = Math.sign(fx - SM_X) * 4;
@@ -512,18 +521,19 @@ export class CampScene extends Phaser.Scene {
 
 
   private buildNPCs() {
+    // Позиции выверены по фону в дизайновых 1280 — едут вместе с фоном на DX (src/ui/layout.ts).
     this.addNPCWithSprite(
-      224, 604, 80, 120, 'npc-smith',
-      200, 522, 340, 285,
+      224 + DX, 604, 80, 120, 'npc-smith',
+      200 + DX, 522, 340, 285,
       'Кузнец', () => this.openSmithPanel(),
     );
     this.dealerBlinkHint = this.addNPCWithSprite(
-      1090, 604, 80, 120, 'npc-dealer',
-      1125, 540, 250, 240,
+      1090 + DX, 604, 80, 120, 'npc-dealer',
+      1125 + DX, 540, 250, 240,
       'Скупщик', () => this.openDealerPanel(),
       true,
     ) ?? null;
-    this.buildDealerAlert(1090, 604 - 120 / 2 - 18);
+    this.buildDealerAlert(1090 + DX, 604 - 120 / 2 - 18);
   }
 
   // Восклицательный знак над Скупщиком — привлекает внимание, когда есть готовый
@@ -622,7 +632,7 @@ export class CampScene extends Phaser.Scene {
   // Спрайт 353×600 — рисуем с сохранением пропорций (~0.59).
   private buildFlutist() {
     // (960, 740) — нижняя центральная точка; addNPCWithSprite ждёт центр, поднимаем на h/2.
-    const x = 960, bottomY = 740, w = 72, h = 122;
+    const x = 960 + DX, bottomY = 740, w = 72, h = 122;
     const y = bottomY - h / 2;
     this.addNPCWithSprite(
       x, y, w, h, 'npc-flutist',
@@ -643,21 +653,36 @@ export class CampScene extends Phaser.Scene {
 
   private buildChestStand() {
     this.addNPCWithSprite(
-      855, 490, 96, 96, 'chest-stand',
-      855, 490, 120, 100,
+      855 + DX, 490, 96, 96, 'chest-stand',
+      855 + DX, 490, 120, 100,
       'Сундук и стойки', () => this.openChestPanel(),
     );
   }
 
   private buildPanel() {
-    this.panelContainer = this.add.container(0, 0).setDepth(150).setVisible(false);
-    const overlay = this.add.rectangle(640, 400, 1280, 800, 0x000000, 0.5);
+    // Контейнер сдвинут на DX: вся начинка панелей (магазин, стойка, сундук, карта, апгрейд) свёрстана
+    // в дизайновых 1280 и этим сдвигом целиком встаёт в центр широкого холста (src/ui/layout.ts).
+    this.panelContainer = this.add.container(DX, 0).setDepth(150).setVisible(false);
+    // Оверлей — единственное исключение: тянется во всю ширину экрана. x=640 внутри контейнера — это
+    // ровно CX на экране, так что при ширине GAME_W затемнение достаёт до обоих краёв.
+    const overlay = this.add.rectangle(640, 400, GAME_W, GAME_H, 0x000000, 0.5);
     overlay.setInteractive();
     overlay.on('pointerdown', () => {
       if (this.dragDrop?.isHolding()) return; // с предметом в руке клик по фону вернёт его в сундук (pointerup)
       this.closePanel();
     });
     this.panelContainer.add(overlay);
+  }
+
+  // Начинка панели живёт в локальных координатах сдвинутого контейнера, а хит-зоны DragDropManager
+  // и тултипы работают в экранных (курсор, клампы по краям экрана) — эти два хелпера переводят
+  // локальный x панели в экранный. Всё, что просто рисуется внутри панели, перевода не требует.
+  private panelX(localX: number): number {
+    return localX + DX;
+  }
+
+  private panelRect(x: number, y: number, w: number, h: number): Phaser.Geom.Rectangle {
+    return new Phaser.Geom.Rectangle(x + DX, y, w, h);
   }
 
   private clearPanelResources() {
@@ -848,7 +873,7 @@ export class CampScene extends Phaser.Scene {
           id: `stand_${slotId}`,
           slotType: slotId as unknown as SlotType,
           placeable: true,
-          rect: new Phaser.Geom.Rectangle(x - SIZE / 2, y - SIZE / 2, SIZE, SIZE),
+          rect: this.panelRect(x - SIZE / 2, y - SIZE / 2, SIZE, SIZE),
           item: inst ?? null,
           onRemove: () => { const it = MetaStore.getArmorStand(si)[sid] ?? null; MetaStore.setArmorStandSlot(si, sid, null); return it; },
           onAccept: (it) => { MetaStore.setArmorStandSlot(si, sid, it); EventBus.emit('item_equipped'); this.time.delayedCall(0, () => this.rebuildPanel()); },
@@ -858,7 +883,7 @@ export class CampScene extends Phaser.Scene {
       if ((onSlotClick || this.dragDrop) && inst) {
         bg.setInteractive({ useHandCursor: true });
         const sid = slotId;
-        bg.on('pointerover', () => { bg.setFillStyle(0x3a3a5a); if (inst) this.tooltip.showItem(inst, x + SIZE / 2 + 8, y - SIZE / 2 - 8); });
+        bg.on('pointerover', () => { bg.setFillStyle(0x3a3a5a); if (inst) this.tooltip.showItem(inst, this.panelX(x + SIZE / 2 + 8), y - SIZE / 2 - 8); });
         bg.on('pointerout',  () => { bg.setFillStyle(0x2a2a3a); this.tooltip.hide(); });
         if (this.dragDrop) {
           bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
@@ -1154,8 +1179,8 @@ export class CampScene extends Phaser.Scene {
     }
     MetaStore.spendGold(cost);
     MetaStore.addEssence(tier, qty);
-    spawnIconFloater(this, rewardIconKey('gold'), `-${cost}`, x ?? 379, y ?? 300, '#ffcc00');
-    spawnIconFloater(this, essenceIconKey(tier), `+${qty}`, x ?? 379, y ?? 300, TIER_HEX[tier]);
+    spawnIconFloater(this, rewardIconKey('gold'), `-${cost}`, x ?? this.panelX(379), y ?? 300, '#ffcc00');
+    spawnIconFloater(this, essenceIconKey(tier), `+${qty}`, x ?? this.panelX(379), y ?? 300, TIER_HEX[tier]);
     this.essenceBuyQty[tier] = 1;
     this.refreshHUD();
     this.rebuildPanel();
@@ -1173,8 +1198,8 @@ export class CampScene extends Phaser.Scene {
     MetaStore.spendEssence(cost);
     const output = ESSENCE_EXCHANGE_RATE;
     MetaStore.addEssence(to, output);
-    spawnIconFloater(this, essenceIconKey(from), '-1', x ?? 379, y ?? 300, TIER_HEX[from]);
-    spawnIconFloater(this, essenceIconKey(to), `+${output}`, x ?? 379, y ?? 300, TIER_HEX[to]);
+    spawnIconFloater(this, essenceIconKey(from), '-1', x ?? this.panelX(379), y ?? 300, TIER_HEX[from]);
+    spawnIconFloater(this, essenceIconKey(to), `+${output}`, x ?? this.panelX(379), y ?? 300, TIER_HEX[to]);
     this.refreshHUD();
     this.rebuildPanel();
   }
@@ -1275,7 +1300,7 @@ export class CampScene extends Phaser.Scene {
         id: 'upgrade_input_slot',
         placeable: true,
         alwaysHighlight: (it) => craftPreview(it, null).result !== null,
-        rect: new Phaser.Geom.Rectangle(inputX - S / 2, slotY - S / 2, S, S),
+        rect: this.panelRect(inputX - S / 2, slotY - S / 2, S, S),
         item: item ?? null,
         onRemove: () => { const it = this.upgradeInputItem; this.upgradeInputItem = null; return it; },
         onAccept: (it) => { this.upgradeInputItem = it; EventBus.emit('item_placed_smith'); this.time.delayedCall(0, () => this.rebuildPanel()); },
@@ -1284,7 +1309,7 @@ export class CampScene extends Phaser.Scene {
         id: 'upgrade_zone',
         placeable: true,
         allowOccupied: true,
-        rect: new Phaser.Geom.Rectangle(cx - 170, top, 340, 150),
+        rect: this.panelRect(cx - 170, top, 340, 150),
         item: null,
         onRemove: () => null,
         onAccept: (it) => {
@@ -1297,7 +1322,7 @@ export class CampScene extends Phaser.Scene {
       if (resultItem) {
         this.dragDrop.registerSlot({
           id: 'upgrade_result_slot',
-          rect: new Phaser.Geom.Rectangle(resultX - S / 2, slotY - S / 2, S, S),
+          rect: this.panelRect(resultX - S / 2, slotY - S / 2, S, S),
           item: resultItem,
           onRemove: () => { const it = this.upgradeResultItem; this.upgradeResultItem = null; return it; },
           onAccept: () => {},
@@ -1310,7 +1335,7 @@ export class CampScene extends Phaser.Scene {
       s1Bg.setInteractive({ useHandCursor: true });
       s1Bg.on('pointerover', () => {
         s1Bg.setFillStyle(0x3a3a5a);
-        this.tooltip.showItem(item, inputX + S / 2 + 8, slotY - S / 2 - 8);
+        this.tooltip.showItem(item, this.panelX(inputX + S / 2 + 8), slotY - S / 2 - 8);
       });
       s1Bg.on('pointerout', () => { s1Bg.setFillStyle(0x2a2a3a); this.tooltip.hide(); });
       if (this.dragDrop) {
@@ -1332,7 +1357,7 @@ export class CampScene extends Phaser.Scene {
       s3Bg.setInteractive({ useHandCursor: true });
       s3Bg.on('pointerover', () => {
         s3Bg.setFillStyle(0x35354a);
-        this.tooltip.showItem(resultItem, resultX + S / 2 + 8, slotY - S / 2 - 8);
+        this.tooltip.showItem(resultItem, this.panelX(resultX + S / 2 + 8), slotY - S / 2 - 8);
       });
       s3Bg.on('pointerout', () => { s3Bg.setFillStyle(0x252530); this.tooltip.hide(); });
       if (this.dragDrop) {
@@ -1347,7 +1372,7 @@ export class CampScene extends Phaser.Scene {
       // Только превью следующего шага — без взаимодействия, кроме тултипа.
       s3Bg.setInteractive({ useHandCursor: false });
       s3Bg.on('pointerover', () => {
-        this.tooltip.showItem(previewResult!, resultX + S / 2 + 8, slotY - S / 2 - 8, { defaultCost: 'essence' });
+        this.tooltip.showItem(previewResult!, this.panelX(resultX + S / 2 + 8), slotY - S / 2 - 8, { defaultCost: 'essence' });
       });
       s3Bg.on('pointerout', () => { this.tooltip.hide(); });
     }
@@ -1473,7 +1498,7 @@ export class CampScene extends Phaser.Scene {
         id: 'dealer_sell_zone',
         placeable: true,
         allowOccupied: true,
-        rect: new Phaser.Geom.Rectangle(195, 212, 370, 440),
+        rect: this.panelRect(195, 212, 370, 440),
         item: null,
         onRemove: () => null,
         onAccept: (it) => {
@@ -1546,7 +1571,7 @@ export class CampScene extends Phaser.Scene {
         // Разборка — мгновенно, без подтверждения.
         const ptr = this.input.activePointer;
         const keepHammer = !!(ptr?.event as MouseEvent)?.shiftKey;
-        const clickX = ptr?.x ?? 640, clickY = ptr?.y ?? 400;
+        const clickX = ptr?.x ?? CX, clickY = ptr?.y ?? 400;
         MetaStore.removeFromChest(idx);
         this.performSalvage(inst, clickX, clickY, keepHammer);
       };
@@ -1708,15 +1733,16 @@ export class CampScene extends Phaser.Scene {
     if (this.dragDrop) {
       this.dragDrop.registerSlot({
         id: 'chest_drop',
-        rect: new Phaser.Geom.Rectangle(573, CONTENT_TOP, 512, CONTENT_H + 2),
+        rect: this.panelRect(573, CONTENT_TOP, 512, CONTENT_H + 2),
         item: null,
         onRemove: () => null,
         onAccept: (it) => { MetaStore.addToChest(it); this.time.delayedCall(0, () => this.rebuildPanel()); },
       });
     }
 
+    // Геометрическая маска живёт в экранных координатах (объект вне контейнера панели) — переводим.
     this.chestMaskGraphics = this.add.graphics();
-    this.chestMaskGraphics.fillRect(573, CONTENT_TOP, 512, CONTENT_H + 2);
+    this.chestMaskGraphics.fillRect(this.panelX(573), CONTENT_TOP, 512, CONTENT_H + 2);
     const mask = this.chestMaskGraphics.createGeometryMask();
 
     const itemsCtr = this.add.container(0, 0);
@@ -1754,7 +1780,7 @@ export class CampScene extends Phaser.Scene {
           slotBg.setInteractive({ useHandCursor: true });
           slotBg.on('pointerover', () => {
             slotBg.setFillStyle(0x3a3a5a);
-            this.tooltip.showItem(item, x + SIZE / 2 + 8, yc - SIZE / 2 - 8, {
+            this.tooltip.showItem(item, this.panelX(x + SIZE / 2 + 8), yc - SIZE / 2 - 8, {
               defaultCost: showPrices ? 'gold' : this.panelState === 'smith' ? 'essence' : 'none',
             });
           });
@@ -1764,7 +1790,7 @@ export class CampScene extends Phaser.Scene {
             const chestSlotId = `chest_${idx}`;
             this.dragDrop.registerSlot({
               id: chestSlotId,
-              rect: new Phaser.Geom.Rectangle(x - SIZE / 2, yc - SIZE / 2, SIZE, SIZE),
+              rect: this.panelRect(x - SIZE / 2, yc - SIZE / 2, SIZE, SIZE),
               item: inst,
               onRemove: () => { MetaStore.removeFromChest(idx); return inst; },
               onAccept: () => {},
@@ -1912,7 +1938,7 @@ export class CampScene extends Phaser.Scene {
         [node, nameText].forEach(obj => {
           obj.on('pointerover', () => {
             node.setFillStyle(0x332233);
-            this.tooltip.showText(['Центр закрыт', 'Пройди Склеп, Пастбище хищников', 'и Логово мародёров'], entry.x + 65, entry.y - 50);
+            this.tooltip.showText(['Центр закрыт', 'Пройди Склеп, Пастбище хищников', 'и Логово мародёров'], this.panelX(entry.x + 65), entry.y - 50);
           });
           obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
         });
@@ -1930,7 +1956,7 @@ export class CampScene extends Phaser.Scene {
         [node, nameText].forEach(obj => {
           obj.on('pointerover', () => {
             node.setFillStyle(0x332233);
-            this.tooltip.showText(['Заблокировано', `Сначала пройди: ${prevLabel}`], entry.x + 65, entry.y - 50);
+            this.tooltip.showText(['Заблокировано', `Сначала пройди: ${prevLabel}`], this.panelX(entry.x + 65), entry.y - 50);
           });
           obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
         });
@@ -1959,7 +1985,7 @@ export class CampScene extends Phaser.Scene {
           this.tooltip.showLines([
             { text: canAfford ? 'Купить проходку:' : 'Не хватает золота:' },
             { text: `${entry.passPrice}`, color: '#ffcc00', icon: rewardIconKey('gold') },
-          ], entry.x + 65, entry.y - 50);
+          ], this.panelX(entry.x + 65), entry.y - 50);
         });
         obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
         obj.on('pointerdown', (ptr: Phaser.Input.Pointer) => this.tryBuyMapPass(entry, ptr.x, ptr.y));
@@ -1993,7 +2019,7 @@ export class CampScene extends Phaser.Scene {
             iconRow: itemIds.map(id => ({ texture: itemIconKey(id), discovered: !!carriedOut[id] })),
           });
         }
-        this.tooltip.showLines(lines, entry.x + 65, entry.y - 70);
+        this.tooltip.showLines(lines, this.panelX(entry.x + 65), entry.y - 70);
       });
       obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
       obj.on('pointerdown', () => {
@@ -2016,13 +2042,13 @@ export class CampScene extends Phaser.Scene {
     MetaStore.spendGold(entry.passPrice);
     MetaStore.unlockArea(entry.id);
     if (entry.questId) MetaStore.addActiveQuest(entry.questId, 1);
-    spawnIconFloater(this, rewardIconKey('gold'), `-${entry.passPrice}`, x ?? entry.x, y ?? entry.y, '#ffcc00');
+    spawnIconFloater(this, rewardIconKey('gold'), `-${entry.passPrice}`, x ?? this.panelX(entry.x), y ?? entry.y, '#ffcc00');
     this.refreshHUD();
     this.rebuildPanel();
   }
 
   private showMessage(msg: string) {
-    const text = this.add.text(640, 740, msg, {
+    const text = this.add.text(CX, 740, msg, {
       fontSize: '15px', fontFamily: FONT_FAMILY, color: '#ffaa44',
     }).setOrigin(0.5).setDepth(200);
     this.time.delayedCall(2500, () => text.destroy());

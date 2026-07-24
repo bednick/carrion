@@ -1,6 +1,7 @@
 import { MetaStore } from './MetaStore';
 import { EventBus } from './EventBus';
 import { QUEST_DEFS, type QuestDef } from '../quests/definitions';
+import { CX } from '../ui/layout';
 
 function applyInstantEffects(questId: string) {
   const def = QUEST_DEFS[questId];
@@ -23,7 +24,7 @@ export function claimQuestReward(questId: string) {
   for (const reward of def.rewards) {
     if (reward.type === 'gold' && reward.value) {
       MetaStore.addGold(reward.value);
-      EventBus.emit('floater', { type: 'gold', value: reward.value, x: 640, y: 400 });
+      EventBus.emit('floater', { type: 'gold', value: reward.value, x: CX, y: 400 });
     }
   }
   MetaStore.claimQuestReward(questId);

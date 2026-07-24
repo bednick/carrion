@@ -1,13 +1,16 @@
 import Phaser from 'phaser';
 import { SoundManager } from '../core/SoundManager';
 import { FONT_FAMILY } from './theme';
+import { rightX } from './layout';
 
-// Геометрия: виджет прижат к правому верхнему углу логического пространства 1280×800.
-const TRACK_LEFT = 1160;
+// Геометрия: виджет прижат к правому верхнему углу экрана (отступы считаются от правого края,
+// ширина холста зависит от аспекта монитора — см. src/ui/layout.ts).
 const TRACK_W = 84;
+const TRACK_LEFT = rightX(120);
 const TRACK_RIGHT = TRACK_LEFT + TRACK_W;
 const CY = 17;
-const SPEAKER_CX = 1258;
+const SPEAKER_CX = rightX(22);
+const PLATE_CX = rightX(69);
 
 const COLOR_ON = 0x66ccff;
 const COLOR_OFF = 0x555555;
@@ -24,7 +27,7 @@ export class VolumeControl {
   private dragging = false;
 
   constructor(scene: Phaser.Scene) {
-    scene.add.rectangle(1211, CY, 130, 24, 0x000000, 0.55).setOrigin(0.5).setDepth(100);
+    scene.add.rectangle(PLATE_CX, CY, 130, 24, 0x000000, 0.55).setOrigin(0.5).setDepth(100);
 
     // Динамик-кнопка (мьют). Цвет отражает состояние.
     this.icon = scene.add.text(SPEAKER_CX, CY, '♪', {

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FONT_FAMILY } from './theme';
+import { CX, GAME_W, GAME_H } from './layout';
 
 export interface SliderPopupOpts {
   label: string;
@@ -35,12 +36,12 @@ export class SliderPopup {
     this.opts = opts;
     this.value = Phaser.Math.Clamp(opts.value, 0, 1);
 
-    this.overlay = scene.add.rectangle(640, 400, 1280, 800, 0x000000, 0).setDepth(60).setInteractive();
+    this.overlay = scene.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0).setDepth(60).setInteractive();
     this.overlay.on('pointerdown', () => this.close());
 
     // Держим окно в пределах экрана.
-    const cx = Phaser.Math.Clamp(x, W / 2 + 6, 1280 - W / 2 - 6);
-    const cy = Phaser.Math.Clamp(y, H / 2 + 6, 800 - H / 2 - 6);
+    const cx = Phaser.Math.Clamp(x, W / 2 + 6, GAME_W - W / 2 - 6);
+    const cy = Phaser.Math.Clamp(y, H / 2 + 6, GAME_H - H / 2 - 6);
     this.container = scene.add.container(cx, cy).setDepth(61);
 
     const panel = scene.add.rectangle(0, 0, W, H, 0x1e1e2e, 0.97).setStrokeStyle(2, 0x555577).setInteractive();

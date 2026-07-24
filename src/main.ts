@@ -4,14 +4,17 @@ import { CampScene } from './scenes/CampScene';
 import { ExpeditionScene } from './scenes/ExpeditionScene';
 import { MetaStore } from './core/MetaStore';
 import { loadFonts } from './ui/theme';
+import { GAME_W, GAME_H } from './ui/layout';
 
 MetaStore.init();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
-  width: 1280,
-  height: 800,
+  // Ширина зависит от аспекта окна, высота фиксирована — см. src/ui/layout.ts. FIT остаётся ради
+  // остаточных полос на экстремальном ультраширике (кламп MAX_W) и на «узких» окнах (кламп BASE_W).
+  width: GAME_W,
+  height: GAME_H,
   backgroundColor: '#1a1a2e',
   // Пиксель-арт: NEAREST-сэмплинг + округление позиций — убирает мерцание/мельтешение
   // при скролле фонов и масштабировании спрайтов.
