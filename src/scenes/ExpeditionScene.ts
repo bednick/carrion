@@ -21,6 +21,7 @@ import { getMobConfig } from '../mobs/registry';
 import { itemIconKey } from '../items/icons';
 import { slotSilhouetteKey, zoneDecorKey } from '../ui/silhouettes';
 import { goldTag, essenceTag } from '../ui/priceTag';
+import { newBadge } from '../ui/newBadge';
 import { ESSENCE_TIERS } from '../items/craft';
 import { QuestTracker } from '../ui/QuestTracker';
 import { ResourceHUD } from '../ui/ResourceHUD';
@@ -1547,6 +1548,9 @@ export class ExpeditionScene extends Phaser.Scene {
     const total = options.length * CARD_W + (options.length - 1) * GAP;
     const startX = 640 - total / 2 + CARD_W / 2;
     const cardY = 210;
+    // «Уже получал» = хоть раз вынесен в сундук — тот же критерий, что у иконок
+    // лута в тултипе зоны на карте (CampScene.buildMapContent).
+    const carriedOut = MetaStore.get().stats.items_carried_out;
 
     options.forEach((opt, i) => {
       const x = startX + i * (CARD_W + GAP);
@@ -1580,6 +1584,10 @@ export class ExpeditionScene extends Phaser.Scene {
           fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
           align: 'center', wordWrap: { width: CARD_W - 16 },
         }).setOrigin(0.5, 0));
+        // Значок последним в карточке — рисуется поверх иконки и названия.
+        if (!carriedOut[opt.item.item_id]) {
+          this.victoryContainer.add(newBadge(this, x + CARD_W / 2 - 8, cardY - CARD_H / 2 + 6));
+        }
       }
 
       card.on('pointerover', () => {
