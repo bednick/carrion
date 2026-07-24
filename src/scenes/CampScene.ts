@@ -33,8 +33,11 @@ import { CX, DX, GAME_W, GAME_H, rightX } from '../ui/layout';
 // Ширина, в которой нарисована композиция camp.png. Пока арт без бокового запаса (файл 1376×768) —
 // тянем картинку по ширине холста, как и раньше (это уже слегка сплющивало её). Когда придёт новый
 // camp.png шириной 1920 (центральные 1280×800 = историческая композиция, по 320px сценографии по бокам) —
-// поставить здесь 1920: картинка нарисуется 1:1, лишнее уйдёт за края холста, а центр совпадёт с текущим.
-const CAMP_BG_W = GAME_W;
+// вернуть здесь 1920: картинка нарисуется 1:1, лишнее уйдёт за края холста, а центр совпадёт с текущим.
+// Функция, а не константа: GAME_W пересчитывается при ресайзе окна (src/ui/layout.ts).
+function campBgWidth(): number {
+  return GAME_W;
+}
 
 interface MapZoneEntry {
   id: string;
@@ -170,15 +173,32 @@ export class CampScene extends Phaser.Scene {
   private dealerBlinkHint: Phaser.GameObjects.Image | null = null;
   private firstExpeditionHint: Phaser.GameObjects.Image | null = null;
 
+  // Панель, которую надо переоткрыть после рестарта сцены (см. relayoutOnResize).
+  private panelToRestore: 'smith' | 'dealer' | 'chest' | 'map' | null = null;
+
   constructor() {
     super({ key: 'CampScene' });
+  }
+
+  init(data?: { panelState?: 'smith' | 'dealer' | 'chest' | 'map' | null }) {
+    this.panelToRestore = data?.panelState ?? null;
+    this.panelState = null;
+  }
+
+  /**
+   * Ресайз окна (чаще всего F11) сменил ширину холста — лагерь целиком строится из MetaStore,
+   * так что просто пересобираем сцену, сохранив открытую панель. Прокрутка сундука и предмет
+   * «в руке» при этом теряются.
+   */
+  relayoutOnResize() {
+    this.scene.restart({ panelState: this.panelState });
   }
 
   create() {
     initQuestSystem();
     this.tooltip = new Tooltip(this);
 
-    this.add.image(CX, 400, 'bg-camp').setDisplaySize(CAMP_BG_W, GAME_H);
+    this.add.image(CX, 400, 'bg-camp').setDisplaySize(campBgWidth(), GAME_H);
     this.buildFire();
 
     this.buildHUD();
@@ -249,6 +269,18 @@ export class CampScene extends Phaser.Scene {
     });
 
     this.refreshHUD();
+
+    // Рестарт под новый размер окна — возвращаем игрока в ту же панель, что была открыта.
+    if (this.panelToRestore) {
+      const reopen = {
+        smith:  () => this.openSmithPanel(),
+        dealer: () => this.openDealerPanel(),
+        chest:  () => this.openChestPanel(),
+        map:    () => this.openMapPanel(),
+      };
+      reopen[this.panelToRestore]();
+      this.panelToRestore = null;
+    }
   }
 
   private buildHUD() {

@@ -8,6 +8,7 @@ import { UNARMED_DAMAGE } from './events';
 import { getItemBehavior } from '../items/registry';
 import { HANDLER_ORDER, MAX_CASCADE, runPass, stampOrigin } from './dispatcher';
 import { mitigateDamage } from './mitigation';
+import { unseededRng, type Rng } from '../core/rng';
 
 const UNARMED_INTERVAL = 1500;
 
@@ -103,17 +104,23 @@ export class CombatEngine {
   private phases?: EnemySpec[];
   private currentPhaseIdx = 0;
   private resolveSummon: SummonResolver;
+  private rng: Rng;
 
   constructor(
     state: CombatState,
     callbacks: CombatCallbacks,
     resolveSummon: SummonResolver,
     phases?: EnemySpec[],
+    // Единственный рандом внутри движка — шанс перехода в следующую фазу (см. applyKill). Сцена
+    // передаёт сюда сид похода, чтобы рестарт не рероллил переход; симулятору баланса детерминизм
+    // не нужен, поэтому дефолт — Math.random.
+    rng: Rng = unseededRng,
   ) {
     this.state = state;
     this.cb = callbacks;
     this.resolveSummon = resolveSummon;
     this.phases = phases;
+    this.rng = rng;
   }
 
   update(deltaMs: number) {
@@ -490,7 +497,7 @@ export class CombatEngine {
     if (this.phases) {
       const nextPhaseIdx = (this.currentPhaseIdx ?? 0) + 1;
       const nextPhase = nextPhaseIdx < this.phases.length ? this.phases[nextPhaseIdx] : undefined;
-      if (nextPhase && Math.random() < (nextPhase.chance ?? 1)) {
+      if (nextPhase && this.rng.frac() < (nextPhase.chance ?? 1)) {
         this.activatePhase(nextPhaseIdx, enemy, enemyIdx);
         return [];
       }

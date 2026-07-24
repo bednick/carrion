@@ -27,10 +27,14 @@ import { QuestTracker } from '../ui/QuestTracker';
 import { ResourceHUD } from '../ui/ResourceHUD';
 import { VolumeControl } from '../ui/VolumeControl';
 import { CX, DX, GAME_W, GAME_H, rightX } from '../ui/layout';
+import { makeRunSeed, rngFor, type Rng } from '../core/rng';
 
 // Боевая арена выверена в дизайновых 1280 (герой слева, 4 слота мобов справа) — её не пересобираем
-// под ширину экрана, а целиком сдвигаем в новый центр на DX (src/ui/layout.ts).
-const HERO_X = 560 + DX;
+// под ширину экрана, а целиком сдвигаем в новый центр на DX. Функция, а не константа: DX
+// пересчитывается при ресайзе окна (src/ui/layout.ts).
+function heroX(): number {
+  return 560 + DX;
+}
 
 // Та же палитра, что у характеристик предметов в тултипе (src/items/factories.ts,
 // src/items/spiked_cuirass/behavior.ts) — тултип моба должен выглядеть единообразно с ними.
@@ -216,15 +220,30 @@ export class ExpeditionScene extends Phaser.Scene {
     super({ key: 'ExpeditionScene' });
   }
 
-  // Кэрриовер при «Продолжить поиски» — только HP и визуал ленты (рюкзак/схрон/крафт убраны).
+  // Кэрриовер при рестарте сцены без выхода из похода — только HP и визуал ленты
+  // (рюкзак/схрон/крафт убраны). Сейчас единственный такой рестарт — перекладка под новый
+  // размер окна, см. relayoutOnResize.
   private carryoverBelt: ItemInstance[] = [];
   private carryoverQueue: ItemInstance[] = [];
-  // Текущее здоровье героя переносится при «Продолжить поиски» (не восстанавливается).
+  // Текущее здоровье героя переносится при рестарте (не восстанавливается).
   private carryoverHp: number | null = null;
+  // План боёв и номер текущего боя — иначе generateFightPlan заново бросит кубик на длину зоны.
+  private carryoverPlan: ('mob' | 'boss')[] | null = null;
+  private carryoverFightIdx: number | null = null;
+  // true — сцена перезапущена внутри уже идущего похода (не новый заход в зону).
+  private resumed = false;
+  // Сид похода: из него выводятся моб, лут, драфт, фазы, длина зоны и фон (src/core/rng.ts).
+  // Переживает рестарт сцены — иначе F11 посреди боя рероллил бы противника и добычу.
+  private runSeed = '';
   // Индекс стойки-пресета, с которой герой ушёл в поход (0..2).
   private standIndex = 0;
 
-  init(data: { zoneId: string; standIndex?: number; speedMult?: number; carryoverBelt?: ItemInstance[]; carryoverQueue?: ItemInstance[]; carryoverHp?: number }) {
+  init(data: {
+    zoneId: string; standIndex?: number; speedMult?: number;
+    carryoverBelt?: ItemInstance[]; carryoverQueue?: ItemInstance[]; carryoverHp?: number;
+    carryoverPlan?: ('mob' | 'boss')[]; carryoverFightIdx?: number; resumed?: boolean;
+    seed?: string;
+  }) {
     this.zoneId = data.zoneId ?? 'dead-fields';
     // Заходим с последней выбранной стойкой (на стенде или в прошлом бою); её можно сменить в бою.
     this.standIndex = data.standIndex ?? MetaStore.getActiveStand();
@@ -234,7 +253,32 @@ export class ExpeditionScene extends Phaser.Scene {
     this.carryoverBelt = data.carryoverBelt ?? [];
     this.carryoverQueue = data.carryoverQueue ?? [];
     this.carryoverHp = data.carryoverHp ?? null;
+    this.carryoverPlan = data.carryoverPlan ?? null;
+    this.carryoverFightIdx = data.carryoverFightIdx ?? null;
+    this.resumed = data.resumed ?? false;
+    this.runSeed = data.seed ?? makeRunSeed();
     this.retreatDialogOpen = false;
+  }
+
+  /**
+   * Ресайз окна (чаще всего F11) сменил ширину холста — пересобираем сцену под новую раскладку,
+   * не выбрасывая игрока из похода. Переживают рестарт: лут на ленте и в очереди, HP героя,
+   * скорость, стойка, длина зоны, номер боя и сид. Текущий бой начинается заново, но противник,
+   * его лут и фон зоны те же — они выводятся из сида (src/core/rng.ts), рероллить их нельзя.
+   */
+  relayoutOnResize() {
+    this.scene.restart({
+      zoneId: this.zoneId,
+      standIndex: this.standIndex,
+      speedMult: this.speedMult,
+      carryoverBelt: this.beltItems.map(o => o.item),
+      carryoverQueue: [...this.lootQueue],
+      carryoverHp: this.engine?.state.hero.hp,
+      carryoverPlan: this.fightPlan,
+      carryoverFightIdx: this.currentFightIdx,
+      resumed: true,
+      seed: this.runSeed,
+    });
   }
 
   create() {
@@ -262,9 +306,9 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.zoneCfg = getZoneConfig(this.zoneId);
     EventBus.emit('expedition_started');
-    // Счётчик заходов: «Продолжить поиски» перезапускает сцену с переносом HP —
+    // Счётчик заходов: рестарт сцены внутри идущего похода (перекладка под новый размер окна) —
     // это та же экспедиция, повторно не считаем.
-    if (this.carryoverHp === null) MetaStore.recordZoneEntered(this.zoneId);
+    if (!this.resumed) MetaStore.recordZoneEntered(this.zoneId);
 
     // Фоновый эмбиент похода (один и тот же для всех зон). Заменяет лагерные слои;
     // при возврате в лагерь CampScene перебьёт его своим набором.
@@ -297,7 +341,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.resourceHUD = new ResourceHUD(this, this.tooltip);
     this.questTracker = new QuestTracker(this);
     EventBus.on('quest_completed', this.onQuestCompleted, this);
-    // Перенос ленты при «Продолжить поиски» (только визуал — предметы всё равно уйдут в сундук).
+    // Перенос ленты при рестарте (только визуал — предметы всё равно уйдут в сундук).
     for (const item of this.carryoverBelt) this.addToBelt(item);
     for (const item of this.carryoverQueue) this.lootQueue.push(item);
     this.carryoverBelt = [];
@@ -313,6 +357,18 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private generateFightPlan() {
+    // Рестарт внутри идущего похода (перекладка под новый размер окна) — план и номер боя пришли
+    // готовыми, кубик на длину зоны бросать заново нельзя. Для endless-зоны план пуст, но номер боя
+    // (глубина и уровень проклятья) всё равно переносится.
+    if (this.carryoverFightIdx !== null) {
+      this.fightPlan = this.carryoverPlan ?? [];
+      this.totalFights = this.zoneCfg.endless ? 0 : this.fightPlan.length;
+      this.currentFightIdx = this.carryoverFightIdx;
+      this.carryoverPlan = null;
+      this.carryoverFightIdx = null;
+      return;
+    }
+
     // Endless-зона (см. docs/content.zones.format.md) — рядовые бои идут без предела, fightPlan
     // не строим вовсе (см. startNextFight/beginFight/onFightEnd, ветка this.zoneCfg.endless).
     if (this.zoneCfg.endless) {
@@ -327,7 +383,7 @@ export class ExpeditionScene extends Phaser.Scene {
     let count = 0;
     if (hasMobs && this.zoneCfg.fights) {
       const { min, max } = this.zoneCfg.fights;
-      const base = min + Math.floor(Math.random() * (max - min + 1));
+      const base = rngFor(this.runSeed, 'plan').int(min, max);
       // Длина забега ± модификатор обуви (фиксируется при старте), минимум 1 рядовой бой (§4.D).
       count = Math.max(1, base + sumMeta(this.equipment).fightDelta);
     }
@@ -404,7 +460,7 @@ export class ExpeditionScene extends Phaser.Scene {
     }
     this.add.line(0, 360, 0, 360, GAME_W, 360, 0x333355).setOrigin(0);
 
-    const hx = HERO_X;
+    const hx = heroX();
     this.add.ellipse(hx, 287, 70, 16, 0x000000, 0.45).setDepth(4);
     // Единственный герой — Силач.
     const animPrefix = 'char-strongman';
@@ -481,10 +537,12 @@ export class ExpeditionScene extends Phaser.Scene {
   private buildParallaxBackground(folder: string) {
     const variants = ZONE_BG_VARIANTS[folder];
     if (!variants) return;
+    // Вариант слоя — из сида похода: при рестарте сцены зона не должна перерисовываться другой.
+    const bgRng = rngFor(this.runSeed, 'bg');
     for (const layer of BG_LAYERS) {
       const count = variants[layer];
       if (!count) continue;
-      const variant = 1 + Math.floor(Math.random() * count); // случайный вариант на старте
+      const variant = bgRng.int(1, count);
       const key = zoneBgKey(folder, layer, variant);
       if (!this.textures.exists(key)) continue;
 
@@ -523,8 +581,11 @@ export class ExpeditionScene extends Phaser.Scene {
     fore: [0.55, 1.0],
   };
   // Период бесшовного повтора scatter-слоёв (аналог тайлинга TileSprite, но руками — см. scrollBackground).
-  // Должен быть заметно шире экрана, иначе на широком холсте виден период повтора.
-  private static readonly SCATTER_WORLD_WIDTH = Math.max(1600, GAME_W + 320);
+  // Должен быть заметно шире экрана, иначе на широком холсте виден период повтора. Метод, а не константа:
+  // GAME_W пересчитывается при ресайзе окна (src/ui/layout.ts).
+  private scatterWorldWidth(): number {
+    return Math.max(1600, GAME_W + 320);
+  }
 
   // Раскладывает пул объектов зоны (ZONE_BG_OBJECTS) в случайную последовательность: тасовка, случайный
   // размер (в пределах SCATTER_SCALE от h слоя) и случайный джиттер расстояния между объектами.
@@ -535,23 +596,25 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const r = ExpeditionScene.LAYER_RENDER[layer];
     const scroll = ExpeditionScene.ZONE_LAYER_SCROLL[folder]?.[layer] ?? r.scroll;
-    const worldWidth = ExpeditionScene.SCATTER_WORLD_WIDTH;
+    const worldWidth = this.scatterWorldWidth();
     const [minCount, maxCount] = ExpeditionScene.SCATTER_COUNT[layer];
-    const count = Phaser.Math.Between(minCount, maxCount);
+    // Раскладка силуэтов — тоже из сида, чтобы рестарт сцены не перетасовал пейзаж под игроком.
+    const rng = rngFor(this.runSeed, 'scatter', layer);
+    const count = rng.int(minCount, maxCount);
     const [minScale, maxScale] = ExpeditionScene.SCATTER_SCALE[layer];
     const groundY = r.cy + r.h / 2; // нижняя граница слоя — «линия земли» для силуэтов
     const baseSpacing = worldWidth / count;
 
-    const sequence = this.pickScatterSequence(slugs, count, layer === 'mid');
+    const sequence = this.pickScatterSequence(slugs, count, layer === 'mid', rng);
     const entries: { imgA: Phaser.GameObjects.Image; imgB: Phaser.GameObjects.Image; localX: number }[] = [];
 
     sequence.forEach((slug, i) => {
       const key = zoneObjKey(layer, slug);
       if (!this.textures.exists(key)) return;
       const src = this.textures.get(key).getSourceImage() as HTMLImageElement;
-      const targetH = Phaser.Math.FloatBetween(minScale, maxScale) * r.h;
+      const targetH = rng.float(minScale, maxScale) * r.h;
       const scale = targetH / src.height;
-      const jitter = Phaser.Math.FloatBetween(-0.3, 0.3) * baseSpacing;
+      const jitter = rng.float(-0.3, 0.3) * baseSpacing;
       const localX = i * baseSpacing + baseSpacing / 2 + jitter;
 
       const imgA = this.add.image(localX, groundY, key).setOrigin(0.5, 1).setScale(scale).setDepth(r.depth);
@@ -564,12 +627,12 @@ export class ExpeditionScene extends Phaser.Scene {
 
   // Тасует пул в последовательность длины count. mid — без соседних повторов (силуэты на горизонте
   // не должны дублироваться, style-guide), fore — повторы допустимы (объекты ближе, пул может быть меньше).
-  private pickScatterSequence(slugs: string[], count: number, avoidAdjacentRepeat: boolean): string[] {
+  private pickScatterSequence(slugs: string[], count: number, avoidAdjacentRepeat: boolean, rng: Rng): string[] {
     const seq: string[] = [];
-    let pool = Phaser.Utils.Array.Shuffle([...slugs]);
+    let pool = rng.shuffle(slugs);
     let idx = 0;
     for (let i = 0; i < count; i++) {
-      if (idx >= pool.length) { pool = Phaser.Utils.Array.Shuffle([...slugs]); idx = 0; }
+      if (idx >= pool.length) { pool = rng.shuffle(slugs); idx = 0; }
       if (avoidAdjacentRepeat && seq.length > 0 && seq[seq.length - 1] === pool[idx] && idx + 1 < pool.length) {
         [pool[idx], pool[idx + 1]] = [pool[idx + 1], pool[idx]];
       }
@@ -607,7 +670,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateForeMask();
   }
 
-  // Перерисовывает «дыры»: вокруг героя (HERO_X) и каждого живого врага.
+  // Перерисовывает «дыры»: вокруг героя (heroX) и каждого живого врага.
   private updateForeMask() {
     const rt = this.foreMaskRT;
     if (!rt) return;
@@ -618,7 +681,7 @@ export class ExpeditionScene extends Phaser.Scene {
       rt.erase(brush, x, HOLE_Y);
       brush.destroy();
     };
-    stamp(HERO_X);
+    stamp(heroX());
     for (const g of this.enemyGraphics) {
       if (g) stamp(g.sprite.x);
     }
@@ -660,7 +723,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.heroAtkBars = [];
     if (!this.engine) return;
 
-    const hx = HERO_X;
+    const hx = heroX();
     const timers = this.engine.state.hero.weaponTimers;
     const count = timers.length === 0 ? 1 : timers.length;
     for (let i = 0; i < count; i++) {
@@ -873,10 +936,14 @@ export class ExpeditionScene extends Phaser.Scene {
   // (carryOut) только при переполнении — когда под новый предмет не хватает места. Ни клика, ни drag.
   private readonly BELT_SPACING = 56;
   private readonly BELT_LEFT_X = 40;      // центр крайнего левого (упорного) предмета
-  private readonly BELT_ENTRY_X = rightX(40); // точка въезда справа
-  // Сколько предметов помещается от левого упора до точки въезда (не считая уезжающих).
-  private readonly BELT_CAPACITY =
-    Math.floor((rightX(40) - 40) / 56) + 1;
+  // Правый край зависит от ширины холста, а та пересчитывается при ресайзе окна (src/ui/layout.ts).
+  // Поля экземпляра инициализировались бы один раз при создании сцены (restart их не пересоздаёт),
+  // поэтому — геттеры, считающие значение на каждое обращение.
+  private get BELT_ENTRY_X(): number { return rightX(40); }        // точка въезда справа
+  /** Сколько предметов помещается от левого упора до точки въезда (не считая уезжающих). */
+  private get BELT_CAPACITY(): number {
+    return Math.floor((this.BELT_ENTRY_X - this.BELT_LEFT_X) / this.BELT_SPACING) + 1;
+  }
 
   private addToBelt(item: ItemInstance) {
     const beltY = 370;
@@ -1333,7 +1400,7 @@ export class ExpeditionScene extends Phaser.Scene {
         if (target !== 'hero') return;
         SoundManager.play('block');
         this.flashSprite(this.heroSprite, 0xffdd00);
-        spawnFloater(this, 'block', 0, HERO_X, 130);
+        spawnFloater(this, 'block', 0, heroX(), 130);
       },
       onDodge: (enemyIdx) => {
         SoundManager.play('block');
@@ -1410,7 +1477,7 @@ export class ExpeditionScene extends Phaser.Scene {
       onEnemySummoned: (enemy, enemyIdx) => {
         this.addEnemyGraphic(enemy, enemyIdx);
       },
-    }, resolveSummonSpec, enginePhases);
+    }, resolveSummonSpec, enginePhases, rngFor(this.runSeed, 'phase', this.currentFightIdx));
 
     this.buildEnemyGraphics(enemies);
     this.buildHeroAtkBars();
@@ -1422,7 +1489,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const pool = this.zoneCfg.mob_pool ?? [];
     if (pool.length === 0) return getMobConfig(this.zoneCfg.boss!.mob_id);
     const total = pool.reduce((s, e) => s + e.weight, 0);
-    let rand = Math.random() * total;
+    // Ключ «сид + бой» — при рестарте сцены на том же номере боя выпадет тот же моб.
+    let rand = rngFor(this.runSeed, 'mob', this.currentFightIdx).frac() * total;
     for (const entry of pool) {
       rand -= entry.weight;
       if (rand <= 0) return getMobConfig(entry.mob_id);
@@ -1441,7 +1509,8 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (fightType === 'mob') {
       if (this.zoneCfg.mob_loot) {
-        const loot = rollLootTable(this.zoneCfg.mob_loot, magicFind);
+        // Индекс инкрементится ниже, уже после начисления — «бой N» и «лут боя N» согласованы.
+        const loot = rollLootTable(this.zoneCfg.mob_loot, magicFind, rngFor(this.runSeed, 'loot', this.currentFightIdx));
         const gold = loot.gold;
         MetaStore.addGold(gold);
         if (gold > 0) spawnFloater(this, 'gold', gold, floatX, floatY);
@@ -1535,7 +1604,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.collectBeltToChest();
     // Гарант-драфт: до 5 карточек [золото, предмет·mob, предмет·boss, предмет·mob, эссенция],
     // игрок берёт одну. Недостающие источники не показываются — см. buildRewardOptions.
-    const options = buildRewardOptions(this.zoneCfg.boss?.loot, this.zoneCfg.mob_loot);
+    const options = buildRewardOptions(this.zoneCfg.boss?.loot, this.zoneCfg.mob_loot, rngFor(this.runSeed, 'reward'));
     this.showRewardDraft(options);
   }
 

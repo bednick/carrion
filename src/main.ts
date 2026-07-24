@@ -5,6 +5,7 @@ import { ExpeditionScene } from './scenes/ExpeditionScene';
 import { MetaStore } from './core/MetaStore';
 import { loadFonts } from './ui/theme';
 import { GAME_W, GAME_H } from './ui/layout';
+import { installResizeHandler } from './ui/resize';
 
 MetaStore.init();
 
@@ -35,4 +36,7 @@ loadFonts().then(() => {
   // и буквы одного слова визуально «плывут» по размеру. Возвращаем плавную интерполяцию для
   // финального CSS-масштаба канвы — сэмплинг текстур спрайтов внутри игры (antialiasGL) не трогаем.
   Phaser.Display.Canvas.CanvasInterpolation.setBicubic(game.canvas);
+  // Аспект окна меняется на лету (F11, ресайз) — ширина холста должна за ним следовать, иначе FIT
+  // снова начнёт добавлять полосы.
+  installResizeHandler(game);
 });
