@@ -148,6 +148,12 @@ export class CampScene extends Phaser.Scene {
   private set selectedStandIndex(i: number) { MetaStore.setActiveStand(i); }
   private tooltip!: Tooltip;
   private panelContainer!: Phaser.GameObjects.Container;
+  /** Дизайновая высота рамки панели НПС (buildPanelFrame). */
+  private static readonly PANEL_H = 520;
+  /** Целевой отступ панели до края холста — половина прежних 140. */
+  private static readonly PANEL_PAD = 70;
+  /** Текущий масштаб panelContainer: 1 для карты, computePanelScale() для меню НПС. */
+  private panelScale = 1;
   private hoverLabel!: Phaser.GameObjects.Text;
   /** Предмет во входном слоте улучшения (вкладка «Экипировка»). */
   private upgradeInputItem: ItemInstance | null = null;
@@ -694,10 +700,15 @@ export class CampScene extends Phaser.Scene {
   private buildPanel() {
     // Контейнер сдвинут на DX: вся начинка панелей (магазин, стойка, сундук, карта, апгрейд) свёрстана
     // в дизайновых 1280 и этим сдвигом целиком встаёт в центр широкого холста (src/ui/layout.ts).
-    this.panelContainer = this.add.container(DX, 0).setDepth(150).setVisible(false);
+    // Меню НПС вдобавок увеличено масштабом контейнера вокруг пивота (640, 400) — см. computePanelScale.
+    // При S = 1 позиция совпадает с прежней (DX, 0).
+    const S = this.panelScale;
+    this.panelContainer = this.add.container(CX - 640 * S, 400 - 400 * S)
+      .setScale(S).setDepth(150).setVisible(false);
     // Оверлей — единственное исключение: тянется во всю ширину экрана. x=640 внутри контейнера — это
-    // ровно CX на экране, так что при ширине GAME_W затемнение достаёт до обоих краёв.
-    const overlay = this.add.rectangle(640, 400, GAME_W, GAME_H, 0x000000, 0.5);
+    // ровно CX на экране, так что при ширине GAME_W затемнение достаёт до обоих краёв. Размер делим
+    // на масштаб — иначе увеличенный оверлей вылезет за холст.
+    const overlay = this.add.rectangle(640, 400, GAME_W / S, GAME_H / S, 0x000000, 0.5);
     overlay.setInteractive();
     overlay.on('pointerdown', () => {
       if (this.dragDrop?.isHolding()) return; // с предметом в руке клик по фону вернёт его в сундук (pointerup)
@@ -710,11 +721,26 @@ export class CampScene extends Phaser.Scene {
   // и тултипы работают в экранных (курсор, клампы по краям экрана) — эти два хелпера переводят
   // локальный x панели в экранный. Всё, что просто рисуется внутри панели, перевода не требует.
   private panelX(localX: number): number {
-    return localX + DX;
+    return this.panelContainer.x + localX * this.panelScale;
+  }
+
+  private panelY(localY: number): number {
+    return this.panelContainer.y + localY * this.panelScale;
   }
 
   private panelRect(x: number, y: number, w: number, h: number): Phaser.Geom.Rectangle {
-    return new Phaser.Geom.Rectangle(x + DX, y, w, h);
+    const S = this.panelScale;
+    return new Phaser.Geom.Rectangle(this.panelX(x), this.panelY(y), w * S, h * S);
+  }
+
+  // Меню НПС свёрстано в дизайновых 1280×800 и увеличивается масштабом контейнера вокруг
+  // центра рамки (640, 400): панель растёт симметрично, отступ сверху/снизу падает 140 → 70.
+  private computePanelScale(): number {
+    const desired = (GAME_H - 2 * CampScene.PANEL_PAD) / CampScene.PANEL_H;
+    // Вкладки слева торчат до локального x=100, т.е. на 540 левее пивота. На узких холстах
+    // (аспект < ~1.6, GAME_W у нижней границы BASE_W) полный масштаб срезал бы их за краем экрана.
+    const maxByWidth = (CX - 8) / 540;
+    return Math.max(1, Math.min(desired, maxByWidth));
   }
 
   private clearPanelResources() {
@@ -747,15 +773,20 @@ export class CampScene extends Phaser.Scene {
     this.chestSlotFilter = null;
     this.chestRarityFilter = null;
     this.panelState = null;
+    this.panelScale = 1;
     this.clearPanelResources();
     this.panelContainer.setVisible(false);
     this.panelContainer.removeAll(true);
+    this.panelContainer.destroy();
     this.buildPanel();
   }
 
   private rebuildPanel() {
     this.clearPanelResources();
+    // Карта свёрстана шире рамки НПС (фон 660×620) — её не увеличиваем.
+    this.panelScale = this.panelState === 'map' ? 1 : this.computePanelScale();
     this.panelContainer.removeAll(true);
+    this.panelContainer.destroy();
     this.buildPanel();
     this.panelContainer.setVisible(true);
     if (this.panelState === 'map') {
@@ -764,6 +795,8 @@ export class CampScene extends Phaser.Scene {
       // Менеджер живёт между перестроениями панели — иначе «рука» (взятый предмет) терялась бы.
       if (!this.dragDrop) this.dragDrop = new DragDropManager(this);
       else this.dragDrop.clearSlots();
+      // Иконка «в руке» живёт в экранных координатах — тянем её за масштабом панели.
+      this.dragDrop.setIconScale(this.panelScale);
       this.buildPanelFrame();
       this.buildPanelTabs();
       if (this.panelState === 'smith')        this.buildSmithContent();
@@ -915,7 +948,7 @@ export class CampScene extends Phaser.Scene {
       if ((onSlotClick || this.dragDrop) && inst) {
         bg.setInteractive({ useHandCursor: true });
         const sid = slotId;
-        bg.on('pointerover', () => { bg.setFillStyle(0x3a3a5a); if (inst) this.tooltip.showItem(inst, this.panelX(x + SIZE / 2 + 8), y - SIZE / 2 - 8); });
+        bg.on('pointerover', () => { bg.setFillStyle(0x3a3a5a); if (inst) this.tooltip.showItem(inst, this.panelX(x + SIZE / 2 + 8), this.panelY(y - SIZE / 2 - 8)); });
         bg.on('pointerout',  () => { bg.setFillStyle(0x2a2a3a); this.tooltip.hide(); });
         if (this.dragDrop) {
           bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
@@ -1211,8 +1244,8 @@ export class CampScene extends Phaser.Scene {
     }
     MetaStore.spendGold(cost);
     MetaStore.addEssence(tier, qty);
-    spawnIconFloater(this, rewardIconKey('gold'), `-${cost}`, x ?? this.panelX(379), y ?? 300, '#ffcc00');
-    spawnIconFloater(this, essenceIconKey(tier), `+${qty}`, x ?? this.panelX(379), y ?? 300, TIER_HEX[tier]);
+    spawnIconFloater(this, rewardIconKey('gold'), `-${cost}`, x ?? this.panelX(379), y ?? this.panelY(300), '#ffcc00');
+    spawnIconFloater(this, essenceIconKey(tier), `+${qty}`, x ?? this.panelX(379), y ?? this.panelY(300), TIER_HEX[tier]);
     this.essenceBuyQty[tier] = 1;
     this.refreshHUD();
     this.rebuildPanel();
@@ -1230,8 +1263,8 @@ export class CampScene extends Phaser.Scene {
     MetaStore.spendEssence(cost);
     const output = ESSENCE_EXCHANGE_RATE;
     MetaStore.addEssence(to, output);
-    spawnIconFloater(this, essenceIconKey(from), '-1', x ?? this.panelX(379), y ?? 300, TIER_HEX[from]);
-    spawnIconFloater(this, essenceIconKey(to), `+${output}`, x ?? this.panelX(379), y ?? 300, TIER_HEX[to]);
+    spawnIconFloater(this, essenceIconKey(from), '-1', x ?? this.panelX(379), y ?? this.panelY(300), TIER_HEX[from]);
+    spawnIconFloater(this, essenceIconKey(to), `+${output}`, x ?? this.panelX(379), y ?? this.panelY(300), TIER_HEX[to]);
     this.refreshHUD();
     this.rebuildPanel();
   }
@@ -1367,7 +1400,7 @@ export class CampScene extends Phaser.Scene {
       s1Bg.setInteractive({ useHandCursor: true });
       s1Bg.on('pointerover', () => {
         s1Bg.setFillStyle(0x3a3a5a);
-        this.tooltip.showItem(item, this.panelX(inputX + S / 2 + 8), slotY - S / 2 - 8);
+        this.tooltip.showItem(item, this.panelX(inputX + S / 2 + 8), this.panelY(slotY - S / 2 - 8));
       });
       s1Bg.on('pointerout', () => { s1Bg.setFillStyle(0x2a2a3a); this.tooltip.hide(); });
       if (this.dragDrop) {
@@ -1389,7 +1422,7 @@ export class CampScene extends Phaser.Scene {
       s3Bg.setInteractive({ useHandCursor: true });
       s3Bg.on('pointerover', () => {
         s3Bg.setFillStyle(0x35354a);
-        this.tooltip.showItem(resultItem, this.panelX(resultX + S / 2 + 8), slotY - S / 2 - 8);
+        this.tooltip.showItem(resultItem, this.panelX(resultX + S / 2 + 8), this.panelY(slotY - S / 2 - 8));
       });
       s3Bg.on('pointerout', () => { s3Bg.setFillStyle(0x252530); this.tooltip.hide(); });
       if (this.dragDrop) {
@@ -1404,7 +1437,7 @@ export class CampScene extends Phaser.Scene {
       // Только превью следующего шага — без взаимодействия, кроме тултипа.
       s3Bg.setInteractive({ useHandCursor: false });
       s3Bg.on('pointerover', () => {
-        this.tooltip.showItem(previewResult!, this.panelX(resultX + S / 2 + 8), slotY - S / 2 - 8, { defaultCost: 'essence' });
+        this.tooltip.showItem(previewResult!, this.panelX(resultX + S / 2 + 8), this.panelY(slotY - S / 2 - 8), { defaultCost: 'essence' });
       });
       s3Bg.on('pointerout', () => { this.tooltip.hide(); });
     }
@@ -1774,7 +1807,10 @@ export class CampScene extends Phaser.Scene {
 
     // Геометрическая маска живёт в экранных координатах (объект вне контейнера панели) — переводим.
     this.chestMaskGraphics = this.add.graphics();
-    this.chestMaskGraphics.fillRect(this.panelX(573), CONTENT_TOP, 512, CONTENT_H + 2);
+    this.chestMaskGraphics.fillRect(
+      this.panelX(573), this.panelY(CONTENT_TOP),
+      512 * this.panelScale, (CONTENT_H + 2) * this.panelScale,
+    );
     const mask = this.chestMaskGraphics.createGeometryMask();
 
     const itemsCtr = this.add.container(0, 0);
@@ -1812,7 +1848,7 @@ export class CampScene extends Phaser.Scene {
           slotBg.setInteractive({ useHandCursor: true });
           slotBg.on('pointerover', () => {
             slotBg.setFillStyle(0x3a3a5a);
-            this.tooltip.showItem(item, this.panelX(x + SIZE / 2 + 8), yc - SIZE / 2 - 8, {
+            this.tooltip.showItem(item, this.panelX(x + SIZE / 2 + 8), this.panelY(yc - SIZE / 2 - 8), {
               defaultCost: showPrices ? 'gold' : this.panelState === 'smith' ? 'essence' : 'none',
             });
           });
@@ -1970,7 +2006,7 @@ export class CampScene extends Phaser.Scene {
         [node, nameText].forEach(obj => {
           obj.on('pointerover', () => {
             node.setFillStyle(0x332233);
-            this.tooltip.showText(['Центр закрыт', 'Пройди Склеп, Пастбище хищников', 'и Логово мародёров'], this.panelX(entry.x + 65), entry.y - 50);
+            this.tooltip.showText(['Центр закрыт', 'Пройди Склеп, Пастбище хищников', 'и Логово мародёров'], this.panelX(entry.x + 65), this.panelY(entry.y - 50));
           });
           obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
         });
@@ -1988,7 +2024,7 @@ export class CampScene extends Phaser.Scene {
         [node, nameText].forEach(obj => {
           obj.on('pointerover', () => {
             node.setFillStyle(0x332233);
-            this.tooltip.showText(['Заблокировано', `Сначала пройди: ${prevLabel}`], this.panelX(entry.x + 65), entry.y - 50);
+            this.tooltip.showText(['Заблокировано', `Сначала пройди: ${prevLabel}`], this.panelX(entry.x + 65), this.panelY(entry.y - 50));
           });
           obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
         });
@@ -2017,7 +2053,7 @@ export class CampScene extends Phaser.Scene {
           this.tooltip.showLines([
             { text: canAfford ? 'Купить проходку:' : 'Не хватает золота:' },
             { text: `${entry.passPrice}`, color: '#ffcc00', icon: rewardIconKey('gold') },
-          ], this.panelX(entry.x + 65), entry.y - 50);
+          ], this.panelX(entry.x + 65), this.panelY(entry.y - 50));
         });
         obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
         obj.on('pointerdown', (ptr: Phaser.Input.Pointer) => this.tryBuyMapPass(entry, ptr.x, ptr.y));
@@ -2051,7 +2087,7 @@ export class CampScene extends Phaser.Scene {
             iconRow: itemIds.map(id => ({ texture: itemIconKey(id), discovered: !!carriedOut[id] })),
           });
         }
-        this.tooltip.showLines(lines, this.panelX(entry.x + 65), entry.y - 70);
+        this.tooltip.showLines(lines, this.panelX(entry.x + 65), this.panelY(entry.y - 70));
       });
       obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
       obj.on('pointerdown', () => {
@@ -2074,7 +2110,7 @@ export class CampScene extends Phaser.Scene {
     MetaStore.spendGold(entry.passPrice);
     MetaStore.unlockArea(entry.id);
     if (entry.questId) MetaStore.addActiveQuest(entry.questId, 1);
-    spawnIconFloater(this, rewardIconKey('gold'), `-${entry.passPrice}`, x ?? this.panelX(entry.x), y ?? entry.y, '#ffcc00');
+    spawnIconFloater(this, rewardIconKey('gold'), `-${entry.passPrice}`, x ?? this.panelX(entry.x), y ?? this.panelY(entry.y), '#ffcc00');
     this.refreshHUD();
     this.rebuildPanel();
   }

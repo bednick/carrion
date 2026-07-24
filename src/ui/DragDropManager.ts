@@ -61,10 +61,22 @@ export class DragDropManager {
   // Подсветка слотов, куда подходит взятый в руку предмет.
   private highlights: Phaser.GameObjects.Rectangle[] = [];
 
+  // Спрайты «руки» и драга живут в экранных координатах, вне контейнера панели, поэтому
+  // масштаб увеличенного меню НПС им передаётся снаружи (CampScene.rebuildPanel).
+  private iconScale = 1;
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     scene.input.on('pointermove', this.onPointerMove, this);
     scene.input.on('pointerup', this.onPointerUp, this);
+  }
+
+  /** Масштаб иконки предмета в руке/драге — под размер ячеек текущей панели. */
+  setIconScale(s: number) {
+    this.iconScale = s;
+    this.dragSprite?.setDisplaySize(44 * s, 44 * s);
+    this.heldSprite?.setDisplaySize(44 * s, 44 * s);
+    this.heldBorder?.setSize(48 * s, 48 * s);
   }
 
   registerSlot(zone: SlotZone) {
@@ -93,7 +105,7 @@ export class DragDropManager {
 
     this.dragSprite = this.scene.add
       .image(pointerX, pointerY, itemIconKey(slot.item.item_id))
-      .setDisplaySize(44, 44)
+      .setDisplaySize(44 * this.iconScale, 44 * this.iconScale)
       .setDepth(200)
       .setAlpha(0.85)
       .setOrigin(0.5);
@@ -157,13 +169,13 @@ export class DragDropManager {
     this.heldFrom = fromId;
     const p = this.scene.input.activePointer;
     this.heldBorder = this.scene.add
-      .rectangle(p.x, p.y, 48, 48)
+      .rectangle(p.x, p.y, 48 * this.iconScale, 48 * this.iconScale)
       .setStrokeStyle(2, RARITY_COLORS[item.rarity])
       .setDepth(299)
       .setOrigin(0.5);
     this.heldSprite = this.scene.add
       .image(p.x, p.y, itemIconKey(item.item_id))
-      .setDisplaySize(44, 44)
+      .setDisplaySize(44 * this.iconScale, 44 * this.iconScale)
       .setDepth(300)
       .setAlpha(0.95)
       .setOrigin(0.5);
