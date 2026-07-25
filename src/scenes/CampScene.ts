@@ -227,6 +227,13 @@ export class CampScene extends Phaser.Scene {
       if (this.panelContainer.visible) this.closePanel();
     });
 
+    // Горячие клавиши лагеря: быстрый доступ к панелям без мыши. Повторное нажатие закрывает (как ESC).
+    const kb = this.input.keyboard!;
+    kb.on('keydown-SPACE', () => this.togglePanel('map',    () => this.openMapPanel()));
+    kb.on('keydown-I',     () => this.togglePanel('chest',  () => this.openChestPanel()));
+    kb.on('keydown-S',     () => this.togglePanel('smith',  () => this.openSmithPanel()));
+    kb.on('keydown-D',     () => this.togglePanel('dealer', () => this.openDealerPanel()));
+
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
       if (!this.pendingDrag || !this.dragDrop || !ptr.isDown) return;
       if (this.dragDrop.isDragging() || this.dragDrop.isHolding()) return;
@@ -414,7 +421,10 @@ export class CampScene extends Phaser.Scene {
     // (src/ui/layout.ts), иначе на широком холсте силач съедет с поленьев.
     const x = 560 + DX, y = 540;
 
-    this.add.ellipse(x, y + CAMP_CHAR_H / 2, CAMP_CHAR_W * 0.9, 20, 0x000000, 0.45);
+    // Двухслойная тень (псевдоградиент) — та же схема, что в бою (ExpeditionScene).
+    const heroShW = CAMP_CHAR_W * 0.9 * 1.1, heroShH = 20 * 1.1, heroShY = y + CAMP_CHAR_H / 2 - 4;
+    this.add.ellipse(x, heroShY, heroShW * 1.1, heroShH * 1.1, 0x000000, 0.22);
+    this.add.ellipse(x, heroShY, heroShW * 0.9, heroShH * 0.9, 0x000000, 0.45);
     const outlineImg = this.add.image(x, y, HERO_SPRITE)
       .setDisplaySize(CAMP_CHAR_W + 6, CAMP_CHAR_H + 6).setTintFill(0xffffff).setVisible(false);
 
@@ -624,8 +634,10 @@ export class CampScene extends Phaser.Scene {
     name: string, onClick: () => void,
     withBlinkHint = false,
   ): Phaser.GameObjects.Image | undefined {
-    // Тень под ногами
-    this.add.ellipse(spriteX, spriteY + spriteH / 2, spriteW * 0.9, 14, 0x000000, 0.45);
+    // Тень под ногами — двухслойная (псевдоградиент), как в бою (ExpeditionScene).
+    const npcShW = spriteW * 0.9 * 1.1, npcShH = 14 * 1.1, npcShY = spriteY + spriteH / 2 - 4;
+    this.add.ellipse(spriteX, npcShY, npcShW * 1.1, npcShH * 1.1, 0x000000, 0.22);
+    this.add.ellipse(spriteX, npcShY, npcShW * 0.9, npcShH * 0.9, 0x000000, 0.45);
 
     // Белый силуэт чуть крупнее — показывается при hover позади спрайта
     const outline = this.add.image(spriteX, spriteY, textureKey)
@@ -753,6 +765,12 @@ export class CampScene extends Phaser.Scene {
       this.chestMaskGraphics = null;
     }
     this.pendingDrag = null;
+  }
+
+  private togglePanel(state: 'smith' | 'dealer' | 'chest' | 'map', open: () => void) {
+    if (this.smithHammerMode) return; // не мешаем режиму разборки
+    if (this.panelState === state && this.panelContainer.visible) this.closePanel();
+    else open();
   }
 
   private closePanel() {
@@ -1144,7 +1162,7 @@ export class CampScene extends Phaser.Scene {
         .setStrokeStyle(1, canAfford ? 0x44aa44 : 0x664444)
         .setInteractive({ useHandCursor: true });
       const buyLbl = this.add.text(cx + 158, rowY, 'Купить', {
-        fontSize: '11px', fontFamily: FONT_FAMILY, color: canAfford ? '#aaffaa' : '#886666',
+        fontSize: '12px', fontFamily: FONT_FAMILY, color: canAfford ? '#aaffaa' : '#886666',
       }).setOrigin(0.5);
       buyBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
         if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не покупает
@@ -1174,7 +1192,7 @@ export class CampScene extends Phaser.Scene {
         .setStrokeStyle(1, canExchange ? 0x44aa44 : 0x664444)
         .setInteractive({ useHandCursor: true });
       const exchangeLbl = this.add.text(cx + 7, rowY, 'Обменять', {
-        fontSize: '9px', fontFamily: FONT_FAMILY, color: canExchange ? '#aaffaa' : '#886666', align: 'center',
+        fontSize: '10px', fontFamily: FONT_FAMILY, color: canExchange ? '#aaffaa' : '#886666', align: 'center',
       }).setOrigin(0.5);
       exchangeBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
         if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не меняет
@@ -1211,7 +1229,7 @@ export class CampScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     const hammerG = this.add.image(cx - BTN_W / 2 + 30, btnY, 'hammer').setDisplaySize(24, 24);
     const hammerLbl = this.add.text(cx - BTN_W / 2 + 54, btnY, 'Разобрать', {
-      fontSize: '15px', fontFamily: FONT_FAMILY,
+      fontSize: '14px', fontFamily: FONT_FAMILY,
       color: hammerActive ? '#ffcc88' : '#aaddaa', align: 'center',
     }).setOrigin(0, 0.5);
     hammerBtn.on('pointerover', () => { if (!this.smithHammerMode) hammerBtn.setFillStyle(0x3a3a2a); });
@@ -1450,7 +1468,7 @@ export class CampScene extends Phaser.Scene {
     const btn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, btnColor);
     if (btnEnabled) btn.setInteractive({ useHandCursor: true });
     const btnLbl = this.add.text(cx, btnY, 'Улучшить', {
-      fontSize: '13px', fontFamily: FONT_FAMILY,
+      fontSize: '14px', fontFamily: FONT_FAMILY,
       color: btnEnabled ? '#aaffaa' : '#555566', align: 'center',
     }).setOrigin(0.5);
     if (btnEnabled && previewResult) {
@@ -1509,9 +1527,9 @@ export class CampScene extends Phaser.Scene {
     const isShop = this.dealerTab === 'shop';
 
     const tabShopBg = this.add.rectangle(295, 192, 110, 30, isShop ? 0x444466 : 0x333355).setInteractive({ useHandCursor: true });
-    const tabShopLbl = this.add.text(295, 192, 'Магазин', { fontSize: '13px', fontFamily: FONT_FAMILY, color: isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
+    const tabShopLbl = this.add.text(295, 192, 'Магазин', { fontSize: '14px', fontFamily: FONT_FAMILY, color: isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
     const tabQstBg = this.add.rectangle(415, 192, 110, 30, !isShop ? 0x444466 : 0x333355).setInteractive({ useHandCursor: true });
-    const tabQstLbl = this.add.text(415, 192, 'Задания', { fontSize: '13px', fontFamily: FONT_FAMILY, color: !isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
+    const tabQstLbl = this.add.text(415, 192, 'Задания', { fontSize: '14px', fontFamily: FONT_FAMILY, color: !isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
 
     tabShopBg.on('pointerdown', () => { this.tabClickGuard = true; this.dealerTab = 'shop';   this.rebuildPanel(); });
     tabQstBg.on('pointerdown',  () => { this.tabClickGuard = true; this.dealerTab = 'quests'; this.rebuildPanel(); });
@@ -1543,7 +1561,7 @@ export class CampScene extends Phaser.Scene {
             .setStrokeStyle(1, canAfford ? 0x44aa44 : 0x664444)
             .setInteractive({ useHandCursor: true });
           const buyLbl = this.add.text(cx + 125, rowY, 'Купить', {
-            fontSize: '11px', fontFamily: FONT_FAMILY, color: canAfford ? '#aaffaa' : '#886666',
+            fontSize: '12px', fontFamily: FONT_FAMILY, color: canAfford ? '#aaffaa' : '#886666',
           }).setOrigin(0.5);
           buyBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
             if (this.dragDrop?.isHolding()) return; // с предметом в руке клик не покупает — pointerup продаст

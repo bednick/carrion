@@ -133,7 +133,8 @@ const EQUIP_SLOTS: SlotId[] = ['head', 'body', 'legs', 'hand_left', 'hand_right'
 
 type EnemyGraphic = {
   baseX: number;
-  shadow: Phaser.GameObjects.Ellipse;
+  shadowOuter: Phaser.GameObjects.Ellipse;
+  shadowInner: Phaser.GameObjects.Ellipse;
   sprite: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Sprite;
   nameText: Phaser.GameObjects.Text;
   hpBar: Phaser.GameObjects.Rectangle;
@@ -461,7 +462,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.add.line(0, 360, 0, 360, GAME_W, 360, 0x333355).setOrigin(0);
 
     const hx = heroX();
-    this.add.ellipse(hx, 287, 70, 16, 0x000000, 0.45).setDepth(4);
+    // Двухслойная тень героя — та же схема, что у мобов (см. addEnemyGraphic). Ширина от HERO_W=100.
+    const heroShW = 100 * 0.8;
+    this.add.ellipse(hx, 287, heroShW * 1.1, 16 * 1.1, 0x000000, 0.22).setDepth(4);
+    this.add.ellipse(hx, 287, heroShW * 0.9, 16 * 0.9, 0x000000, 0.45).setDepth(4);
     // Единственный герой — Силач.
     const animPrefix = 'char-strongman';
     if (this.textures.exists(`${animPrefix}-idle`)) {
@@ -757,7 +761,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private clearEnemyGraphics() {
     for (const g of this.enemyGraphics) {
       if (!g) continue;
-      g.shadow.destroy();
+      g.shadowOuter.destroy();
+      g.shadowInner.destroy();
       g.sprite.destroy();
       g.nameText.destroy();
       g.hpBar.destroy();
@@ -775,7 +780,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!g) return;
     this.enemyGraphics[idx] = null;
     const objs: Phaser.GameObjects.GameObject[] = [
-      g.shadow, g.sprite, g.nameText, g.hpBar, g.hpFill, g.hpText,
+      g.shadowOuter, g.shadowInner, g.sprite, g.nameText, g.hpBar, g.hpFill, g.hpText,
       ...g.atkBars.flatMap(b => [b.bg, b.fill]),
       ...g.summonBars.flatMap(b => [b.bg, b.fill]),
     ];
@@ -808,8 +813,6 @@ export class ExpeditionScene extends Phaser.Scene {
       const x = this.slotX(e.slot);
       const color = e.isBoss ? 0xaa4422 : 0x884422;
 
-      const shadow = this.add.ellipse(x, 287, 76, 16, 0x000000, 0.45).setDepth(4);
-
       // Спрайт моба (вписан в бокс с сохранением пропорций, ноги на линии тени y=287).
       // Фолбэк — цветной прямоугольник, если спрайта нет.
       const spriteKey = `mob-${e.id}`;
@@ -829,6 +832,12 @@ export class ExpeditionScene extends Phaser.Scene {
         sprite = this.add.rectangle(x, 287, 70, dispH, color).setOrigin(0.5, 1).setDepth(5);
         halfW = 35;
       }
+
+      // Двухслойная тень (псевдоградиент): внешний овал больше и прозрачнее, внутренний меньше и темнее.
+      // Ширина тянется за шириной модельки; коэффициент 0.8 — спрайт в боксе с прозрачными полями, тело уже.
+      const shW = halfW * 2 * 0.8;
+      const shadowOuter = this.add.ellipse(x, 287, shW * 1.1, 16 * 1.1, 0x000000, 0.22).setDepth(4);
+      const shadowInner = this.add.ellipse(x, 287, shW * 0.9, 16 * 0.9, 0x000000, 0.45).setDepth(4);
       const uiAlpha = getMobConfig(e.id).ui?.alpha;
       if (uiAlpha !== undefined) sprite.setAlpha(uiAlpha);
 
@@ -894,7 +903,7 @@ export class ExpeditionScene extends Phaser.Scene {
       });
       sprite.on('pointerout', () => this.tooltip.hide());
 
-      this.enemyGraphics[idx] = { baseX: x, shadow, sprite, nameText, hpBar, hpFill, hpText, atkBars, summonBars };
+      this.enemyGraphics[idx] = { baseX: x, shadowOuter, shadowInner, sprite, nameText, hpBar, hpFill, hpText, atkBars, summonBars };
     }
   }
 
@@ -1368,13 +1377,13 @@ export class ExpeditionScene extends Phaser.Scene {
     };
 
     this.engine = new CombatEngine(state, {
-      onDamageDealt: (target, amount, enemyIdx) => {
+      onDamageDealt: (target, amount, enemyIdx, crit) => {
         if (target === 'hero') {
           SoundManager.play('hero_hurt');
           // Цифра урона — в случайной точке нижних 2/3 модельки (надписи-статусы остаются над головой).
           {
             const p = this.damageSpot(this.heroSprite);
-            spawnFloater(this, 'damage', amount, p.x, p.y);
+            spawnFloater(this, 'damage', amount, p.x, p.y, { crit });
           }
           this.updateHeroHpBar();
           if (this.heroAnimPrefix) this.playHeroAnim(`${this.heroAnimPrefix}-hit`, true);
@@ -1387,7 +1396,7 @@ export class ExpeditionScene extends Phaser.Scene {
           if (g) {
             // Цифра урона — в случайной точке нижних 2/3 модельки (надписи Блок/мимо остаются над головой).
             const p = this.damageSpot(g.sprite);
-            spawnFloater(this, 'damage', amount, p.x, p.y);
+            spawnFloater(this, 'damage', amount, p.x, p.y, { crit });
             this.flashSprite(g.sprite, 0xff0000);
             this.jerkEnemy(enemyIdx, 16); // отскок от героя при получении урона
           }
@@ -1455,7 +1464,8 @@ export class ExpeditionScene extends Phaser.Scene {
           if (flash) { flash.remove(false); g.sprite.setData('flashTimer', undefined); }
           if (g.sprite instanceof Phaser.GameObjects.Rectangle) g.sprite.setFillStyle(0x333333);
           else g.sprite.setTint(0x333333);
-          g.shadow.setAlpha(0.15);
+          g.shadowOuter.setAlpha(0.07);
+          g.shadowInner.setAlpha(0.15);
         } else {
           SoundManager.play('enemy_death');
           this.removeEnemyGraphics(enemyIdx);

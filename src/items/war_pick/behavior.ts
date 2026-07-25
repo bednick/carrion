@@ -62,6 +62,7 @@ const behavior: ItemBehavior = {
           target: e.target,
           amount: dmg,
           armorPierce: isCrit ? CRIT_ARMOR_PIERCE : undefined,
+          crit: isCrit || undefined,
           origin: e.origin,
         }],
       };

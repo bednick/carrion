@@ -17,7 +17,7 @@ const behavior: ItemBehavior = {
     attack: (e, ctx) => {
       if (e.source.side !== 'hero' || e.source.slot !== 'hand_right') return {};
       if (ctx.rng() >= CRIT_CHANCE[ctx.rarity]) return {};
-      return { replace: [{ ...e, amount: Math.round(e.amount * CRIT_MULT) }] };
+      return { replace: [{ ...e, amount: Math.round(e.amount * CRIT_MULT), crit: true }] };
     },
   },
   stats: (rarity) => [

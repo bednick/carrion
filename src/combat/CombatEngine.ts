@@ -19,7 +19,7 @@ const UNARMED_INTERVAL = 1500;
 const ATTACK_WINDUP_MS = 160;
 
 export interface CombatCallbacks {
-  onDamageDealt: (target: 'hero' | 'enemy', amount: number, enemyIdx: number) => void;
+  onDamageDealt: (target: 'hero' | 'enemy', amount: number, enemyIdx: number, crit?: boolean) => void;
   // Урон полностью отклонён: щит героя (target='hero') или флэт-броня врага в ноль (target='enemy', enemyIdx).
   onBlock: (target: 'hero' | 'enemy', enemyIdx: number) => void;
   // Враг уклонился — входящий удар погашен (enemyIdx — кто уклонился).
@@ -372,10 +372,10 @@ export class CombatEngine {
         return [];
 
       case 'attack':
-        return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, armorPierce: e.armorPierce, splash: e.splash, origin: e.origin }];
+        return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, armorPierce: e.armorPierce, splash: e.splash, crit: e.crit, origin: e.origin }];
 
       case 'damage':
-        return this.applyDamage(e.source, e.target, e.amount);
+        return this.applyDamage(e.source, e.target, e.amount, e.crit);
 
       case 'block':
         this.cb.onBlock(e.target.side === 'hero' ? 'hero' : 'enemy', e.target.side === 'enemy' ? e.target.idx : -1);
@@ -430,7 +430,7 @@ export class CombatEngine {
     return [];
   }
 
-  private applyDamage(source: Side, target: Side, rawAmount: number): GameEvent[] {
+  private applyDamage(source: Side, target: Side, rawAmount: number, crit?: boolean): GameEvent[] {
     const amount = Math.max(0, Math.round(rawAmount));
 
     if (target.side === 'enemy') {
@@ -438,7 +438,7 @@ export class CombatEngine {
       if (!enemy || enemy.hp <= 0) return [];
       if (amount > 0) {
         enemy.hp = Math.max(0, enemy.hp - amount);
-        this.cb.onDamageDealt('enemy', amount, target.idx);
+        this.cb.onDamageDealt('enemy', amount, target.idx, crit);
       }
       if (enemy.hp <= 0) {
         return [{ type: 'kill', source, target, origin: { from: 'engine' } }];
@@ -465,7 +465,7 @@ export class CombatEngine {
 
     if (dmg > 0) {
       hero.hp = Math.max(0, hero.hp - dmg);
-      this.cb.onDamageDealt('hero', dmg, -1);
+      this.cb.onDamageDealt('hero', dmg, -1, crit);
     }
 
     if (hero.hp <= 0) {

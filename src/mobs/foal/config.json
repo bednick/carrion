@@ -8,5 +8,8 @@
       "damage": 1,
       "interval": 0.9
     }
-  ]
+  ],
+   "ui": {
+    "scale": 0.6
+  }
 }

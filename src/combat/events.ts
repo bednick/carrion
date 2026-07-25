@@ -50,8 +50,11 @@ export type GameEvent = EventMeta &
     // thorns — true у урона, порождённого самими шипами (моба или предмета героя). Шипы обеих сторон
     // обязаны игнорировать входящий урон с этой меткой — иначе шипы моба и шипы героя отражают друг
     // друга по кругу (гасится только предохранителем MAX_CASCADE, давая длинную серию урона по 1).
-    | { type: 'attack'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean } // взмах, авторённый предметом
-    | { type: 'damage'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; thorns?: boolean } // экземпляр урона «в полёте»
+    // crit — презентационная метка крит-удара (war_pick/heavy_gloves). HP-математику не меняет (урон уже
+    // домножен автором), нужна только для отрисовки: движок переносит поле с `attack` на выведенный `damage`
+    // так же, как armorPierce/splash, и отдаёт его в onDamageDealt для крит-флоатера.
+    | { type: 'attack'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; crit?: boolean } // взмах, авторённый предметом
+    | { type: 'damage'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; thorns?: boolean; crit?: boolean } // экземпляр урона «в полёте»
     | { type: 'block'; source: Side; target: Side; prevented: number } // урон полностью отклонён (щит)
     | { type: 'dodge'; source: Side; target: Side } // враг уклонился — входящий урон погашен
     | { type: 'counter'; source: Side; target: Side } // чисто презентационное: «это был контрудар», HP не трогает
