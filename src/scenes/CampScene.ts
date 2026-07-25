@@ -345,7 +345,12 @@ export class CampScene extends Phaser.Scene {
     const noBtn  = this.add.rectangle(CX + 75, 432, 130, 34, 0x224422).setDepth(91).setInteractive({ useHandCursor: true });
     const noLbl  = this.add.text(CX + 75, 432, 'Отмена', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(92);
 
-    const close = () => [overlay, box, text, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
+    const onEsc = () => close();
+    const close = () => {
+      this.input.keyboard?.off('keydown-ESC', onEsc);
+      [overlay, box, text, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
+    };
+    this.input.keyboard?.on('keydown-ESC', onEsc);
     yesBtn.on('pointerdown', () => { close(); this.showStartWeaponPicker(); });
     noBtn.on('pointerdown', () => close());
     overlay.on('pointerdown', () => close());
