@@ -5,7 +5,7 @@
 | Тип       | Источник                 | Описание                                                          |
 |-----------|--------------------------|--------------------------------------------------------------------|
 | Обучающие | Автоматически            | Одноразовые, учат механикам, срабатывают по событиям               |
-| Зональные | По паре на область (9)   | `<zone>_clear` (убить босса) → `collect_<zone>_items` (собрать всё) |
+| Зональные | По паре на область (9)   | `<zone>_clear` (убить босса) + `collect_<zone>_items` (собрать всё) — выдаются одновременно |
 
 Золота в игре нет. У зональных квестов два типа наград: `unlock_area` (разблокировать зону) и
 `essence` (эссенция заданного тира и количества, см. таблицу ниже). Обучающие квесты наград не
@@ -66,38 +66,46 @@
 ## Зональные квесты и квесты сбора
 
 Пара квестов на каждую из 9 областей (центр — Поле битвы — квеста не имеет, открывается по
-топологии, когда зачищены все 9). Общий вид цепочки:
+топологии, когда зачищены все 9). **`<zone>_clear` и `collect_<zone>_items` выдаются одновременно**,
+как только зона открылась — не один после другого:
 
 1. **`<zone>_clear`** («Исследовать: `<название зоны>`») — цель: победить босса локации
    (`condition: { kind: 'stat', stat: 'zones_returned', id: '<zone_id>' }`). Награда — эссенция
-   (см. таблицу ниже), плюс `next: ['collect_<zone>_items']`.
+   (см. таблицу ниже).
 2. **`collect_<zone>_items`** («Собрать: `<название зоны>`») — цель: вынести из экспедиции хотя бы по
    одному экземпляру каждого предмета этой зоны (`condition: { kind: 'zone_items', itemIds: [...] }`,
    `target` = число предметов). **Награда — `unlock_area` следующей зоны маршрута** (это и заменяет
-   бывшую покупку проходки за золото) плюс эссенция, плюс `next` с боевым квестом следующей зоны.
+   бывшую покупку проходки за золото) плюс эссенция.
+
+Оба квеста зоны N+1 выдаёт `collect_<zone_N>_items` предыдущей зоны маршрута — его `next` содержит
+сразу пару `[<zone_N+1>_clear, collect_<zone_N+1>_items]`. Первая зона маршрута 1 (`dead-fields`)
+особая — обе её квеста сидятся сразу в стартовом состоянии меты (`MetaStore.createDefault`), без
+какого-либо квеста-триггера. `next` самого `<zone>_clear` на «свой» `collect_<zone>_items` оставлен
+как подстраховка для сохранений, начатых до этого изменения (addActiveQuest идемпотентна по id —
+для новых партий это no-op, см. `src/quests/definitions.ts`).
 
 Пока `collect_<zone>_items` не выполнен, следующая зона на карте показывает замок с прогрессом
 сбора (`N/M`) вместо кнопки покупки — см. `CampScene.buildMapZoneNode`.
 
 Особый случай — `dead_fields_clear`: помимо своей обычной награды-эссенции, он же (а не
 `collect_dead_fields_items`) разблокирует старты 2-го и 3-го маршрутов — Растоптанные луга и
-Свалку доспехов (`unlock_area` × 2 в `rewards`), и сразу выдаёт их боевые квесты (`next`). Это
+Свалку доспехов (`unlock_area` × 2 в `rewards`), и сразу выдаёт обе пары их квестов (`next`). Это
 единственная точка входа во 2-й и 3-й маршруты, и она срабатывает уже на первом прохождении
 Мёртвых полей, не дожидаясь сбора всех предметов зоны. `collect_dead_fields_items` в остальном
-ведёт себя как обычный квест сбора — открывает только следующую зону своего маршрута (Руины
-магов).
+ведёт себя как обычный квест сбора — открывает только следующую пару квестов своего маршрута
+(Руины магов).
 
-Цепочки (по `FACTION_ROUTES`):
+Цепочки (по `FACTION_ROUTES`; `+` — пара квестов зоны выдана одновременно):
 
 ```
-Маршрут 1: dead_fields_clear → collect_dead_fields_items → mage_ruins_clear → collect_mage_ruins_items → crypt_clear
-Маршрут 2: trampled_meadows_clear → collect_trampled_meadows_items → beast_lair_clear → collect_beast_lair_items → predator_pasture_clear
-Маршрут 3: armor_dump_clear → collect_armor_dump_items → abandoned_camp_clear → collect_abandoned_camp_items → marauder_lair_clear
+Маршрут 1: [dead_fields_clear + collect_dead_fields_items] → [mage_ruins_clear + collect_mage_ruins_items] → crypt_clear
+Маршрут 2: [trampled_meadows_clear + collect_trampled_meadows_items] → [beast_lair_clear + collect_beast_lair_items] → predator_pasture_clear
+Маршрут 3: [armor_dump_clear + collect_armor_dump_items] → [abandoned_camp_clear + collect_abandoned_camp_items] → marauder_lair_clear
 ```
 
-Конечные зоны маршрутов (`crypt`, `predator-pasture`, `marauder-lair`) ведут к Полю битвы. Их боевой
-квест не выдаёт квеста сбора и не имеет `next` — гейт центра завязан на зачистку всех 9 зон
-(`completed_areas`), а не на квест, и этим механизмом не затрагивается.
+Конечные зоны маршрутов (`crypt`, `predator-pasture`, `marauder-lair`) ведут к Полю битвы. У них нет
+парного квеста сбора и `next` — гейт центра завязан на зачистку всех 9 зон (`completed_areas`), а не
+на квест, и этим механизмом не затрагивается.
 
 ### Награда-эссенция по тирам зон
 
@@ -120,9 +128,9 @@
  │
  ├─ [tutorial_*] — обучение механикам (параллельно с основным прогрессом)
  │
- └─ dead_fields_clear → collect_dead_fields_items → mage_ruins_clear → collect_mage_ruins_items → crypt_clear ┐
-      │ (открывает ↓)                                                                                          ├─ зачистка всех 9 → Поле битвы
-      ├─ trampled_meadows_clear → collect_trampled_meadows_items → beast_lair_clear → collect_beast_lair_items → predator_pasture_clear ┤
-      │                                                                                                        │
-      └─ armor_dump_clear → collect_armor_dump_items → abandoned_camp_clear → collect_abandoned_camp_items → marauder_lair_clear ─────┘
+ └─ [dead_fields_clear + collect_dead_fields_items] → [mage_ruins_clear + collect_mage_ruins_items] → crypt_clear ┐
+      │ (открывает сразу обе пары ↓)                                                                              ├─ зачистка всех 9 → Поле битвы
+      ├─ [trampled_meadows_clear + collect_trampled_meadows_items] → [beast_lair_clear + collect_beast_lair_items] → predator_pasture_clear ┤
+      │                                                                                                            │
+      └─ [armor_dump_clear + collect_armor_dump_items] → [abandoned_camp_clear + collect_abandoned_camp_items] → marauder_lair_clear ─────┘
 ```

@@ -63,14 +63,20 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   // на zones_returned (растёт только при полном зачёте зоны = добивании босса;
   // ретрит не считается) — устойчивее mobs_killed, у которого некоторые боссы
   // делят mob_id. Награда — эссенция (тир и количество растут по мере
-  // продвижения по маршруту, см. таблицу в docs/quests.md); next выдаёт
-  // следующий квест: сбор всех предметов зоны (collect_<zone>_items).
+  // продвижения по маршруту, см. таблицу в docs/quests.md).
   //
   // Квест сбора (collect_<zone>_items) — условие zone_items: нужно вынести в
   // сундук хотя бы один экземпляр каждого предмета из mob_loot/boss.loot зоны.
   // Награда — разблокировка следующей зоны маршрута (unlock_area, замена бывшей
-  // покупке проходки за золото) плюс эссенция. next выдаёт боевой квест
-  // следующей зоны (см. FACTION_ROUTES в CampScene).
+  // покупке проходки за золото) плюс эссенция.
+  //
+  // <zone>_clear и collect_<zone>_items зоны выдаются ОДНОВРЕМЕННО, а не один за
+  // другим: событие, открывающее зону (стартовый сид меты для dead-fields — см.
+  // MetaStore.createDefault — или `next` квеста сбора предыдущей зоны маршрута),
+  // перечисляет в `next` сразу оба id. `next` самого <zone>_clear на свой
+  // collect_<zone>_items оставлен как подстраховка для уже идущих партий (сохранений
+  // без единого бампа схемы, см. AGENTS.md) — addActiveQuest идемпотентна по id, так
+  // что для новых игр это просто no-op.
   //
   // Финальные зоны маршрутов (crypt/predator-pasture/marauder-lair) квеста
   // сбора не получают — дальше только battlefield, чей гейт завязан на
@@ -78,8 +84,9 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   //
   // Исключение — dead_fields_clear: помимо своей обычной награды-эссенции, он же (а не
   // collect_dead_fields_items) открывает старты 2-го и 3-го маршрутов (trampled-meadows,
-  // armor-dump), чтобы игрок мог пойти в любой из трёх маршрутов сразу после первого
-  // прохождения Мёртвых полей, не собирая в них все предметы.
+  // armor-dump) вместе с их квестами сбора, чтобы игрок мог пойти в любой из трёх
+  // маршрутов сразу после первого прохождения Мёртвых полей, не собирая в них все
+  // предметы.
 
   // Маршрут 1: Мёртвые поля → Руины магов → Склеп
   dead_fields_clear: {
@@ -95,7 +102,11 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
       { type: 'unlock_area', areaId: 'trampled-meadows' },
       { type: 'unlock_area', areaId: 'armor-dump' },
     ],
-    next: ['collect_dead_fields_items', 'trampled_meadows_clear', 'armor_dump_clear'],
+    next: [
+      'collect_dead_fields_items',
+      'trampled_meadows_clear', 'collect_trampled_meadows_items',
+      'armor_dump_clear', 'collect_armor_dump_items',
+    ],
     condition: { kind: 'stat', stat: 'zones_returned', id: 'dead-fields' },
     areas: ['dead-fields'],
   },
@@ -108,7 +119,7 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
       { type: 'unlock_area', areaId: 'mage-ruins' },
       { type: 'essence', tier: 'rare', amount: 4 },
     ],
-    next: ['mage_ruins_clear'],
+    next: ['mage_ruins_clear', 'collect_mage_ruins_items'],
     condition: { kind: 'zone_items', itemIds: ['short_spear', 'broadaxe', 'rapier', 'buckler'] },
     areas: ['dead-fields'],
   },
@@ -165,7 +176,7 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
       { type: 'unlock_area', areaId: 'beast-lair' },
       { type: 'essence', tier: 'rare', amount: 4 },
     ],
-    next: ['beast_lair_clear'],
+    next: ['beast_lair_clear', 'collect_beast_lair_items'],
     condition: { kind: 'zone_items', itemIds: ['battle_staff', 'war_pick', 'spiked_shield'] },
     areas: ['trampled-meadows'],
   },
@@ -222,7 +233,7 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
       { type: 'unlock_area', areaId: 'abandoned-camp' },
       { type: 'essence', tier: 'rare', amount: 4 },
     ],
-    next: ['abandoned_camp_clear'],
+    next: ['abandoned_camp_clear', 'collect_abandoned_camp_items'],
     condition: { kind: 'zone_items', itemIds: ['short_sword', 'dagger', 'heavy_shield'] },
     areas: ['armor-dump'],
   },

@@ -144,8 +144,13 @@ function createDefault(): MetaState {
     run_speed: 1,
     battlefield_best_depth: 0,
     stats: emptyStats(),
+    // Квест зачистки и квест сбора предметов зоны выдаются одновременно (см.
+    // docs/quests.md) — оба доступны с самого начала, а не только после зачистки.
     quests: {
-      active: [{ id: 'dead_fields_clear', progress: 0, target: 1 }],
+      active: [
+        { id: 'dead_fields_clear', progress: 0, target: 1 },
+        { id: 'collect_dead_fields_items', progress: 0, target: 4 },
+      ],
       pending_reward: [],
       completed: [],
     },
