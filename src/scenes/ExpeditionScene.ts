@@ -1221,7 +1221,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.pauseBtn = this.add.rectangle(centers[0], rowY, BTN_W, BTN_H, 0x222233)
       .setStrokeStyle(1, 0x444466)
       .setInteractive({ useHandCursor: true });
-    this.pauseIcon = this.add.text(centers[0], rowY, '⏸', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaaacc' }).setOrigin(0.5);
+    this.pauseIcon = this.add.text(centers[0], rowY, '⏸', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaaacc' }).setOrigin(0.5);
     this.pauseBtn.on('pointerover', () => { if (!this.isPaused) this.pauseBtn!.setFillStyle(0x2a2a44); });
     this.pauseBtn.on('pointerout',  () => { if (!this.isPaused) this.pauseBtn!.setFillStyle(0x222233); });
     this.pauseBtn.on('pointerdown', () => { if (this.isPaused) this.resume(); else this.pause(); });
@@ -1280,7 +1280,7 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '20px', fontFamily: FONT_FAMILY, color: '#ffcc88',
     }).setOrigin(0.5);
     const sub = this.add.text(CX, 378, 'Собранный лут сохранится.\nЗона не будет зачтена.', {
-      fontSize: '13px', fontFamily: FONT_FAMILY, color: '#bbbbbb', align: 'center',
+      fontSize: '14px', fontFamily: FONT_FAMILY, color: '#bbbbbb', align: 'center',
     }).setOrigin(0.5);
 
     const yesBtn = this.add.rectangle(CX - 88, 445, 150, 40, 0x332222).setStrokeStyle(1, 0x885555)

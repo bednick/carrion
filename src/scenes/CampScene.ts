@@ -315,9 +315,9 @@ export class CampScene extends Phaser.Scene {
       { key: 'amb_flute', volume: SoundManager.getLayerVolume('amb_flute', 0.5) },
     ]);
 
-    const resetBtn = this.add.rectangle(rightX(28), 785, 90, 22, 0x1a0000)
+    const resetBtn = this.add.rectangle(rightX(52), 785, 90, 22, 0x1a0000)
       .setStrokeStyle(1, 0x551111).setInteractive({ useHandCursor: true });
-    this.add.text(rightX(28), 785, 'Сброс данных', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#663333' }).setOrigin(0.5);
+    this.add.text(rightX(52), 785, 'Сброс данных', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#663333' }).setOrigin(0.5);
     resetBtn.on('pointerover', () => resetBtn.setFillStyle(0x2a0000));
     resetBtn.on('pointerout',  () => resetBtn.setFillStyle(0x1a0000));
     resetBtn.on('pointerdown', () => this.confirmReset());
@@ -325,9 +325,9 @@ export class CampScene extends Phaser.Scene {
     // Дев-инструмент: балансировочный симулятор (balance.html) — открывается в новой вкладке.
     // Только для дев-сервера (import.meta.env.DEV) — в проде balance.html не собирается и не нужен игроку.
     if (import.meta.env.DEV) {
-      const balanceBtn = this.add.rectangle(rightX(128), 785, 90, 22, 0x0a1a1a)
+      const balanceBtn = this.add.rectangle(rightX(152), 785, 90, 22, 0x0a1a1a)
         .setStrokeStyle(1, 0x225555).setInteractive({ useHandCursor: true });
-      this.add.text(rightX(128), 785, 'Баланс-тул', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#337766' }).setOrigin(0.5);
+      this.add.text(rightX(152), 785, 'Баланс-тул', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#337766' }).setOrigin(0.5);
       balanceBtn.on('pointerover', () => balanceBtn.setFillStyle(0x143030));
       balanceBtn.on('pointerout',  () => balanceBtn.setFillStyle(0x0a1a1a));
       balanceBtn.on('pointerdown', () => window.open('./balance.html', '_blank'));
@@ -337,13 +337,13 @@ export class CampScene extends Phaser.Scene {
   private confirmReset() {
     const overlay = this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0.7).setDepth(90).setInteractive();
     const box = this.add.rectangle(CX, 400, 460, 160, 0x1e0a0a).setDepth(91).setStrokeStyle(2, 0x882222);
-    const text = this.add.text(CX, 368, '⚠ Сбросить весь прогресс?\nЗолото, металл, сундук, снаряжение — всё удалится.\nДействие необратимо.', {
-      fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffaaaa', align: 'center',
+    const text = this.add.text(CX, 368, '⚠ Сбросить весь прогресс? ⚠\n\n⚠⚠⚠ Действие необратимо! ⚠⚠⚠', {
+      fontSize: '14px', fontFamily: FONT_FAMILY, color: '#ffaaaa', align: 'center',
     }).setOrigin(0.5).setDepth(92);
-    const yesBtn = this.add.rectangle(CX - 50, 432, 130, 34, 0x551111).setDepth(91).setInteractive({ useHandCursor: true });
-    const yesLbl = this.add.text(CX - 50, 432, 'Сбросить', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ff6666' }).setOrigin(0.5).setDepth(92);
-    const noBtn  = this.add.rectangle(CX + 70, 432, 130, 34, 0x224422).setDepth(91).setInteractive({ useHandCursor: true });
-    const noLbl  = this.add.text(CX + 70, 432, 'Отмена', { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(92);
+    const yesBtn = this.add.rectangle(CX - 55, 432, 130, 34, 0x551111).setDepth(91).setInteractive({ useHandCursor: true });
+    const yesLbl = this.add.text(CX - 55, 432, 'Сбросить', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#ff6666' }).setOrigin(0.5).setDepth(92);
+    const noBtn  = this.add.rectangle(CX + 75, 432, 130, 34, 0x224422).setDepth(91).setInteractive({ useHandCursor: true });
+    const noLbl  = this.add.text(CX + 75, 432, 'Отмена', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(92);
 
     const close = () => [overlay, box, text, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
     yesBtn.on('pointerdown', () => { close(); this.showStartWeaponPicker(); });
@@ -899,7 +899,7 @@ export class CampScene extends Phaser.Scene {
       const q = active[i];
       const def = QUEST_DEFS[q.id];
       if (!def) continue;
-      const title = this.add.text(210, y, def.title, { fontSize: '13px', fontFamily: FONT_FAMILY, color: '#dddddd' });
+      const title = this.add.text(210, y, def.title, { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#dddddd' });
       const desc = this.add.text(210, y + 16, def.description, { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#888888' });
       const progress = this.add.text(210, y + 30, `${q.progress}/${q.target}`, { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#88aaff' });
       container.add([title, desc, progress]);
@@ -1145,7 +1145,7 @@ export class CampScene extends Phaser.Scene {
       // ввода в проекте нет — canvas Phaser, а не DOM).
       const qtyBox = this.add.rectangle(cx + 36, rowY, 32, 26, 0x1a1a26).setStrokeStyle(1, 0x555566);
       const qtyLbl = this.add.text(cx + 36, rowY, `${qty}`, {
-        fontSize: '13px', fontFamily: FONT_FAMILY, color: '#ffffff',
+        fontSize: '14px', fontFamily: FONT_FAMILY, color: '#ffffff',
       }).setOrigin(0.5);
       const arrowUp = this.add.text(cx + 57, rowY - 7, '▲', {
         fontSize: '9px', fontFamily: FONT_FAMILY, color: atMax ? '#444455' : '#aaaacc',
@@ -1543,7 +1543,7 @@ export class CampScene extends Phaser.Scene {
       );
       if (buyable.length === 0) {
         content.add(this.add.text(cx, 340, 'Все доступные зоны\nуже открыты', {
-          fontSize: '13px', fontFamily: FONT_FAMILY, color: '#555566', align: 'center',
+          fontSize: '14px', fontFamily: FONT_FAMILY, color: '#555566', align: 'center',
         }).setOrigin(0.5));
       } else {
         buyable.forEach((entry, i) => {
