@@ -4,7 +4,7 @@
   "description": "Выжженная равнина магической фракции. Ритуалы удержали павших на ногах.",
   "faction": "Магия — Нежить",
   "star": 1,
-  "fights": { "min": 5, "max": 7 },
+  "fights": { "min": 3, "max": 5 },
   "mob_pool": [
     { "mob_id": "raised_infantry", "weight": 60 },
     { "mob_id": "skeleton", "weight": 40 }

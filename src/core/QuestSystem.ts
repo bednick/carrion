@@ -8,6 +8,8 @@ function applyInstantEffects(questId: string) {
   for (const reward of def.rewards) {
     if (reward.type === 'unlock_area') {
       MetaStore.unlockArea(reward.areaId);
+    } else if (reward.type === 'essence') {
+      MetaStore.addEssence(reward.tier, reward.amount);
     }
   }
   if (def.next) {
@@ -17,7 +19,15 @@ function applyInstantEffects(questId: string) {
   }
 }
 
+/**
+ * Игрок нажал «Забрать» у Скупщика — только тут выдаётся сама награда (эссенция,
+ * unlock_area) и следующие квесты из `next`. До этого момента квест лишь висит
+ * в pending_reward: tryComplete переводит его туда при выполнении условия, но
+ * эффекты не применяет — иначе награда «начисляется сама», не дожидаясь клика.
+ */
 export function claimQuestReward(questId: string) {
+  if (!MetaStore.get().quests.pending_reward.includes(questId)) return;
+  applyInstantEffects(questId);
   MetaStore.claimQuestReward(questId);
   EventBus.emit('quest_reward_claimed', questId);
 }
@@ -26,7 +36,6 @@ function tryComplete(questId: string, amount = 1) {
   if (!MetaStore.isQuestActive(questId)) return;
   const done = MetaStore.progressQuest(questId, amount);
   if (done) {
-    applyInstantEffects(questId);
     MetaStore.moveToPendingReward(questId);
     EventBus.emit('quest_completed', questId);
   }

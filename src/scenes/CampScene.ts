@@ -4,6 +4,7 @@ import { MetaStore } from '../core/MetaStore';
 import { EventBus } from '../core/EventBus';
 import { initQuestSystem } from '../core/QuestSystem';
 import { QUEST_DEFS } from '../quests/definitions';
+import type { QuestReward } from '../quests/definitions';
 import type { ItemInstance, SlotId } from '../core/MetaStore';
 import { ARMOR_STAND_COUNT } from '../core/MetaStore';
 import { getItemBehavior } from '../items/registry';
@@ -84,8 +85,8 @@ for (const route of FACTION_ROUTES) {
     ZONE_PREREQ[route[i]] = route[i - 1];
   }
 }
-// Старты 2-го и 3-го маршрутов открываются НАГРАДОЙ за квест сбора предметов Мёртвых
-// полей (collect_dead_fields_items → unlock_area), а не прохождением самих себя.
+// Старты 2-го и 3-го маршрутов открываются НАГРАДОЙ за первое прохождение Мёртвых полей
+// (dead_fields_clear → unlock_area), а не прохождением самих себя.
 ZONE_PREREQ['trampled-meadows'] = 'dead-fields';
 ZONE_PREREQ['armor-dump'] = 'dead-fields';
 
@@ -843,6 +844,19 @@ export class CampScene extends Phaser.Scene {
     this.rebuildPanel();
   }
 
+  /** Родительный падеж ж.р. тира эссенции — согласуется с «эссенции» (ESSENCE_NAMES в items/craft — им. падеж). */
+  private static readonly ESSENCE_GENITIVE: Record<EssenceTier, string> = {
+    uncommon: 'необычной', rare: 'редкой', epic: 'эпической',
+  };
+
+  /** Текст награды готового к сдаче квеста — unlock_area не показываем, она видна по карте. */
+  private describeRewards(rewards: QuestReward[]): string {
+    const parts = rewards
+      .filter((r): r is Extract<QuestReward, { type: 'essence' }> => r.type === 'essence')
+      .map((r) => `+${r.amount} ${CampScene.ESSENCE_GENITIVE[r.tier]} эссенции`);
+    return parts.length > 0 ? parts.join(', ') : 'Выполнено';
+  }
+
   private buildQuestList(container: Phaser.GameObjects.Container) {
     const meta = MetaStore.get();
     const pending = meta.quests.pending_reward;
@@ -861,7 +875,7 @@ export class CampScene extends Phaser.Scene {
 
         const rowBg = this.add.rectangle(379, y + 18, 320, 36, 0x2a2a10).setStrokeStyle(1, 0x887722);
         const titleT = this.add.text(225, y + 8, def.title, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddaa' });
-        const rewardT = this.add.text(225, y + 24, 'Выполнено', { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44' });
+        const rewardT = this.add.text(225, y + 24, this.describeRewards(def.rewards), { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44' });
 
         const claimBtn = this.add.rectangle(500, y + 18, 58, 26, 0x224422)
           .setStrokeStyle(1, 0x44aa44)
@@ -1877,12 +1891,18 @@ export class CampScene extends Phaser.Scene {
       // (collect_<zone>_items → unlock_area), а не покупкой. Показываем его прогресс.
       const questId = AREA_UNLOCK_QUEST[entry.id];
       const def = questId ? QUEST_DEFS[questId] : undefined;
-      const record = MetaStore.get().quests.active.find((q) => q.id === questId);
-      const progress = record?.progress ?? 0;
+      const quests = MetaStore.get().quests;
+      // Награда выдаётся только по клику «Забрать» у Скупщика (см. QuestSystem.claimQuestReward),
+      // поэтому квест сбора может быть уже выполнен (в pending_reward, не в active) — тогда
+      // прогресс = target, а не 0/target, и сообщение зовёт к Скупщику, а не «собери предметы».
+      const isPendingClaim = questId ? quests.pending_reward.includes(questId) : false;
+      const record = quests.active.find((q) => q.id === questId);
+      const progress = isPendingClaim ? (def?.target ?? 0) : (record?.progress ?? 0);
       const target = def?.target ?? 0;
       const prevLabel = zoneLabel(ZONE_PREREQ[entry.id]);
 
-      this.panelContainer.add(this.add.text(entry.x, entry.y + 20, `🔒 собери предметы ${progress}/${target}`, {
+      const lockLabel = isPendingClaim ? '🔒 забери награду у Скупщика' : `🔒 собери предметы ${progress}/${target}`;
+      this.panelContainer.add(this.add.text(entry.x, entry.y + 20, lockLabel, {
         fontSize: '13px', fontFamily: FONT_FAMILY, color: '#886666', align: 'center', wordWrap: { width: 160 },
       }).setOrigin(0.5));
 
@@ -1891,7 +1911,10 @@ export class CampScene extends Phaser.Scene {
       [node, nameText].forEach(obj => {
         obj.on('pointerover', () => {
           node.setFillStyle(0x332233);
-          this.tooltip.showText([
+          this.tooltip.showText(isPendingClaim ? [
+            'Заблокировано',
+            'Награда уже готова — забери её у Скупщика',
+          ] : [
             'Заблокировано',
             `Собери в «${prevLabel}» все предметы (${progress}/${target})`,
           ], this.panelX(entry.x + 65), this.panelY(entry.y - 50));
