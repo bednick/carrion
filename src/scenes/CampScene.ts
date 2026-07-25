@@ -8,13 +8,13 @@ import type { ItemInstance, SlotId } from '../core/MetaStore';
 import { ARMOR_STAND_COUNT } from '../core/MetaStore';
 import { getItemBehavior } from '../items/registry';
 import {
-  craftPreview, salvageEssence, formatEssence, ESSENCE_TIERS, ESSENCE_NAMES, itemSellPrice, essenceBuyCost,
+  craftPreview, salvageEssence, formatEssence, ESSENCE_TIERS, ESSENCE_NAMES,
   ESSENCE_EXCHANGE_RATE, ESSENCE_EXCHANGE_TARGET, emptyEssence,
 } from '../items/craft';
 import type { Rarity, SlotType, EssencePool, EssenceTier } from '../items/types';
 import { itemIconKey } from '../items/icons';
-import { resourceTag, goldTag } from '../ui/priceTag';
-import { rewardIconKey, essenceIconKey, essenceIconKeyByRarity } from '../ui/rewards';
+import { resourceTag } from '../ui/priceTag';
+import { essenceIconKey, essenceIconKeyByRarity } from '../ui/rewards';
 import { slotSilhouetteKey } from '../ui/silhouettes';
 import { Tooltip } from '../ui/Tooltip';
 import { DragDropManager } from '../ui/DragDropManager';
@@ -44,8 +44,6 @@ interface MapZoneEntry {
   label: string;
   x: number;
   y: number;
-  passPrice?: number;
-  questId?: string;
 }
 
 // Раскладка — 3 колонки по фракциям (нежить / звери / мародёры слева направо), внутри
@@ -54,16 +52,16 @@ interface MapZoneEntry {
 const MAP_ZONE_LAYOUT: MapZoneEntry[] = [
   // Нежить (Магия) — левая колонка
   { id: 'dead-fields',       label: 'Мёртвые поля',        x: 440,  y: 574 },
-  { id: 'mage-ruins',        label: 'Руины магов',         x: 440,  y: 444, passPrice: 500 },
-  { id: 'crypt',             label: 'Склеп',               x: 440,  y: 314, passPrice: 5000 },
+  { id: 'mage-ruins',        label: 'Руины магов',         x: 440,  y: 444 },
+  { id: 'crypt',             label: 'Склеп',               x: 440,  y: 314 },
   // Звери (Конница) — центральная колонка
-  { id: 'trampled-meadows',  label: 'Растоптанные луга',   x: 640,  y: 574, passPrice: 50 },
-  { id: 'beast-lair',        label: 'Логово зверей',       x: 640,  y: 444, passPrice: 500 },
-  { id: 'predator-pasture',  label: 'Пастбище хищников',   x: 640,  y: 314, passPrice: 5000 },
+  { id: 'trampled-meadows',  label: 'Растоптанные луга',   x: 640,  y: 574 },
+  { id: 'beast-lair',        label: 'Логово зверей',       x: 640,  y: 444 },
+  { id: 'predator-pasture',  label: 'Пастбище хищников',   x: 640,  y: 314 },
   // Мародёры — правая колонка
-  { id: 'armor-dump',        label: 'Свалка доспехов',     x: 840,  y: 574, passPrice: 50 },
-  { id: 'abandoned-camp',    label: 'Брошенный лагерь',    x: 840,  y: 444, passPrice: 500 },
-  { id: 'marauder-lair',     label: 'Логово мародёров',    x: 840,  y: 314, passPrice: 5000 },
+  { id: 'armor-dump',        label: 'Свалка доспехов',     x: 840,  y: 574 },
+  { id: 'abandoned-camp',    label: 'Брошенный лагерь',    x: 840,  y: 444 },
+  { id: 'marauder-lair',     label: 'Логово мародёров',    x: 840,  y: 314 },
   // Финал — над центральной колонкой
   { id: 'battlefield',       label: 'Поле битвы',          x: 640,  y: 172 },
 ];
@@ -76,9 +74,9 @@ const FACTION_ROUTES: string[][] = [
   ['armor-dump', 'abandoned-camp', 'marauder-lair', 'battlefield'],
 ];
 
-// Предшественник каждой зоны в маршруте (кроме центра): проходку можно купить только
-// после того, как предыдущая зона пройдена (попала в completed_areas). Старт первого
-// маршрута (dead-fields) бесплатен и предшественника не имеет.
+// Предшественник каждой зоны в маршруте (кроме центра): зона появляется на карте как
+// «пройди прошлую» только после того, как предыдущая зона пройдена (попала в
+// completed_areas). Старт первого маршрута (dead-fields) предшественника не имеет.
 const ZONE_PREREQ: Record<string, string> = {};
 for (const route of FACTION_ROUTES) {
   for (let i = 1; i < route.length; i++) {
@@ -86,10 +84,8 @@ for (const route of FACTION_ROUTES) {
     ZONE_PREREQ[route[i]] = route[i - 1];
   }
 }
-// Старты 2-го и 3-го маршрутов открываются НАГРАДОЙ за прохождение Мёртвых полей
-// (quest dead_fields_clear → unlock_area). До этого они заблокированы (не купить):
-// prereq = dead-fields гасит ранний buy-путь, а к моменту его выполнения зоны уже
-// авто-открыты, поэтому кнопка покупки не появляется.
+// Старты 2-го и 3-го маршрутов открываются НАГРАДОЙ за квест сбора предметов Мёртвых
+// полей (collect_dead_fields_items → unlock_area), а не прохождением самих себя.
 ZONE_PREREQ['trampled-meadows'] = 'dead-fields';
 ZONE_PREREQ['armor-dump'] = 'dead-fields';
 
@@ -100,6 +96,15 @@ function zonePrereqMet(zoneId: string, completed: string[]): boolean {
 
 function zoneLabel(zoneId: string): string {
   return MAP_ZONE_LAYOUT.find((z) => z.id === zoneId)?.label ?? zoneId;
+}
+
+// Обратный индекс: зона → id квеста, чья награда её разблокирует (unlock_area).
+// Строится один раз по QUEST_DEFS — источник истины остаётся в quests/definitions.ts.
+const AREA_UNLOCK_QUEST: Record<string, string> = {};
+for (const def of Object.values(QUEST_DEFS)) {
+  for (const reward of def.rewards) {
+    if (reward.type === 'unlock_area') AREA_UNLOCK_QUEST[reward.areaId] = def.id;
+  }
 }
 
 const RARITY_COLORS: Record<Rarity, number> = {
@@ -160,9 +165,6 @@ export class CampScene extends Phaser.Scene {
   /** Готовый предмет после улучшения — лежит в правой ячейке, пока игрок не заберёт его drag'ом. */
   private upgradeResultItem: ItemInstance | null = null;
   private smithHammerMode = false;
-  /** Сколько эссенции покупать за один клик «Купить», по тирам (вкладка «Кузнец»). */
-  private essenceBuyQty: Record<EssenceTier, number> = { uncommon: 1, rare: 1, epic: 1 };
-  private dealerTab: 'shop' | 'quests' = 'quests';
   private panelState: 'smith' | 'dealer' | 'chest' | 'map' | null = null;
   private panelWheelHandler: ((...args: unknown[]) => void) | null = null;
   private chestMaskGraphics: Phaser.GameObjects.Graphics | null = null;
@@ -792,7 +794,6 @@ export class CampScene extends Phaser.Scene {
     this.smithHammerMode = false;
     this.input.setDefaultCursor('default');
     this.input.off('pointermove', this.forceHammerCursor, this);
-    this.dealerTab = 'quests';
     this.chestSlotFilter = null;
     this.chestRarityFilter = null;
     this.panelState = null;
@@ -825,7 +826,7 @@ export class CampScene extends Phaser.Scene {
       if (this.panelState === 'smith')        this.buildSmithContent();
       else if (this.panelState === 'dealer')  this.buildDealerContent();
       else if (this.panelState === 'chest')   this.buildChestStandContent();
-      this.buildSharedChestPane(this.getChestClickHandler(), this.panelState === 'dealer');
+      this.buildSharedChestPane(this.getChestClickHandler());
     }
   }
 
@@ -837,8 +838,6 @@ export class CampScene extends Phaser.Scene {
   private openDealerPanel() {
     if (this.panelState !== 'dealer') {
       this.closePanel();
-      // Есть готовый к сдаче квест — сразу открываем «Задания», иначе «Магазин».
-      this.dealerTab = MetaStore.get().quests.pending_reward.length > 0 ? 'quests' : 'shop';
       this.panelState = 'dealer';
     }
     this.rebuildPanel();
@@ -859,20 +858,16 @@ export class CampScene extends Phaser.Scene {
       for (const questId of pending) {
         const def = QUEST_DEFS[questId];
         if (!def) continue;
-        const hasGoldMetal = def.rewards.some(r => r.type === 'gold');
-        const goldSum = def.rewards.filter(r => r.type === 'gold').reduce((s, r) => s + (r.value ?? 0), 0);
 
         const rowBg = this.add.rectangle(379, y + 18, 320, 36, 0x2a2a10).setStrokeStyle(1, 0x887722);
         const titleT = this.add.text(225, y + 8, def.title, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddaa' });
-        const rewardT = goldSum > 0
-          ? goldTag(this, goldSum, { prefix: '+', iconSize: 14, fontSize: 11, color: '#ffdd44' }).setPosition(225, y + 30)
-          : this.add.text(225, y + 24, 'Выполнено', { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44' });
+        const rewardT = this.add.text(225, y + 24, 'Выполнено', { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44' });
 
-        const claimBtn = this.add.rectangle(500, y + 18, 58, 26, hasGoldMetal ? 0x224422 : 0x222233)
-          .setStrokeStyle(1, hasGoldMetal ? 0x44aa44 : 0x444455)
+        const claimBtn = this.add.rectangle(500, y + 18, 58, 26, 0x224422)
+          .setStrokeStyle(1, 0x44aa44)
           .setInteractive({ useHandCursor: true });
         const claimLbl = this.add.text(500, y + 18, 'Забрать', {
-          fontSize: '12px', fontFamily: FONT_FAMILY, color: hasGoldMetal ? '#aaffaa' : '#666677',
+          fontSize: '12px', fontFamily: FONT_FAMILY, color: '#aaffaa',
         }).setOrigin(0.5);
 
         const qid = questId;
@@ -1103,87 +1098,29 @@ export class CampScene extends Phaser.Scene {
     this.rebuildPanel();
   }
 
-  // Кузнец: покупка эссенции за золото (верхние 2/3) + разборка предметов на эссенцию
-  // (нижняя треть, отделена линией — см. divider в buildUpgradePanel). Улучшение — на
+  // Кузнец: обмен эссенции между тирами (по центру верхних 2/3) + разборка предметов
+  // на эссенцию (нижняя треть, отделена линией — см. divider ниже). Улучшение — на
   // вкладке «Экипировка» (см. buildUpgradePanel), сюда её не рисуем.
   private buildSmithContent() {
     const cx = 379;
     const toAdd: Phaser.GameObjects.GameObject[] = [];
     const meta = MetaStore.get();
 
-    // Сетка строк: 3 покупки + 2 обмена в одном списке, диапазон 140-502 (до разделителя блока «Разобрать»).
     // Расстояние между строками = зазор между ячейками сундука (SIZE=52, GAP=6 в buildSharedChestPane).
     const ROW_H = 40, ROW_GAP = 6, ROW_SPACING = ROW_H + ROW_GAP;
-    // Доп. отступ сверху и снизу от разделителя между группами (покупка/обмен), поверх обычного ROW_SPACING.
-    const GROUP_PAD = 14;
-    // Разделитель блока «Разобрать» ниже в этом методе — считаем сетку строк снизу вверх от него,
-    // чтобы отступ от последней строки обмена до него был таким же, как GROUP_PAD между группами.
-    const BOTTOM_DIVIDER_Y = 502;
+    // Разделитель блока «Разобрать» ниже в этом методе — строки обмена центрируем
+    // в пространстве над ним (диапазон 140-502).
+    const CONTENT_TOP = 140, BOTTOM_DIVIDER_Y = 502;
 
     const exchangePairs = ESSENCE_TIERS
       .map((from): [EssenceTier, EssenceTier | null] => [from, ESSENCE_EXCHANGE_TARGET[from]])
       .filter((p): p is [EssenceTier, EssenceTier] => p[1] !== null);
 
-    const lastExchangeY = BOTTOM_DIVIDER_Y - GROUP_PAD - ROW_H / 2;
-    const exchangeYStart = lastExchangeY - (exchangePairs.length - 1) * ROW_SPACING;
-    const lastBuyY = exchangeYStart - ROW_H - 2 * GROUP_PAD;
-    const ROW_Y_START = lastBuyY - (ESSENCE_TIERS.length - 1) * ROW_SPACING;
+    const contentMidY = (CONTENT_TOP + BOTTOM_DIVIDER_Y) / 2;
+    const exchangeYStart = contentMidY - ((exchangePairs.length - 1) * ROW_SPACING) / 2;
 
-    // Строки покупки эссенции за золото, одна на тир (от слабой к сильной).
-    ESSENCE_TIERS.forEach((tier, i) => {
-      const rowY = ROW_Y_START + i * ROW_SPACING;
-      const qty = this.essenceBuyQty[tier];
-      const cost = essenceBuyCost(tier, qty);
-      const canAfford = meta.gold >= cost;
-      const maxQty = Math.min(99, Math.max(1, Math.floor(meta.gold / essenceBuyCost(tier, 1))));
-      const atMax = qty >= maxQty;
-      const name = ESSENCE_NAMES[tier];
-      const label = name.charAt(0).toUpperCase() + name.slice(1);
-
-      const rowBg = this.add.rectangle(cx + 7, rowY, 356, ROW_H, 0x222233).setStrokeStyle(1, 0x444455);
-      const icon = this.add.image(cx - 160, rowY, essenceIconKey(tier)).setDisplaySize(20, 20);
-      const rowLabel = this.add.text(cx - 142, rowY, `${label} эссенция`, {
-        fontSize: '12px', fontFamily: FONT_FAMILY, color: TIER_HEX[tier],
-      }).setOrigin(0, 0.5);
-
-      // Степпер количества: число в рамке + мелкие кнопки-стрелки ▲/▼ (клавиатурного
-      // ввода в проекте нет — canvas Phaser, а не DOM).
-      const qtyBox = this.add.rectangle(cx + 36, rowY, 32, 26, 0x1a1a26).setStrokeStyle(1, 0x555566);
-      const qtyLbl = this.add.text(cx + 36, rowY, `${qty}`, {
-        fontSize: '14px', fontFamily: FONT_FAMILY, color: '#ffffff',
-      }).setOrigin(0.5);
-      const arrowUp = this.add.text(cx + 57, rowY - 7, '▲', {
-        fontSize: '9px', fontFamily: FONT_FAMILY, color: atMax ? '#444455' : '#aaaacc',
-      }).setOrigin(0.5).setInteractive({ useHandCursor: !atMax });
-      const arrowDown = this.add.text(cx + 57, rowY + 7, '▼', {
-        fontSize: '9px', fontFamily: FONT_FAMILY, color: '#aaaacc',
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      arrowUp.on('pointerdown', () => this.changeEssenceBuyQty(tier, 1));
-      arrowDown.on('pointerdown', () => this.changeEssenceBuyQty(tier, -1));
-
-      const priceTag = goldTag(this, cost, { iconSize: 14, fontSize: 12, originX: 0 }).setPosition(cx + 66, rowY);
-
-      const buyBtn = this.add.rectangle(cx + 158, rowY, 50, 26, canAfford ? 0x224422 : 0x332222)
-        .setStrokeStyle(1, canAfford ? 0x44aa44 : 0x664444)
-        .setInteractive({ useHandCursor: true });
-      const buyLbl = this.add.text(cx + 158, rowY, 'Купить', {
-        fontSize: '12px', fontFamily: FONT_FAMILY, color: canAfford ? '#aaffaa' : '#886666',
-      }).setOrigin(0.5);
-      buyBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
-        if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не покупает
-        this.tryBuyEssence(tier, qty, ptr.x, ptr.y);
-      });
-
-      toAdd.push(rowBg, icon, rowLabel, qtyBox, qtyLbl, arrowUp, arrowDown, priceTag, buyBtn, buyLbl);
-    });
-
-    // Разделитель между группой покупки и группой обмена — с равным отступом (GROUP_PAD)
-    // от последней строки покупки и от первой строки обмена.
-    const groupDividerY = lastBuyY + ROW_H / 2 + GROUP_PAD;
-    toAdd.push(this.add.rectangle(cx + 7, groupDividerY, 356, 1, 0x333344));
-
-    // Строки обмена дорогой эссенции на дешёвую (rare→uncommon, epic→rare) — сразу под покупкой,
-    // тот же список. Курс специально невыгодный (ESSENCE_EXCHANGE_RATE), без золота.
+    // Строки обмена дорогой эссенции на дешёвую (rare→uncommon, epic→rare).
+    // Курс специально невыгодный (ESSENCE_EXCHANGE_RATE), без золота.
     exchangePairs.forEach(([from, to], j) => {
       const rowY = exchangeYStart + j * ROW_SPACING;
       const owned = meta.essence[from];
@@ -1246,32 +1183,6 @@ export class CampScene extends Phaser.Scene {
     toAdd.push(hammerBtn, hammerG, hammerLbl);
 
     this.panelContainer.add(toAdd);
-  }
-
-  private changeEssenceBuyQty(tier: EssenceTier, delta: number) {
-    const unitPrice = essenceBuyCost(tier, 1);
-    const maxAffordable = Math.max(1, Math.floor(MetaStore.get().gold / unitPrice));
-    const next = Phaser.Math.Clamp(this.essenceBuyQty[tier] + delta, 1, Math.min(99, maxAffordable));
-    if (next === this.essenceBuyQty[tier]) return;
-    this.essenceBuyQty[tier] = next;
-    this.rebuildPanel();
-  }
-
-  /** Покупка эссенции у кузнеца за золото — альтернатива разборке предметов. */
-  private tryBuyEssence(tier: EssenceTier, qty: number, x?: number, y?: number) {
-    const cost = essenceBuyCost(tier, qty);
-    const meta = MetaStore.get();
-    if (meta.gold < cost) {
-      this.showMessage(`Недостаточно золота! Нужно ${cost}g`);
-      return;
-    }
-    MetaStore.spendGold(cost);
-    MetaStore.addEssence(tier, qty);
-    spawnIconFloater(this, rewardIconKey('gold'), `-${cost}`, x ?? this.panelX(379), y ?? this.panelY(300), '#ffcc00');
-    spawnIconFloater(this, essenceIconKey(tier), `+${qty}`, x ?? this.panelX(379), y ?? this.panelY(300), TIER_HEX[tier]);
-    this.essenceBuyQty[tier] = 1;
-    this.refreshHUD();
-    this.rebuildPanel();
   }
 
   /** Обмен дорогой эссенции на дешёвую по невыгодному курсу 1:ESSENCE_EXCHANGE_RATE, без золота. */
@@ -1338,7 +1249,6 @@ export class CampScene extends Phaser.Scene {
     let previewResult: ItemInstance | null = null;
     let canCraft = false;
     let craftError: string | null = null;
-    let goldCost = 0;
     let essenceCost: EssencePool | null = null;
 
     if (item && resultItem) {
@@ -1347,10 +1257,8 @@ export class CampScene extends Phaser.Scene {
       const pv = craftPreview(item, null);
       if (pv.result) {
         previewResult = pv.result;
-        goldCost = pv.goldCost;
         essenceCost = pv.essenceCost;
-        canCraft = MetaStore.get().gold >= goldCost
-          && (!essenceCost || MetaStore.canAffordEssence(essenceCost));
+        canCraft = !essenceCost || MetaStore.canAffordEssence(essenceCost);
       } else {
         craftError = pv.error;
       }
@@ -1479,7 +1387,6 @@ export class CampScene extends Phaser.Scene {
     if (btnEnabled && previewResult) {
       btn.on('pointerdown', () => {
         if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не улучшает
-        MetaStore.spendGold(goldCost);
         if (essenceCost) MetaStore.spendEssence(essenceCost);
         // Улучшенный предмет уходит в правую ячейку, входной слот освобождается.
         this.upgradeResultItem = { item_id: previewResult!.item_id, rarity: previewResult!.rarity };
@@ -1495,9 +1402,7 @@ export class CampScene extends Phaser.Scene {
     const costLbls: Phaser.GameObjects.GameObject[] = [];
     if (previewResult) {
       const meta = MetaStore.get();
-      const rows: { icon: string; need: number; have: number }[] = [
-        { icon: rewardIconKey('gold'), need: goldCost, have: meta.gold },
-      ];
+      const rows: { icon: string; need: number; have: number }[] = [];
       if (essenceCost) {
         for (let i = ESSENCE_TIERS.length - 1; i >= 0; i--) {
           const tier = ESSENCE_TIERS[i];
@@ -1528,82 +1433,9 @@ export class CampScene extends Phaser.Scene {
   }
 
   private buildDealerContent() {
-    const cx = 379;
-    const isShop = this.dealerTab === 'shop';
-
-    const tabShopBg = this.add.rectangle(295, 192, 110, 30, isShop ? 0x444466 : 0x333355).setInteractive({ useHandCursor: true });
-    const tabShopLbl = this.add.text(295, 192, 'Магазин', { fontSize: '14px', fontFamily: FONT_FAMILY, color: isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
-    const tabQstBg = this.add.rectangle(415, 192, 110, 30, !isShop ? 0x444466 : 0x333355).setInteractive({ useHandCursor: true });
-    const tabQstLbl = this.add.text(415, 192, 'Задания', { fontSize: '14px', fontFamily: FONT_FAMILY, color: !isShop ? '#ffffff' : '#888888' }).setOrigin(0.5);
-
-    tabShopBg.on('pointerdown', () => { this.tabClickGuard = true; this.dealerTab = 'shop';   this.rebuildPanel(); });
-    tabQstBg.on('pointerdown',  () => { this.tabClickGuard = true; this.dealerTab = 'quests'; this.rebuildPanel(); });
-
     const content = this.add.container(0, 0);
-    if (isShop) {
-      const meta = MetaStore.get();
-      const buyable = MAP_ZONE_LAYOUT.filter(e =>
-        e.passPrice && !WIP_ZONE_IDS.has(e.id) && !meta.unlocked_areas.includes(e.id)
-        && zonePrereqMet(e.id, meta.completed_areas),
-      );
-      if (buyable.length === 0) {
-        content.add(this.add.text(cx, 340, 'Все доступные зоны\nуже открыты', {
-          fontSize: '14px', fontFamily: FONT_FAMILY, color: '#555566', align: 'center',
-        }).setOrigin(0.5));
-      } else {
-        buyable.forEach((entry, i) => {
-          const rowY = 236 + i * 44;
-          const canAfford = meta.gold >= entry.passPrice!;
-          const rowBg = this.add.rectangle(cx, rowY, 320, 36, 0x222233).setStrokeStyle(1, 0x444455);
-          const rowLabel = this.add.text(cx - 152, rowY, `Допуск: ${entry.label}`, {
-            fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ccccdd',
-          }).setOrigin(0, 0.5);
-          // originX: 1 — тег растёт влево от фиксированного правого края, поэтому доп. цифры
-          // в цене не заезжают на кнопку «Купить».
-          const priceLabel = goldTag(this, entry.passPrice!, { iconSize: 16, fontSize: 12, originX: 1 })
-            .setPosition(cx + 90, rowY);
-          const buyBtn = this.add.rectangle(cx + 125, rowY, 60, 26, canAfford ? 0x224422 : 0x332222)
-            .setStrokeStyle(1, canAfford ? 0x44aa44 : 0x664444)
-            .setInteractive({ useHandCursor: true });
-          const buyLbl = this.add.text(cx + 125, rowY, 'Купить', {
-            fontSize: '12px', fontFamily: FONT_FAMILY, color: canAfford ? '#aaffaa' : '#886666',
-          }).setOrigin(0.5);
-          buyBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
-            if (this.dragDrop?.isHolding()) return; // с предметом в руке клик не покупает — pointerup продаст
-            this.tryBuyMapPass(entry, ptr.x, ptr.y);
-          });
-          content.add([rowBg, rowLabel, priceLabel, buyBtn, buyLbl]);
-        });
-      }
-    } else {
-      this.buildQuestList(content);
-    }
-
-    // Продажа доступна на обеих вкладках скупщика: брошенный в левую половину предмет
-    // (drag или «в руке») продаётся; в сундуке работают Shift+клик и показ цены.
-    if (this.dragDrop) {
-      this.dragDrop.registerSlot({
-        id: 'dealer_sell_zone',
-        placeable: true,
-        allowOccupied: true,
-        rect: this.panelRect(195, 212, 370, 440),
-        item: null,
-        onRemove: () => null,
-        onAccept: (it) => {
-          const price = itemSellPrice(it);
-          MetaStore.addGold(price);
-          EventBus.emit('item_sold');
-          const ptr = this.input.activePointer;
-          spawnIconFloater(this, rewardIconKey('gold'), `+${price}`, ptr.x, ptr.y, '#ffcc00');
-          this.refreshHUD();
-          this.time.delayedCall(0, () => this.rebuildPanel());
-        },
-      });
-    }
-
-    // Контур зоны продажи — на обеих вкладках.
-    const dropOutline = this.add.rectangle(380, 432, 370, 440).setStrokeStyle(1, 0x554433).setFillStyle(0x000000, 0);
-    this.panelContainer.add([tabShopBg, tabShopLbl, tabQstBg, tabQstLbl, dropOutline, content]);
+    this.buildQuestList(content);
+    this.panelContainer.add(content);
   }
 
   private buildChestStandContent() {
@@ -1664,18 +1496,6 @@ export class CampScene extends Phaser.Scene {
         this.performSalvage(inst, clickX, clickY, keepHammer);
       };
     }
-    if (this.panelState === 'dealer') {
-      return (inst, idx) => {
-        const price = itemSellPrice(inst);
-        MetaStore.removeFromChest(idx);
-        MetaStore.addGold(price);
-        EventBus.emit('item_sold');
-        const ptr = this.input.activePointer;
-        spawnIconFloater(this, rewardIconKey('gold'), `+${price}`, ptr.x, ptr.y, '#ffcc00');
-        this.refreshHUD();
-        this.rebuildPanel();
-      };
-    }
     if (this.panelState === 'chest') {
       return (inst, idx) => {
         const beh = getItemBehavior(inst.item_id);
@@ -1697,7 +1517,6 @@ export class CampScene extends Phaser.Scene {
 
   private buildSharedChestPane(
     onItemClick?: (inst: ItemInstance, idx: number) => void,
-    showPrices = false
   ) {
     const CHEST_CX = 830;
     const showFilters = true;
@@ -1872,7 +1691,7 @@ export class CampScene extends Phaser.Scene {
           slotBg.on('pointerover', () => {
             slotBg.setFillStyle(0x3a3a5a);
             this.tooltip.showItem(item, this.panelX(x + SIZE / 2 + 8), this.panelY(yc - SIZE / 2 - 8), {
-              defaultCost: showPrices ? 'gold' : this.panelState === 'smith' ? 'essence' : 'none',
+              defaultCost: this.panelState === 'smith' ? 'essence' : 'none',
             });
           });
           slotBg.on('pointerout', () => { slotBg.setFillStyle(0x2a2a3a); this.tooltip.hide(); });
@@ -2054,32 +1873,30 @@ export class CampScene extends Phaser.Scene {
         return;
       }
 
-      // Проходку можно купить — цвет карточки сигналит, хватает ли золота (аналогично магазину допусков).
-      const canAfford = MetaStore.get().gold >= (entry.passPrice ?? 0);
-      fillColor = canAfford ? 0x554422 : 0x332222;
-      borderColor = canAfford ? 0xaa8844 : 0x664444;
-      const lockColor = canAfford ? '#ffdd88' : '#886666';
-      node.setFillStyle(fillColor).setStrokeStyle(2, borderColor);
+      // Разблокируется наградой квеста сбора предметов предыдущей зоны маршрута
+      // (collect_<zone>_items → unlock_area), а не покупкой. Показываем его прогресс.
+      const questId = AREA_UNLOCK_QUEST[entry.id];
+      const def = questId ? QUEST_DEFS[questId] : undefined;
+      const record = MetaStore.get().quests.active.find((q) => q.id === questId);
+      const progress = record?.progress ?? 0;
+      const target = def?.target ?? 0;
+      const prevLabel = zoneLabel(ZONE_PREREQ[entry.id]);
 
-      const lockLbl = this.add.text(entry.x - 30, entry.y + 20, '🔒', {
-        fontSize: '14px', fontFamily: FONT_FAMILY, color: lockColor,
-      }).setOrigin(0, 0.5);
-      const lockPrice = goldTag(this, entry.passPrice ?? 0, { iconSize: 18, fontSize: 14, color: lockColor })
-        .setPosition(entry.x - 6, entry.y + 20);
-      this.panelContainer.add([lockLbl, lockPrice]);
+      this.panelContainer.add(this.add.text(entry.x, entry.y + 20, `🔒 собери предметы ${progress}/${target}`, {
+        fontSize: '13px', fontFamily: FONT_FAMILY, color: '#886666', align: 'center', wordWrap: { width: 160 },
+      }).setOrigin(0.5));
 
       node.setInteractive({ useHandCursor: true });
       nameText.setInteractive({ useHandCursor: true });
       [node, nameText].forEach(obj => {
         obj.on('pointerover', () => {
-          node.setFillStyle(canAfford ? 0x664422 : 0x332233);
-          this.tooltip.showLines([
-            { text: canAfford ? 'Купить проходку:' : 'Не хватает золота:' },
-            { text: `${entry.passPrice}`, color: '#ffcc00', icon: rewardIconKey('gold') },
+          node.setFillStyle(0x332233);
+          this.tooltip.showText([
+            'Заблокировано',
+            `Собери в «${prevLabel}» все предметы (${progress}/${target})`,
           ], this.panelX(entry.x + 65), this.panelY(entry.y - 50));
         });
         obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
-        obj.on('pointerdown', (ptr: Phaser.Input.Pointer) => this.tryBuyMapPass(entry, ptr.x, ptr.y));
       });
       return;
     }
@@ -2120,22 +1937,6 @@ export class CampScene extends Phaser.Scene {
         this.scene.start('ExpeditionScene', { zoneId: entry.id, standIndex });
       });
     });
-  }
-
-  /** Покупка проходки — без подтверждения, мгновенно; списание видно по всплывающей цифре у клика. */
-  private tryBuyMapPass(entry: MapZoneEntry, x?: number, y?: number) {
-    if (!entry.passPrice) return;
-    const meta = MetaStore.get();
-    if (meta.gold < entry.passPrice) {
-      this.showMessage(`Недостаточно золота! Нужно ${entry.passPrice}g`);
-      return;
-    }
-    MetaStore.spendGold(entry.passPrice);
-    MetaStore.unlockArea(entry.id);
-    if (entry.questId) MetaStore.addActiveQuest(entry.questId, 1);
-    spawnIconFloater(this, rewardIconKey('gold'), `-${entry.passPrice}`, x ?? this.panelX(entry.x), y ?? this.panelY(entry.y), '#ffcc00');
-    this.refreshHUD();
-    this.rebuildPanel();
   }
 
   private showMessage(msg: string) {

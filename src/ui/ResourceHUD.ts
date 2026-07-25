@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import { FONT_FAMILY } from './theme';
 import { MetaStore } from '../core/MetaStore';
-import { EventBus } from '../core/EventBus';
-import { rewardIconKey, essenceIconKey } from './rewards';
+import { essenceIconKey } from './rewards';
 import { ESSENCE_TIERS, ESSENCE_NAMES } from '../items/craft';
 import type { EssenceTier, Rarity } from '../items/types';
 import { Tooltip, RARITY_COLORS } from './Tooltip';
@@ -10,7 +9,6 @@ import { Tooltip, RARITY_COLORS } from './Tooltip';
 const ICON = 29;      // сторона иконки, px
 const GAP = 9;        // зазор иконка↔число, px
 const CELL_W = 90;    // ширина ячейки (иконка + число), px
-const ROW_H = 34;     // высота строки, px
 const ORIGIN_X = 10;
 const ORIGIN_Y = 38;
 
@@ -62,42 +60,30 @@ function buildDescLines(desc: string, baseColor: string, highlights: { word: str
 type Cell = { icon: Phaser.GameObjects.Image; text: Phaser.GameObjects.Text };
 
 export class ResourceHUD {
-  private goldCell!: Cell;
   private essenceCells: Record<string, Cell> = {};
 
   constructor(scene: Phaser.Scene, tooltip?: Tooltip) {
     const DESC_COLOR = '#aaaaaa';
-    // Раскладка: строка 0 — только золото, строка 1 — все тиры эссенции в ряд.
+    // Раскладка: одна строка — все тиры эссенции в ряд.
     const cells: Array<{
       iconKey: string; col: number; row: number; store: (c: Cell) => void;
       title: string; titleColor: string; descLines: DescLine[];
-    }> = [
-      {
-        iconKey: rewardIconKey('gold'), col: 0, row: 0, store: (c) => (this.goldCell = c),
-        title: 'Золото', titleColor: '#ffcc00',
-        descLines: buildDescLines(
-          'Позволяет оплачивать услуги Кузнеца и приобретать товары у Скупщика',
-          DESC_COLOR,
-          [{ word: 'Кузнеца', bold: true }, { word: 'Скупщика', bold: true }],
-        ),
-      },
-      ...ESSENCE_TIERS.map((tier, i) => ({
-        iconKey: essenceIconKey(tier),
-        col: i,
-        row: 1,
-        store: (c: Cell) => (this.essenceCells[tier] = c),
-        title: `${capitalize(ESSENCE_NAMES[tier])} эссенция`, titleColor: '#cbe6ff',
-        descLines: buildDescLines(
-          `Позволяет улучшить предмет до ${RARITY_GENITIVE[tier]} уровня редкости`,
-          DESC_COLOR,
-          [{ word: RARITY_GENITIVE[tier], color: RARITY_COLORS[tier as Rarity] }],
-        ),
-      })),
-    ];
+    }> = ESSENCE_TIERS.map((tier, i) => ({
+      iconKey: essenceIconKey(tier),
+      col: i,
+      row: 0,
+      store: (c: Cell) => (this.essenceCells[tier] = c),
+      title: `${capitalize(ESSENCE_NAMES[tier])} эссенция`, titleColor: '#cbe6ff',
+      descLines: buildDescLines(
+        `Позволяет улучшить предмет до ${RARITY_GENITIVE[tier]} уровня редкости`,
+        DESC_COLOR,
+        [{ word: RARITY_GENITIVE[tier], color: RARITY_COLORS[tier as Rarity] }],
+      ),
+    }));
 
     cells.forEach((def) => {
       const x = ORIGIN_X + def.col * CELL_W;
-      const y = ORIGIN_Y + def.row * ROW_H;
+      const y = ORIGIN_Y + def.row * ICON;
       const icon = scene.add
         .image(x, y, def.iconKey)
         .setOrigin(0, 0)
@@ -132,19 +118,18 @@ export class ResourceHUD {
     });
 
     this.refresh();
-    EventBus.on('quest_reward_claimed', this.refresh, this);
   }
 
   refresh() {
-    if (!this.goldCell?.icon?.active) return;
-    const { gold, essence } = MetaStore.get();
-    this.goldCell.text.setText(`${gold}`);
+    const firstTier = ESSENCE_TIERS[0];
+    if (!this.essenceCells[firstTier]?.icon?.active) return;
+    const { essence } = MetaStore.get();
     for (const tier of ESSENCE_TIERS) {
       this.essenceCells[tier].text.setText(`${essence[tier] ?? 0}`);
     }
   }
 
   destroy() {
-    EventBus.off('quest_reward_claimed', this.refresh, this);
+    // Ничего не подписано напрямую — обновление гоняется явными вызовами refresh() из сцены.
   }
 }

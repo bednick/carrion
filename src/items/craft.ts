@@ -1,7 +1,7 @@
 import type { ItemInstance, Rarity, EssenceTier, EssencePool } from './types';
 
 // Единый источник правды о крафте — обе сцены (лагерь/экспедиция) считают результат,
-// стоимость (золото + эссенция) и разбор через этот модуль, чтобы правила не расходились.
+// стоимость (эссенция) и разбор через этот модуль, чтобы правила не расходились.
 // Крафт = только улучшение редкости + разбор. Рецептов больше нет (см. docs/mechanics.md).
 
 export const RARITY_ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -60,33 +60,6 @@ export function salvageEssence(item: ItemInstance): EssencePool {
   return pool;
 }
 
-// Цена редкости в золоте — какая плата кузнецу нужна, чтобы получить предмет этой редкости
-// улучшением (×10 за тир, docs/meta-progression.md). common/legendary улучшением не достигаются
-// (common — стартовая, legendary только находится), но продолжают ту же геометрию — нужны как
-// база для цены продажи (см. `itemSellPrice`).
-const RARITY_GOLD_VALUE: Record<Rarity, number> = {
-  common: 10, uncommon: 100, rare: 1000, epic: 10000, legendary: 100000,
-};
-
-// Плата кузнецу за улучшение — пятая часть базовой цены редкости (цена продажи её не использует).
-const CRAFT_GOLD_DIVISOR = 5;
-
-/** Сколько золота стоит улучшение до данной редкости. */
-export function craftGoldCost(result: ItemInstance): number {
-  return (RARITY_GOLD_VALUE[result.rarity] ?? 0) / CRAFT_GOLD_DIVISOR;
-}
-
-// Прямая покупка эссенции у кузнеца за золото — альтернатива разборке предметов.
-// Цена за 1 шт. = та же цифра, что и craftGoldCost за апгрейд до этого тира.
-export const ESSENCE_BUY_PRICE: Record<EssenceTier, number> = {
-  uncommon: 20, rare: 200, epic: 2000,
-};
-
-/** Сколько золота стоит купить qty эссенции данного тира. */
-export function essenceBuyCost(tier: EssenceTier, qty: number): number {
-  return ESSENCE_BUY_PRICE[tier] * qty;
-}
-
 // Обмен дорогой эссенции на дешёвую — специально невыгодный курс, нужен только чтобы
 // разменять излишек одного тира на нехватку другого, а не как основной источник ресурса.
 export const ESSENCE_EXCHANGE_RATE = 3;
@@ -95,11 +68,6 @@ export const ESSENCE_EXCHANGE_RATE = 3;
 export const ESSENCE_EXCHANGE_TARGET: Record<EssenceTier, EssenceTier | null> = {
   uncommon: null, rare: 'uncommon', epic: 'rare',
 };
-
-/** Цена продажи скупщику — половина цены редкости предмета (docs/meta-progression.md). */
-export function itemSellPrice(item: ItemInstance): number {
-  return RARITY_GOLD_VALUE[item.rarity] / 2;
-}
 
 // Сколько эссенции целевого тира стоит улучшение (см. docs/meta-progression.md).
 const UPGRADE_ESSENCE_AMOUNT = 10;
@@ -132,15 +100,13 @@ export interface CraftPreview {
   /** Что получится, либо null если улучшение невозможно. */
   result: ItemInstance | null;
   kind: CraftKind | null;
-  /** Плата кузнецу в золоте (0 если result == null). В походе золото не берётся. */
-  goldCost: number;
   /** Эссенция-ингредиент улучшения; null если result == null. */
   essenceCost: EssencePool | null;
   /** Готовый текст ошибки для подсказки/кнопки, либо null если крафт возможен. */
   error: string | null;
 }
 
-const EMPTY: Omit<CraftPreview, 'error'> = { result: null, kind: null, goldCost: 0, essenceCost: null };
+const EMPTY: Omit<CraftPreview, 'error'> = { result: null, kind: null, essenceCost: null };
 
 /**
  * Считает результат улучшения одного предмета: следующая редкость + стоимость эссенции.
@@ -161,7 +127,7 @@ export function craftPreview(
   }
   const result: ItemInstance = { item_id: single.item_id, rarity: up };
   return {
-    result, kind: 'upgrade', goldCost: craftGoldCost(result),
+    result, kind: 'upgrade',
     essenceCost: upgradeEssenceCost(up), error: null,
   };
 }

@@ -4,7 +4,7 @@ import { QUEST_DEFS } from '../quests/definitions';
 import { FONT_FAMILY } from './theme';
 
 const X = 10;
-const Y_START = 112; // ниже таблицы ресурсов ResourceHUD (2 строки)
+const Y_START = 78; // ниже таблицы ресурсов ResourceHUD (1 строка — эссенция)
 const ROW_H = 28;
 const MAX_QUESTS = 5;
 const BOX_WIDTH = 420;

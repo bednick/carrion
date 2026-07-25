@@ -45,7 +45,6 @@ export interface PlayerStats {
 }
 
 export interface MetaState {
-  gold: number;
   essence: EssencePool;
   completed_areas: string[];
   unlocked_areas: string[];
@@ -136,7 +135,6 @@ function createDefault(): MetaState {
   const pendingStartWeapon = localStorage.getItem(PENDING_START_WEAPON_KEY) ?? undefined;
   if (pendingStartWeapon) localStorage.removeItem(PENDING_START_WEAPON_KEY);
   return {
-    gold: 0,
     essence: emptyEssence(),
     completed_areas: [],
     unlocked_areas: ['dead-fields'],
@@ -166,7 +164,6 @@ export const MetaStore = {
     const parsed = JSON.parse(raw) as Partial<MetaState>;
     const defaults = createDefault();
     state = {
-      gold: parsed.gold ?? defaults.gold,
       essence: { ...defaults.essence, ...(parsed.essence ?? {}) },
       completed_areas: parsed.completed_areas ?? defaults.completed_areas,
       unlocked_areas: parsed.unlocked_areas ?? defaults.unlocked_areas,
@@ -219,21 +216,9 @@ export const MetaStore = {
     return state;
   },
 
-  addGold(amount: number) {
-    state.gold = Math.max(0, state.gold + amount);
-    this.save();
-  },
-
   addEssence(tier: EssenceTier, amount: number) {
     state.essence[tier] = Math.max(0, state.essence[tier] + amount);
     this.save();
-  },
-
-  spendGold(amount: number): boolean {
-    if (state.gold < amount) return false;
-    state.gold -= amount;
-    this.save();
-    return true;
   },
 
   /** Хватает ли эссенции на весь пул затрат (по каждому тиру). */

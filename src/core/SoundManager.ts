@@ -59,7 +59,6 @@ class SoundManagerImpl {
     EventBus.on('item_in_backpack', () => this.play('loot_pickup'));
     EventBus.on('item_disassembled', () => this.play('disassemble'));
     EventBus.on('item_crafted', () => this.play('craft'));
-    EventBus.on('item_sold', () => this.play('sell'));
     EventBus.on('item_equipped', () => this.play('equip'));
     EventBus.on('item_placed_smith', () => this.play('anvil'));
     EventBus.on('item_stored', () => this.play('chest_add'));

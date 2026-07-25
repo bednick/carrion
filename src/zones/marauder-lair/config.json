@@ -15,13 +15,11 @@
     { "mob_id": "overseer", "weight": 40 }
   ],
   "mob_loot": {
-    "gold": { "min": 0, "max": 0 },
     "items": []
   },
   "boss": {
     "mob_id": "brigadier",
     "loot": {
-      "gold": { "min": 3500, "max": 6500 },
       "essence": {"epic":  {"min": 10, "max": 20}},
       "items": [
         { "item_id": "gleaming_plate", "chance": 0.10, "rarity": "epic" },

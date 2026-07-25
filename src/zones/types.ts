@@ -10,7 +10,6 @@ export interface LootEntry {
 export type EssenceLoot = Partial<Record<EssenceTier, { min: number; max: number }>>;
 
 export interface LootTable {
-  gold: { min: number; max: number };
   items: LootEntry[];
   /** Необязательно: эссенция за финальный драфт (правая карточка награды). */
   essence?: EssenceLoot;

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-export type FloaterType = 'damage' | 'heal' | 'essence' | 'gold' | 'miss' | 'block' | 'counter' | 'barrier';
+export type FloaterType = 'damage' | 'heal' | 'essence' | 'miss' | 'block' | 'counter' | 'barrier';
 
 export interface FloaterEvent {
   type: FloaterType;

@@ -122,8 +122,9 @@
 одна фаза/боссовая заглушка (`sergeant_boss`) заменена на пул из 8 уже существующих легендарных мобов —
 боссов средних зон (`rat_king`/`dump_boss`/`bone_summoner`/`embalmer`/`pack_leader`/`herd_stallion`/
 `brigadier`/`camp_commander`), бой идёт бесконечно с растущим проклятием (`endless.curse_per_fight`). Контента
-больше не не хватает — но `mob_loot.gold` (`50–100`) и `curse_per_fight` (`8`) в `src/zones/battlefield/
-config.json` — черновые, не провалидированные Monte-Carlo числа. Балансировать стоит через тот же
+больше не не хватает — но `curse_per_fight` (`8`) в `src/zones/battlefield/config.json` — черновое, не
+провалидированное Monte-Carlo число (золото убрано из игры, `mob_loot` зоны теперь пуст — рядовой бой не даёт
+лута, цель зоны рекордная). Балансировать стоит через тот же
 Monte-Carlo симулятор: `src/balance/simulate.ts`/`main.ts` уже умеют считать endless-зону отдельной веткой
 (средняя глубина забега вместо winrate, см. `runEndlessExpedition`) — подобрать `curse_per_fight`, при котором
 типовой билд выживает разумное число боёв, а не 2-3 и не 500 (упирается в предохранитель `ENDLESS_DEPTH_CAP`).

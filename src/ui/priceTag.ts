@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { rewardIconKey, essenceIconKey } from './rewards';
+import { essenceIconKey } from './rewards';
 import type { EssenceTier } from '../items/types';
 import { FONT_FAMILY } from './theme';
 
@@ -38,13 +38,6 @@ export function resourceTag(
   const c = scene.add.container(0, 0, [icon, text]);
   c.setSize(w, Math.max(iconSize, text.height));
   return c;
-}
-
-/** Тег золота. */
-export function goldTag(
-  scene: Phaser.Scene, value: number | string, opts: ResourceTagOpts = {},
-): Phaser.GameObjects.Container {
-  return resourceTag(scene, rewardIconKey('gold'), value, { color: '#ffcc00', ...opts });
 }
 
 /** Тег эссенции конкретного тира. */

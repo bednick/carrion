@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { FONT_FAMILY } from './theme';
 import { getItemBehavior } from '../items/registry';
-import { salvageEssence, ESSENCE_TIERS, itemSellPrice } from '../items/craft';
-import { rewardIconKey, essenceIconKey } from './rewards';
+import { salvageEssence, ESSENCE_TIERS } from '../items/craft';
+import { essenceIconKey } from './rewards';
 import type { ItemInstance, Rarity, EssenceTier } from '../items/types';
 
 // Метрики тултипа (x1.6 от исходных — читаемость).
@@ -39,12 +39,12 @@ interface Line {
 }
 
 /**
- * Контекст показа предмета. `defaultCost` задаёт, какую цену показывать в кратком виде
- * (магазин → 'gold', кузнец → 'essence', иначе → 'none'). Полный вид (зажат Ctrl)
- * всегда показывает слоты и обе цены независимо от контекста.
+ * Контекст показа предмета. `defaultCost` задаёт, показывать ли цену разбора в кратком виде
+ * (кузнец → 'essence', иначе → 'none'). Полный вид (зажат Ctrl) всегда показывает слоты и
+ * цену разбора независимо от контекста.
  */
 export interface ItemTooltipCtx {
-  defaultCost?: 'gold' | 'essence' | 'none';
+  defaultCost?: 'essence' | 'none';
 }
 
 export class Tooltip {
@@ -116,7 +116,6 @@ export class Tooltip {
     // Боевые статы — единый источник правды в behavior.ts (docs/combat-events.md §5).
     const stats: Line[] = beh.stats ? beh.stats(item.rarity) : [];
 
-    const goldLines: Line[] = [{ text: `${itemSellPrice(item)}`, color: '#ffcc00', icon: rewardIconKey('gold') }];
     // Разбор даёт пул эссенции: все тиры в одну строку (иконка тира + количество, включая 0).
     const pool = salvageEssence(item);
     const essenceLines: Line[] = [{
@@ -126,9 +125,7 @@ export class Tooltip {
       })),
     }];
     const prices: Line[] = [];
-    if (full) prices.push(...goldLines, ...essenceLines);
-    else if (ctx.defaultCost === 'gold') prices.push(...goldLines);
-    else if (ctx.defaultCost === 'essence') prices.push(...essenceLines);
+    if (full || ctx.defaultCost === 'essence') prices.push(...essenceLines);
 
     return [identity, stats, prices];
   }

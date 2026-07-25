@@ -21,7 +21,6 @@
     { "mob_id": "camp_commander", "weight": 100 }
   ],
   "mob_loot": {
-    "gold": { "min": 50, "max": 100 },
     "items": []
   },
   "endless": { "curse_per_fight": 5 }

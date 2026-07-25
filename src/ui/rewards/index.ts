@@ -1,4 +1,3 @@
-import gold from './gold.svg';
 import essence from './essence.svg';
 import essence_common from './essence_common.svg';
 import essence_uncommon from './essence_uncommon.svg';
@@ -9,7 +8,6 @@ import type { EssenceTier, Rarity } from '../../items/types';
 
 // Иконки нематериальных наград (золото/эссенция) для карточек гарант-драфта и HUD.
 export const REWARD_ICON_URLS: Record<string, string> = {
-  gold,
   essence,
   essence_common,
   essence_uncommon,

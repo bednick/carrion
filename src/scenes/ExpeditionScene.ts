@@ -20,7 +20,7 @@ import type { ZoneConfig, MobConfig, EnemySpec, PhaseOverride, SummonRef } from 
 import { getMobConfig } from '../mobs/registry';
 import { itemIconKey } from '../items/icons';
 import { slotSilhouetteKey, zoneDecorKey } from '../ui/silhouettes';
-import { goldTag, essenceTag } from '../ui/priceTag';
+import { essenceTag } from '../ui/priceTag';
 import { newBadge } from '../ui/newBadge';
 import { ESSENCE_TIERS } from '../items/craft';
 import { QuestTracker } from '../ui/QuestTracker';
@@ -1514,16 +1514,11 @@ export class ExpeditionScene extends Phaser.Scene {
     const fightType = this.zoneCfg.endless ? 'mob' : this.fightPlan[this.currentFightIdx];
 
     const magicFind = sumMeta(this.equipment).magicFind;
-    const floatX = this.enemyGraphics[0]?.sprite.x ?? this.slotX(0);
-    const floatY = this.enemyGraphics[0]?.sprite.y ?? 185;
 
     if (fightType === 'mob') {
       if (this.zoneCfg.mob_loot) {
         // Индекс инкрементится ниже, уже после начисления — «бой N» и «лут боя N» согласованы.
         const loot = rollLootTable(this.zoneCfg.mob_loot, magicFind, rngFor(this.runSeed, 'loot', this.currentFightIdx));
-        const gold = loot.gold;
-        MetaStore.addGold(gold);
-        if (gold > 0) spawnFloater(this, 'gold', gold, floatX, floatY);
         for (const item of loot.items) {
           MetaStore.recordItemDiscovered(item.item_id);
           this.addToBelt(item);
@@ -1645,14 +1640,8 @@ export class ExpeditionScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true });
       this.victoryContainer.add(card);
 
-      // Наполнение карточки. Золото/эссенция — иконка+число единообразно с предметами.
-      if (opt.kind === 'gold') {
-        this.victoryContainer.add(goldTag(this, opt.gold, { iconSize: 46, fontSize: 26, originX: 0.5 })
-          .setPosition(x, cardY - 6));
-        this.victoryContainer.add(this.add.text(x, cardY + 44, 'Золото', {
-          fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
-        }).setOrigin(0.5, 0));
-      } else if (opt.kind === 'essence') {
+      // Наполнение карточки. Эссенция — иконка+число единообразно с предметами.
+      if (opt.kind === 'essence') {
         const tiers = ESSENCE_TIERS.filter((t) => (opt.essence[t] ?? 0) > 0);
         const rowH = 38;
         const startY = cardY - 12 - ((tiers.length - 1) * rowH) / 2;
@@ -1689,17 +1678,14 @@ export class ExpeditionScene extends Phaser.Scene {
 
   // Цвет рамки карточки награды по её типу.
   private rewardCardColor(opt: RewardOption): number {
-    if (opt.kind === 'gold') return 0xffcc00;
     if (opt.kind === 'essence') return 0x44ddff;
     return RARITY_COLORS[opt.item.rarity];
   }
 
-  // Начисляет выбранную награду: предмет — в сундук, золото/эссенция — в мету.
+  // Начисляет выбранную награду: предмет — в сундук, эссенция — в мету.
   private claimReward(opt: RewardOption) {
     if (opt.kind === 'item') {
       this.carryOut(opt.item); // addToChest + recordItemCarriedOut
-    } else if (opt.kind === 'gold') {
-      MetaStore.addGold(opt.gold);
     } else {
       for (const tier of Object.keys(opt.essence) as EssenceTier[]) {
         const amount = opt.essence[tier] ?? 0;

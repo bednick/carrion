@@ -10,7 +10,6 @@
     { "mob_id": "skeleton", "weight": 40 }
   ],
   "mob_loot": {
-    "gold": { "min": 0, "max": 0 },
     "items": [
       { "item_id": "short_spear", "chance": 0.10 },
       { "item_id": "broadaxe", "chance": 0.10 },
@@ -21,7 +20,6 @@
   "boss": {
     "mob_id": "sergeant",
     "loot": {
-      "gold": { "min": 100, "max": 150 },
       "essence": {"uncommon":  {"min": 10, "max": 20}},
       "items": [
         { "item_id": "short_spear", "chance": 0.10, "rarity": "uncommon" },

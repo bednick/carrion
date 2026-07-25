@@ -14,13 +14,11 @@
     { "mob_id": "wailer", "weight": 100 }
   ],
   "mob_loot": {
-    "gold": { "min": 0, "max": 0 },
     "items": []
   },
   "boss": {
     "mob_id": "embalmer",
     "loot": {
-      "gold": { "min": 3500, "max": 6500 },
       "essence": {"epic":  {"min": 10, "max": 20}},
       "items": [
         { "item_id": "leech_bead", "chance": 0.10, "rarity": "epic" },

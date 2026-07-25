@@ -15,7 +15,6 @@
     { "mob_id": "cataphract", "weight": 40 }
   ],
   "mob_loot": {
-    "gold": { "min": 0, "max": 0 },
     "items": [
       { "item_id": "gleaming_plate", "chance": 0.10, "rarity": "uncommon" },
       { "item_id": "spiked_cuirass", "chance": 0.10, "rarity": "uncommon" },
@@ -26,7 +25,6 @@
   "boss": {
     "mob_id": "camp_commander",
     "loot": {
-      "gold": { "min": 800, "max": 1200 },
       "essence": {"rare":  {"min": 10, "max": 20}},
       "items": [
         { "item_id": "gleaming_plate", "chance": 0.10, "rarity": "rare" },

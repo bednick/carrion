@@ -3,13 +3,11 @@ import type { EssenceTier, ItemInstance, Rarity } from '../items/types';
 import type { Rng } from '../core/rng';
 
 export interface LootResult {
-  gold: number;
   items: ItemInstance[];
 }
 
-/** Один из 5 вариантов гарант-награды после босса (см. buildRewardOptions). */
+/** Один из 4 вариантов гарант-награды после босса (см. buildRewardOptions). */
 export type RewardOption =
-  | { kind: 'gold'; gold: number }
   | { kind: 'essence'; essence: Partial<Record<EssenceTier, number>> }
   | { kind: 'item'; item: ItemInstance };
 
@@ -48,19 +46,15 @@ function itemOrNull(item: ItemInstance | null): RewardOption | null {
 }
 
 /**
- * До пяти вариантов гарант-награды после победы над боссом (игрок берёт один):
- * [золото, предмет·mob, предмет·boss(центр), предмет·mob, эссенция].
- * - Золото — ролл boss.loot.gold; эссенция — ролл boss.loot.essence.
+ * До четырёх вариантов гарант-награды после победы над боссом (игрок берёт один):
+ * [предмет·mob, предмет·boss(центр), предмет·mob, эссенция].
+ * - Эссенция — ролл boss.loot.essence.
  * - Центральный предмет — взвешенно из boss.loot.items; боковые два — из mob_loot.items без повторов.
- * - Любой недостающий источник (нет лута/эссенции/предметов) просто не показывается карточкой.
+ * - Любой недостающий источник (нет эссенции/предметов) просто не показывается карточкой.
  * См. docs/mechanics.md. `rng` обязателен — драфт обязан воспроизводиться при рестарте сцены.
  */
 export function buildRewardOptions(bossLoot: LootTable | undefined, mobLoot: LootTable | undefined, rng: Rng): RewardOption[] {
   const used = new Set<string>();
-
-  const gold: RewardOption | null = bossLoot
-    ? { kind: 'gold', gold: rng.int(bossLoot.gold.min, bossLoot.gold.max) }
-    : null;
 
   // Центр выбираем первым, чтобы боковые mob-предметы не дублировали его item_id.
   const center = itemOrNull(bossLoot ? pickWeightedItem(bossLoot.items, used, rng) : null);
@@ -73,7 +67,7 @@ export function buildRewardOptions(bossLoot: LootTable | undefined, mobLoot: Loo
       ? { kind: 'essence', essence: essenceRoll }
       : null;
 
-  return [gold, left, center, right, essence].filter((o): o is RewardOption => o !== null);
+  return [left, center, right, essence].filter((o): o is RewardOption => o !== null);
 }
 
 const RARITY_ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -93,8 +87,6 @@ function upgradeRarity(item: ItemInstance, magicFind: number, rng: Rng): ItemIns
 
 /** `rng` обязателен — лут боя обязан воспроизводиться при рестарте сцены (см. src/core/rng.ts). */
 export function rollLootTable(table: LootTable, magicFind: number, rng: Rng): LootResult {
-  const gold = rng.int(table.gold.min, table.gold.max);
-
   const items: ItemInstance[] = [];
   for (const entry of table.items) {
     if (rng.frac() < entry.chance) {
@@ -102,5 +94,5 @@ export function rollLootTable(table: LootTable, magicFind: number, rng: Rng): Lo
     }
   }
 
-  return { gold, items };
+  return { items };
 }

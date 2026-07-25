@@ -4,13 +4,11 @@ export interface QuestRecord {
   target: number;
 }
 
-export type RewardType = 'gold' | 'unlock_area' | 'quest';
+export type RewardType = 'unlock_area';
 
 export interface QuestReward {
   type: RewardType;
-  value?: number;
-  questId?: string;
-  areaId?: string;
+  areaId: string;
 }
 
 /** Стат-счётчики, по которым может авто-засчитываться квест (см. PlayerStats). */
@@ -22,15 +20,16 @@ export type StatCountKey =
   | 'zones_returned';
 
 /**
- * Условие на статистику. Квест с `condition` засчитывается, как только
- * `stats[stat][id] >= count` (или сумма по всем id, если id опущен) — в том
- * числе задним числом при выдаче, если игрок выполнил его заранее.
+ * Условие завершения квеста:
+ * - `stat` — засчитывается, как только `stats[stat][id] >= count` (или сумма по всем id,
+ *   если id опущен) — в том числе задним числом при выдаче, если игрок выполнил его заранее;
+ * - `zone_items` — засчитывается, когда для КАЖДОГО item_id из `itemIds` в
+ *   `stats.items_carried_out[id] > 0` (предмет хоть раз вынесен в сундук). Квест с таким
+ *   условием должен иметь `target === itemIds.length`, чтобы прогресс `N/M` был корректен.
  */
-export interface QuestCondition {
-  stat: StatCountKey;
-  id?: string;
-  count?: number; // по умолчанию 1
-}
+export type QuestCondition =
+  | { kind: 'stat'; stat: StatCountKey; id?: string; count?: number }
+  | { kind: 'zone_items'; itemIds: string[] };
 
 export interface QuestDef {
   id: string;
@@ -50,32 +49,32 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Снаряжение',
     description: 'Наденьте любой предмет',
     target: 1,
-    rewards: [{ type: 'gold', value: 10 }],
-  },
-  tutorial_sell: {
-    id: 'tutorial_sell',
-    title: 'Первая продажа',
-    description: 'Продайте предмет скупщику',
-    target: 1,
-    rewards: [{ type: 'gold', value: 15 }],
+    rewards: [],
   },
   tutorial_disassemble: {
     id: 'tutorial_disassemble',
     title: 'Разборка',
     description: 'Разберите предмет у кузнеца',
     target: 1,
-    rewards: [
-      { type: 'gold', value: 10 },
-    ],
+    rewards: [],
   },
 
   // ── Зональные квесты: по одному на каждую из 9 областей ──────────────
-  // Цель — добить босса локации. Условие завязано на zones_returned (растёт
-  // только при полном зачёте зоны = добивании босса; ретрит не считается) —
-  // это устойчивее mobs_killed, у которого некоторые боссы делят mob_id.
-  // Награда: золото + автоматически открывается ПОКУПКА следующей зоны
-  // (completeArea → зона проходит prereq и становится покупаемой).
-  // next выдаёт квест следующей зоны маршрута (см. FACTION_ROUTES в CampScene).
+  // Цель боевого квеста (<zone>_clear) — добить босса локации. Условие завязано
+  // на zones_returned (растёт только при полном зачёте зоны = добивании босса;
+  // ретрит не считается) — устойчивее mobs_killed, у которого некоторые боссы
+  // делят mob_id. Награды у него больше нет — он только выдаёт следующий квест:
+  // сбор всех предметов зоны (collect_<zone>_items).
+  //
+  // Квест сбора (collect_<zone>_items) — условие zone_items: нужно вынести в
+  // сундук хотя бы один экземпляр каждого предмета из mob_loot/boss.loot зоны.
+  // Награда — разблокировка следующей зоны маршрута (unlock_area), это и есть
+  // замена бывшей покупке проходки за золото. next выдаёт боевой квест
+  // следующей зоны (см. FACTION_ROUTES в CampScene).
+  //
+  // Финальные зоны маршрутов (crypt/predator-pasture/marauder-lair) квеста
+  // сбора не получают — дальше только battlefield, чей гейт завязан на
+  // completed_areas трёх финальных зон и этим механизмом не затрагивается.
 
   // Маршрут 1: Мёртвые поля → Руины магов → Склеп
   dead_fields_clear: {
@@ -83,17 +82,25 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Исследовать: Мёртвые поля',
     description: 'Победите босса локации',
     target: 1,
-    // ½ проходки в Руины магов (500) + бесплатное открытие двух других стартовых
-    // зон маршрутов (Растоптанные луга и Свалка доспехов — без покупки проходки).
+    rewards: [],
+    next: ['collect_dead_fields_items'],
+    condition: { kind: 'stat', stat: 'zones_returned', id: 'dead-fields' },
+    areas: ['dead-fields'],
+  },
+  collect_dead_fields_items: {
+    id: 'collect_dead_fields_items',
+    title: 'Собрать: Мёртвые поля',
+    description: 'Вынесите из экспедиции все предметы этой области',
+    target: 4,
+    // Открывает сразу оба других стартовых маршрута — раньше это была бесплатная
+    // часть награды dead_fields_clear (до введения покупки проходок).
     rewards: [
-      { type: 'gold', value: 250 },
+      { type: 'unlock_area', areaId: 'mage-ruins' },
       { type: 'unlock_area', areaId: 'trampled-meadows' },
       { type: 'unlock_area', areaId: 'armor-dump' },
     ],
-    // Открываем и цепочку Руин магов, и стартовые квесты двух открытых зон
-    // (раньше они выдавались при покупке проходки — теперь покупки нет).
     next: ['mage_ruins_clear', 'trampled_meadows_clear', 'armor_dump_clear'],
-    condition: { stat: 'zones_returned', id: 'dead-fields' },
+    condition: { kind: 'zone_items', itemIds: ['short_spear', 'broadaxe', 'rapier', 'buckler'] },
     areas: ['dead-fields'],
   },
   mage_ruins_clear: {
@@ -101,9 +108,19 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Исследовать: Руины магов',
     description: 'Победите босса локации',
     target: 1,
-    rewards: [{ type: 'gold', value: 2500 }], // ½ проходки в Склеп (5000)
+    rewards: [],
+    next: ['collect_mage_ruins_items'],
+    condition: { kind: 'stat', stat: 'zones_returned', id: 'mage-ruins' },
+    areas: ['mage-ruins'],
+  },
+  collect_mage_ruins_items: {
+    id: 'collect_mage_ruins_items',
+    title: 'Собрать: Руины магов',
+    description: 'Вынесите из экспедиции все предметы этой области',
+    target: 4,
+    rewards: [{ type: 'unlock_area', areaId: 'crypt' }],
     next: ['crypt_clear'],
-    condition: { stat: 'zones_returned', id: 'mage-ruins' },
+    condition: { kind: 'zone_items', itemIds: ['leech_bead', 'vulture_amulet', 'thread_charm', 'barrier_amulet'] },
     areas: ['mage-ruins'],
   },
   crypt_clear: {
@@ -111,8 +128,8 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Исследовать: Склеп',
     description: 'Победите босса локации',
     target: 1,
-    rewards: [{ type: 'gold', value: 2500 }], // конечная зона: ½ своей цены (5000)
-    condition: { stat: 'zones_returned', id: 'crypt' },
+    rewards: [], // конечная зона маршрута — дальше только Поле битвы (гейт не меняется)
+    condition: { kind: 'stat', stat: 'zones_returned', id: 'crypt' },
     areas: ['crypt'],
   },
 
@@ -122,9 +139,19 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Исследовать: Растоптанные луга',
     description: 'Победите босса локации',
     target: 1,
-    rewards: [{ type: 'gold', value: 250 }], // ½ проходки в Логово зверей (500)
+    rewards: [],
+    next: ['collect_trampled_meadows_items'],
+    condition: { kind: 'stat', stat: 'zones_returned', id: 'trampled-meadows' },
+    areas: ['trampled-meadows'],
+  },
+  collect_trampled_meadows_items: {
+    id: 'collect_trampled_meadows_items',
+    title: 'Собрать: Растоптанные луга',
+    description: 'Вынесите из экспедиции все предметы этой области',
+    target: 3,
+    rewards: [{ type: 'unlock_area', areaId: 'beast-lair' }],
     next: ['beast_lair_clear'],
-    condition: { stat: 'zones_returned', id: 'trampled-meadows' },
+    condition: { kind: 'zone_items', itemIds: ['battle_staff', 'war_pick', 'spiked_shield'] },
     areas: ['trampled-meadows'],
   },
   beast_lair_clear: {
@@ -132,9 +159,19 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Исследовать: Логово зверей',
     description: 'Победите босса локации',
     target: 1,
-    rewards: [{ type: 'gold', value: 2500 }], // ½ проходки в Пастбище хищников (5000)
+    rewards: [],
+    next: ['collect_beast_lair_items'],
+    condition: { kind: 'stat', stat: 'zones_returned', id: 'beast-lair' },
+    areas: ['beast-lair'],
+  },
+  collect_beast_lair_items: {
+    id: 'collect_beast_lair_items',
+    title: 'Собрать: Логово зверей',
+    description: 'Вынесите из экспедиции все предметы этой области',
+    target: 3,
+    rewards: [{ type: 'unlock_area', areaId: 'predator-pasture' }],
     next: ['predator_pasture_clear'],
-    condition: { stat: 'zones_returned', id: 'beast-lair' },
+    condition: { kind: 'zone_items', itemIds: ['heavy_gloves', 'light_gloves', 'comfortable_gloves'] },
     areas: ['beast-lair'],
   },
   predator_pasture_clear: {
@@ -142,8 +179,8 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Исследовать: Пастбище хищников',
     description: 'Победите босса локации',
     target: 1,
-    rewards: [{ type: 'gold', value: 2500 }], // конечная зона: ½ своей цены (5000)
-    condition: { stat: 'zones_returned', id: 'predator-pasture' },
+    rewards: [], // конечная зона маршрута
+    condition: { kind: 'stat', stat: 'zones_returned', id: 'predator-pasture' },
     areas: ['predator-pasture'],
   },
 
@@ -153,9 +190,19 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Исследовать: Свалка доспехов',
     description: 'Победите босса локации',
     target: 1,
-    rewards: [{ type: 'gold', value: 250 }], // ½ проходки в Брошенный лагерь (500)
+    rewards: [],
+    next: ['collect_armor_dump_items'],
+    condition: { kind: 'stat', stat: 'zones_returned', id: 'armor-dump' },
+    areas: ['armor-dump'],
+  },
+  collect_armor_dump_items: {
+    id: 'collect_armor_dump_items',
+    title: 'Собрать: Свалка доспехов',
+    description: 'Вынесите из экспедиции все предметы этой области',
+    target: 3,
+    rewards: [{ type: 'unlock_area', areaId: 'abandoned-camp' }],
     next: ['abandoned_camp_clear'],
-    condition: { stat: 'zones_returned', id: 'armor-dump' },
+    condition: { kind: 'zone_items', itemIds: ['short_sword', 'dagger', 'heavy_shield'] },
     areas: ['armor-dump'],
   },
   abandoned_camp_clear: {
@@ -163,9 +210,19 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Исследовать: Брошенный лагерь',
     description: 'Победите босса локации',
     target: 1,
-    rewards: [{ type: 'gold', value: 2500 }], // ½ проходки в Логово мародёров (5000)
+    rewards: [],
+    next: ['collect_abandoned_camp_items'],
+    condition: { kind: 'stat', stat: 'zones_returned', id: 'abandoned-camp' },
+    areas: ['abandoned-camp'],
+  },
+  collect_abandoned_camp_items: {
+    id: 'collect_abandoned_camp_items',
+    title: 'Собрать: Брошенный лагерь',
+    description: 'Вынесите из экспедиции все предметы этой области',
+    target: 4,
+    rewards: [{ type: 'unlock_area', areaId: 'marauder-lair' }],
     next: ['marauder_lair_clear'],
-    condition: { stat: 'zones_returned', id: 'abandoned-camp' },
+    condition: { kind: 'zone_items', itemIds: ['gleaming_plate', 'spiked_cuirass', 'desperate_plate', 'heavy_plate'] },
     areas: ['abandoned-camp'],
   },
   marauder_lair_clear: {
@@ -173,18 +230,8 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     title: 'Исследовать: Логово мародёров',
     description: 'Победите босса локации',
     target: 1,
-    rewards: [{ type: 'gold', value: 2500 }], // конечная зона: ½ своей цены (5000)
-    condition: { stat: 'zones_returned', id: 'marauder-lair' },
+    rewards: [], // конечная зона маршрута
+    condition: { kind: 'stat', stat: 'zones_returned', id: 'marauder-lair' },
     areas: ['marauder-lair'],
-  },
-
-  find_uncommon: {
-    id: 'find_uncommon',
-    title: 'Коллекционер',
-    description: 'Найдите предмет редкости «Необычный»',
-    target: 1,
-    rewards: [
-      { type: 'gold', value: 25 },
-    ],
   },
 };

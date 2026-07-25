@@ -16,7 +16,6 @@ export const SOUND_FILES = {
   loot_pickup:  'audio/loot_pickup.ogg',    // предмет ушёл в рюкзак
   disassemble:  'audio/disassemble.ogg',    // предмет разобран в металл
   craft:        'audio/craft.ogg',          // успешный крафт
-  sell:         'audio/sell.ogg',           // продажа за золото
   equip:        'audio/equip.mp3',          // предмет надет на слот персонажа/стойки
   anvil:        'audio/anvil.mp3',          // предмет положен на стол кузнеца
   chest_add:    'audio/chest_add.mp3',      // предмет попал в сундук
