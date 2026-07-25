@@ -15,10 +15,9 @@
   ],
   "mob_loot": {
     "items": [
-      { "item_id": "leech_bead", "chance": 0.10, "rarity": "uncommon" },
-      { "item_id": "vulture_amulet", "chance": 0.10, "rarity": "uncommon" },
-      { "item_id": "thread_charm", "chance": 0.10, "rarity": "uncommon" },
-      { "item_id": "barrier_amulet", "chance": 0.10, "rarity": "uncommon" }
+      { "item_id": "light_gloves", "chance": 0.10, "rarity": "uncommon" },
+      { "item_id": "gleaming_plate", "chance": 0.10, "rarity": "uncommon" },
+      { "item_id": "spiked_shield", "chance": 0.10, "rarity": "uncommon" }
     ]
   },
   "boss": {
@@ -26,10 +25,9 @@
     "loot": {
       "essence": {"rare":  {"min": 10, "max": 20}},
       "items": [
-        { "item_id": "leech_bead", "chance": 0.10, "rarity": "rare" },
-        { "item_id": "vulture_amulet", "chance": 0.10, "rarity": "rare" },
-        { "item_id": "thread_charm", "chance": 0.10, "rarity": "rare" },
-        { "item_id": "barrier_amulet", "chance": 0.10, "rarity": "rare" }
+        { "item_id": "light_gloves", "chance": 0.10, "rarity": "rare" },
+        { "item_id": "gleaming_plate", "chance": 0.10, "rarity": "rare" },
+        { "item_id": "spiked_shield", "chance": 0.10, "rarity": "rare" }
       ]
     }
   }
