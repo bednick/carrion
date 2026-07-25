@@ -301,7 +301,7 @@ export class CampScene extends Phaser.Scene {
     this.resourceHUD = new ResourceHUD(this, this.tooltip);
 
     const coordText = this.add.text(10, 10, '', {
-      fontSize: '11px', fontFamily: FONT_FAMILY, color: '#ffffff', backgroundColor: '#000000aa',
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffffff', backgroundColor: '#000000aa',
     }).setDepth(100).setPadding(3);
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
       coordText.setText(`x:${Math.round(ptr.x)} y:${Math.round(ptr.y)}`);
@@ -366,7 +366,7 @@ export class CampScene extends Phaser.Scene {
       fontSize: '20px', fontFamily: FONT_FAMILY, color: '#ffdd44',
     }).setOrigin(0.5).setDepth(92);
     const hint = this.add.text(CX, 218, 'Common — единственный предмет на стойке новой игры', {
-      fontSize: '11px', fontFamily: FONT_FAMILY, color: '#888888',
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: '#888888',
     }).setOrigin(0.5).setDepth(92);
 
     const objs: Phaser.GameObjects.GameObject[] = [overlay, title, hint];
@@ -389,7 +389,7 @@ export class CampScene extends Phaser.Scene {
         .setStrokeStyle(2, 0x666666).setDepth(91).setInteractive({ useHandCursor: true });
       const icon = this.add.image(x, y - 24, itemIconKey(id)).setDisplaySize(56, 56).setDepth(92);
       const label = this.add.text(x, y + 32, beh.name, {
-        fontSize: '11px', fontFamily: FONT_FAMILY, color: '#dddddd', align: 'center',
+        fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd', align: 'center',
         wordWrap: { width: CARD_W - 12 },
       }).setOrigin(0.5, 0).setDepth(92);
       objs.push(card, icon, label);
@@ -866,13 +866,13 @@ export class CampScene extends Phaser.Scene {
         const titleT = this.add.text(225, y + 8, def.title, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddaa' });
         const rewardT = goldSum > 0
           ? goldTag(this, goldSum, { prefix: '+', iconSize: 14, fontSize: 11, color: '#ffdd44' }).setPosition(225, y + 30)
-          : this.add.text(225, y + 24, 'Выполнено', { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#ffdd44' });
+          : this.add.text(225, y + 24, 'Выполнено', { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44' });
 
         const claimBtn = this.add.rectangle(500, y + 18, 58, 26, hasGoldMetal ? 0x224422 : 0x222233)
           .setStrokeStyle(1, hasGoldMetal ? 0x44aa44 : 0x444455)
           .setInteractive({ useHandCursor: true });
         const claimLbl = this.add.text(500, y + 18, 'Забрать', {
-          fontSize: '11px', fontFamily: FONT_FAMILY, color: hasGoldMetal ? '#aaffaa' : '#666677',
+          fontSize: '12px', fontFamily: FONT_FAMILY, color: hasGoldMetal ? '#aaffaa' : '#666677',
         }).setOrigin(0.5);
 
         const qid = questId;
@@ -905,8 +905,8 @@ export class CampScene extends Phaser.Scene {
       const def = QUEST_DEFS[q.id];
       if (!def) continue;
       const title = this.add.text(210, y, def.title, { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#dddddd' });
-      const desc = this.add.text(210, y + 16, def.description, { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#888888' });
-      const progress = this.add.text(210, y + 30, `${q.progress}/${q.target}`, { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#88aaff' });
+      const desc = this.add.text(210, y + 16, def.description, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#888888' });
+      const progress = this.add.text(210, y + 30, `${q.progress}/${q.target}`, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#88aaff' });
       container.add([title, desc, progress]);
       y += 52;
       container.add(this.add.rectangle(379, y - 8, 320, 1, 0x333344));

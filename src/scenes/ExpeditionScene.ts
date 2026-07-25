@@ -418,14 +418,14 @@ export class ExpeditionScene extends Phaser.Scene {
     this.add.rectangle(barX + barW / 2, barY + barH / 2, barW, barH, 0x222233).setStrokeStyle(1, 0x444455).setDepth(2);
     this.progressFill = this.add.rectangle(barX, barY + barH / 2, 4, barH - 4, 0x4488cc).setOrigin(0, 0.5).setDepth(2);
     this.progressText = this.add.text(CX, barY + barH / 2, '', {
-      fontSize: '11px', fontFamily: FONT_FAMILY, color: '#aaaaaa',
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: '#aaaaaa',
     }).setOrigin(0.5).setDepth(2);
 
     // Уровень проклятья зоны (endless, docs/content.zones.format.md) — по центру, под прогрессом.
     if (this.zoneCfg.endless) {
       const curseY = barY + barH + 14;
       this.curseText = this.add.text(CX, curseY, '', {
-        fontSize: '11px', fontFamily: FONT_FAMILY, color: '#cc88ff',
+        fontSize: '12px', fontFamily: FONT_FAMILY, color: '#cc88ff',
       }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: false });
       this.curseText.on('pointerover', () => {
         const pct = Math.round(this.zoneCfg.endless!.curse_per_fight * this.currentFightIdx);
@@ -504,7 +504,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.add.rectangle(hx, 310, 80, 10, 0x333333).setOrigin(0.5);
     this.heroHpFill = this.add.rectangle(hx - 40, 310, 80, 10, 0x44aa44).setOrigin(0, 0.5);
-    this.heroHpText = this.add.text(hx, 323, '', { fontSize: '11px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5);
+    this.heroHpText = this.add.text(hx, 323, '', { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5);
     // Барьер (docs/content.items.amulet.md) — тонкая полоска над HP-баром, видна только пока барьер жив.
     this.heroBarrierFill = this.add.rectangle(hx - 40, 302, 0, 4, 0x66ccff).setOrigin(0, 0.5);
 
@@ -1018,7 +1018,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.add.rectangle(CX, zCy, GAME_W, zH, 0x201510).setStrokeStyle(2, 0x6b4020);
     this.add.text(CX, 404, 'Экипировка · стойка', {
-      fontSize: '11px', fontFamily: FONT_FAMILY, color: '#a06030',
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: '#a06030',
     }).setOrigin(0.5, 0);
 
     this.add.image(CX, 600, zoneDecorKey('warrior')).setTint(0xa06030).setAlpha(0.16);

@@ -9,7 +9,7 @@ export function newBadge(
   scene: Phaser.Scene, x: number, y: number,
 ): Phaser.GameObjects.Container {
   const text = scene.add.text(0, 0, 'NEW', {
-    fontSize: '11px', fontFamily: FONT_FAMILY, color: '#1a1a2a',
+    fontSize: '12px', fontFamily: FONT_FAMILY, color: '#1a1a2a',
   }).setOrigin(0.5);
 
   const w = text.width + 10;
