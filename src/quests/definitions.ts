@@ -114,13 +114,13 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     id: 'collect_dead_fields_items',
     title: 'Собрать: Мёртвые поля',
     description: 'Вынесите из экспедиции все предметы этой области',
-    target: 4,
+    target: 5,
     rewards: [
       { type: 'unlock_area', areaId: 'mage-ruins' },
       { type: 'essence', tier: 'rare', amount: 4 },
     ],
     next: ['mage_ruins_clear', 'collect_mage_ruins_items'],
-    condition: { kind: 'zone_items', itemIds: ['short_spear', 'broadaxe', 'rapier', 'buckler'] },
+    condition: { kind: 'zone_items', itemIds: ['rapier', 'short_sword', 'dagger', 'leech_bead', 'desperate_plate'] },
     areas: ['dead-fields'],
   },
   mage_ruins_clear: {
@@ -137,13 +137,13 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     id: 'collect_mage_ruins_items',
     title: 'Собрать: Руины магов',
     description: 'Вынесите из экспедиции все предметы этой области',
-    target: 4,
+    target: 3,
     rewards: [
       { type: 'unlock_area', areaId: 'crypt' },
       { type: 'essence', tier: 'epic', amount: 4 },
     ],
     next: ['crypt_clear'],
-    condition: { kind: 'zone_items', itemIds: ['leech_bead', 'vulture_amulet', 'thread_charm', 'barrier_amulet'] },
+    condition: { kind: 'zone_items', itemIds: ['light_gloves', 'gleaming_plate', 'spiked_shield'] },
     areas: ['mage-ruins'],
   },
   crypt_clear: {
@@ -171,13 +171,13 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     id: 'collect_trampled_meadows_items',
     title: 'Собрать: Растоптанные луга',
     description: 'Вынесите из экспедиции все предметы этой области',
-    target: 3,
+    target: 4,
     rewards: [
       { type: 'unlock_area', areaId: 'beast-lair' },
       { type: 'essence', tier: 'rare', amount: 4 },
     ],
     next: ['beast_lair_clear', 'collect_beast_lair_items'],
-    condition: { kind: 'zone_items', itemIds: ['battle_staff', 'war_pick', 'spiked_shield'] },
+    condition: { kind: 'zone_items', itemIds: ['broadaxe', 'short_spear', 'vulture_amulet', 'thread_charm'] },
     areas: ['trampled-meadows'],
   },
   beast_lair_clear: {
@@ -200,7 +200,7 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
       { type: 'essence', tier: 'epic', amount: 4 },
     ],
     next: ['predator_pasture_clear'],
-    condition: { kind: 'zone_items', itemIds: ['heavy_gloves', 'light_gloves', 'comfortable_gloves'] },
+    condition: { kind: 'zone_items', itemIds: ['comfortable_gloves', 'spiked_cuirass', 'buckler'] },
     areas: ['beast-lair'],
   },
   predator_pasture_clear: {
@@ -234,7 +234,7 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
       { type: 'essence', tier: 'rare', amount: 4 },
     ],
     next: ['abandoned_camp_clear', 'collect_abandoned_camp_items'],
-    condition: { kind: 'zone_items', itemIds: ['short_sword', 'dagger', 'heavy_shield'] },
+    condition: { kind: 'zone_items', itemIds: ['battle_staff', 'war_pick', 'barrier_amulet'] },
     areas: ['armor-dump'],
   },
   abandoned_camp_clear: {
@@ -251,13 +251,13 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     id: 'collect_abandoned_camp_items',
     title: 'Собрать: Брошенный лагерь',
     description: 'Вынесите из экспедиции все предметы этой области',
-    target: 4,
+    target: 3,
     rewards: [
       { type: 'unlock_area', areaId: 'marauder-lair' },
       { type: 'essence', tier: 'epic', amount: 4 },
     ],
     next: ['marauder_lair_clear'],
-    condition: { kind: 'zone_items', itemIds: ['gleaming_plate', 'spiked_cuirass', 'desperate_plate', 'heavy_plate'] },
+    condition: { kind: 'zone_items', itemIds: ['heavy_gloves', 'heavy_plate', 'heavy_shield'] },
     areas: ['abandoned-camp'],
   },
   marauder_lair_clear: {
