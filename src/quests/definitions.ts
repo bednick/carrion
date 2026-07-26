@@ -24,11 +24,15 @@ export type StatCountKey =
  *   если id опущен) — в том числе задним числом при выдаче, если игрок выполнил его заранее;
  * - `zone_items` — засчитывается, когда для КАЖДОГО item_id из `itemIds` в
  *   `stats.items_carried_out[id] > 0` (предмет хоть раз вынесен в сундук). Квест с таким
- *   условием должен иметь `target === itemIds.length`, чтобы прогресс `N/M` был корректен.
+ *   условием должен иметь `target === itemIds.length`, чтобы прогресс `N/M` был корректен;
+ * - `battlefield_depth` — засчитывается, когда лучший забег в endless-зоне
+ *   (`meta.battlefield_best_depth`) дотянул до `depth`. Квест с таким условием должен иметь
+ *   `target === depth`, чтобы прогресс `N/M` был корректен.
  */
 export type QuestCondition =
   | { kind: 'stat'; stat: StatCountKey; id?: string; count?: number }
-  | { kind: 'zone_items'; itemIds: string[] };
+  | { kind: 'zone_items'; itemIds: string[] }
+  | { kind: 'battlefield_depth'; depth: number };
 
 export interface QuestDef {
   id: string;
@@ -268,5 +272,90 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     rewards: [{ type: 'essence', tier: 'epic', amount: 10 }], // конечная зона маршрута
     condition: { kind: 'stat', stat: 'zones_returned', id: 'marauder-lair' },
     areas: ['marauder-lair'],
+  },
+
+  // ── Поле битвы: цепочка на глубину забега ────────────────────────────
+  // Отдельная ветка, не входящая в маршрутные пары <zone>_clear / collect_<zone>_items:
+  // Поле битвы — endless-зона без босса и без лута, единственный её выхлоп — рекорд
+  // глубины. Эти пять квестов и есть награда за зону.
+  //
+  // Первый квест не выдаётся ничьим `next`: гейт Поля битвы — не квест, а
+  // completed_areas трёх финальных зон (MetaStore.isCenterUnlocked). Поэтому
+  // battlefield_survive_10 выдаётся из QuestSystem.grantBattlefieldChain, как только
+  // центр открылся; дальше цепочка идёт обычным `next`.
+  //
+  // Условие — battlefield_depth по meta.battlefield_best_depth (лучший забег, а не сумма
+  // боёв за все заходы). Рекорд пишется и при смерти, и при отступлении — см.
+  // ExpeditionScene.onHeroDeath / retreatToCamp.
+  //
+  // unlock_area в наградах нет: открывать после Поля битвы нечего.
+  battlefield_survive_10: {
+    id: 'battlefield_survive_10',
+    title: 'Поле битвы: 10 боёв',
+    description: 'Продержитесь 10 боёв за один забег',
+    target: 10,
+    rewards: [
+      { type: 'essence', tier: 'uncommon', amount: 50 },
+      { type: 'essence', tier: 'rare', amount: 50 },
+      { type: 'essence', tier: 'epic', amount: 50 },
+    ],
+    next: ['battlefield_survive_20'],
+    condition: { kind: 'battlefield_depth', depth: 10 },
+    areas: ['battlefield'],
+  },
+  battlefield_survive_20: {
+    id: 'battlefield_survive_20',
+    title: 'Поле битвы: 20 боёв',
+    description: 'Продержитесь 20 боёв за один забег',
+    target: 20,
+    rewards: [
+      { type: 'essence', tier: 'uncommon', amount: 50 },
+      { type: 'essence', tier: 'rare', amount: 50 },
+      { type: 'essence', tier: 'epic', amount: 50 },
+    ],
+    next: ['battlefield_survive_30'],
+    condition: { kind: 'battlefield_depth', depth: 20 },
+    areas: ['battlefield'],
+  },
+  battlefield_survive_30: {
+    id: 'battlefield_survive_30',
+    title: 'Поле битвы: 30 боёв',
+    description: 'Продержитесь 30 боёв за один забег',
+    target: 30,
+    rewards: [
+      { type: 'essence', tier: 'uncommon', amount: 50 },
+      { type: 'essence', tier: 'rare', amount: 50 },
+      { type: 'essence', tier: 'epic', amount: 50 },
+    ],
+    next: ['battlefield_survive_40'],
+    condition: { kind: 'battlefield_depth', depth: 30 },
+    areas: ['battlefield'],
+  },
+  battlefield_survive_40: {
+    id: 'battlefield_survive_40',
+    title: 'Поле битвы: 40 боёв',
+    description: 'Продержитесь 40 боёв за один забег',
+    target: 40,
+    rewards: [
+      { type: 'essence', tier: 'uncommon', amount: 50 },
+      { type: 'essence', tier: 'rare', amount: 50 },
+      { type: 'essence', tier: 'epic', amount: 50 },
+    ],
+    next: ['battlefield_survive_50'],
+    condition: { kind: 'battlefield_depth', depth: 40 },
+    areas: ['battlefield'],
+  },
+  battlefield_survive_50: {
+    id: 'battlefield_survive_50',
+    title: 'Поле битвы: 50 боёв',
+    description: 'Продержитесь 50 боёв за один забег',
+    target: 50,
+    rewards: [
+      { type: 'essence', tier: 'uncommon', amount: 50 },
+      { type: 'essence', tier: 'rare', amount: 50 },
+      { type: 'essence', tier: 'epic', amount: 50 },
+    ], // конец цепочки — дальше только рекорд ради рекорда
+    condition: { kind: 'battlefield_depth', depth: 50 },
+    areas: ['battlefield'],
   },
 };

@@ -4,7 +4,7 @@
   "description": "Поле разгона конницы. Взрытая земля, сломанные копья, полчища крыс.",
   "faction": "Конница — Дикие звери",
   "star": 1,
-  "fights": { "min": 5, "max": 7 },
+  "fights": { "min": 3, "max": 5 },
   "mob_pool": [
     { "mob_id": "rat", "weight": 80 },
     { "mob_id": "giant_rat", "weight": 20 }

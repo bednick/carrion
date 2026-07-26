@@ -25,8 +25,8 @@ export class PreloadScene extends Phaser.Scene {
     for (const [id, url] of Object.entries(REWARD_ICON_URLS)) {
       this.load.svg(rewardIconKey(id), url, { width: 72, height: 72 });
     }
-    this.load.svg(zoneDecorKey('warrior'), ZONE_DECOR_URLS.warrior, { width: 322, height: 386 });
-    this.load.svg(zoneDecorKey('backpack'), ZONE_DECOR_URLS.backpack, { width: 364, height: 400 });
+    this.load.svg(zoneDecorKey('warrior'), ZONE_DECOR_URLS.warrior, { width: 362, height: 400 });
+    this.load.svg(zoneDecorKey('backpack'), ZONE_DECOR_URLS.backpack, { width: 292, height: 400 });
     this.load.svg(zoneDecorKey('anvil'), ZONE_DECOR_URLS.anvil, { width: 432, height: 360 });
     this.load.svg(zoneDecorKey('belt'), ZONE_DECOR_URLS.belt, { width: 360, height: 104 });
     this.load.svg('hammer', 'hammer.svg', { width: 32, height: 32 });

@@ -10,7 +10,6 @@ import { sumMeta } from '../items/meta';
 import { spawnFloater } from '../ui/Floater';
 import { SoundManager } from '../core/SoundManager';
 import { Tooltip, RARITY_COLORS as RARITY_TEXT_COLORS } from '../ui/Tooltip';
-import { DragDropManager } from '../ui/DragDropManager';
 import type { CombatState, EnemyState, SummonPlan } from '../combat/types';
 import { BOARD_SLOTS, placementAnchor } from '../combat/types';
 import type { ItemInstance, SlotId } from '../core/MetaStore';
@@ -26,7 +25,7 @@ import { ESSENCE_TIERS } from '../items/craft';
 import { QuestTracker } from '../ui/QuestTracker';
 import { ResourceHUD } from '../ui/ResourceHUD';
 import { VolumeControl } from '../ui/VolumeControl';
-import { CX, DX, GAME_W, GAME_H, rightX } from '../ui/layout';
+import { CX, DX, GAME_W, GAME_H, rightX, panelScale } from '../ui/layout';
 import { makeRunSeed, rngFor, type Rng } from '../core/rng';
 
 // Боевая арена выверена в дизайновых 1280 (герой слева, 4 слота мобов справа) — её не пересобираем
@@ -166,13 +165,14 @@ export class ExpeditionScene extends Phaser.Scene {
   // скоростью боя). На событие SoundManager берёт случайный из walking.* вариантов.
   private walkStepTimer = 0;
   private readonly STEP_INTERVAL = 300;
+  // Модалка находки закрывается сама через это время; прогресс показан полоской на кнопке.
+  private readonly LOOT_AUTO_MS = 3000;
 
   // Экипировка героя — снимок выбранной стойки, только для просмотра (без drag).
   private equipment: Partial<Record<SlotId, ItemInstance>> = {};
-  // Лента лута: предмет въезжает справа и упирается в левый край, копясь в очередь. В сундук
-  // (carryOut) он уходит только когда лента забита и место под новый предмет освобождают слева.
-  private lootQueue: ItemInstance[] = [];
-  private beltItems: { item: ItemInstance; x: number; exiting: boolean; sprite: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Image }[] = [];
+  // Рюкзак похода: всё найденное копится здесь и неприменимо до возвращения в лагерь. При любом
+  // выходе из похода (победа/смерть/отступление) содержимое уезжает в сундук — см. dumpBackpackToChest.
+  private backpack: ItemInstance[] = [];
 
   private questTracker!: QuestTracker;
   private resourceHUD!: ResourceHUD;
@@ -209,24 +209,30 @@ export class ExpeditionScene extends Phaser.Scene {
   private enemyGraphics: (EnemyGraphic | null)[] = [];
 
   private equipSlotObjs: { bg: Phaser.GameObjects.Rectangle; icon: Phaser.GameObjects.Image }[] = [];
-  // «Рука» для экипировки прямо в походе: предмет берётся с ленты и кладётся в слот.
-  private dragDrop!: DragDropManager;
-  private equipRefreshPending = false;
+  // Ячейки сетки рюкзака (левая колонка нижней панели) — пересобираются на каждую находку.
+  private backpackCellObjs: Phaser.GameObjects.GameObject[] = [];
   // Табы смены стойки прямо в походе (1/2/3): выбор активной стойки на лету.
   private standTabs: { bg: Phaser.GameObjects.Rectangle; lbl: Phaser.GameObjects.Text }[] = [];
   private tooltip!: Tooltip;
   private statusText!: Phaser.GameObjects.Text;
   private victoryContainer!: Phaser.GameObjects.Container;
+  // Модалка находки открыта: поход стоит на паузе и ждёт кнопку «Продолжить поход». Пока она
+  // открыта, пауза не переключается (иначе рассинхрон с wasPaused) и отступление не открывается.
+  private lootModalOpen = false;
+  // Предметы, показанные в открытой модалке. В рюкзак они уже добавлены — список нужен только
+  // чтобы переоткрыть модалку после рестарта сцены под новый размер окна.
+  private pendingLoot: ItemInstance[] = [];
 
   constructor() {
     super({ key: 'ExpeditionScene' });
   }
 
-  // Кэрриовер при рестарте сцены без выхода из похода — только HP и визуал ленты
-  // (рюкзак/схрон/крафт убраны). Сейчас единственный такой рестарт — перекладка под новый
-  // размер окна, см. relayoutOnResize.
-  private carryoverBelt: ItemInstance[] = [];
-  private carryoverQueue: ItemInstance[] = [];
+  // Кэрриовер при рестарте сцены без выхода из похода — рюкзак и HP. Сейчас единственный
+  // такой рестарт — перекладка под новый размер окна, см. relayoutOnResize.
+  private carryoverBackpack: ItemInstance[] = [];
+  // Предметы открытой модалки находки: после рестарта её нужно показать снова, иначе поход
+  // «залипнет» — переход к следующему бою висит на кнопке «Продолжить поход».
+  private carryoverPendingLoot: ItemInstance[] = [];
   // Текущее здоровье героя переносится при рестарте (не восстанавливается).
   private carryoverHp: number | null = null;
   // План боёв и номер текущего боя — иначе generateFightPlan заново бросит кубик на длину зоны.
@@ -242,7 +248,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   init(data: {
     zoneId: string; standIndex?: number; speedMult?: number;
-    carryoverBelt?: ItemInstance[]; carryoverQueue?: ItemInstance[]; carryoverHp?: number;
+    carryoverBackpack?: ItemInstance[]; carryoverPendingLoot?: ItemInstance[]; carryoverHp?: number;
     carryoverPlan?: ('mob' | 'boss')[]; carryoverFightIdx?: number; resumed?: boolean;
     seed?: string;
   }) {
@@ -252,8 +258,8 @@ export class ExpeditionScene extends Phaser.Scene {
     // Свежий поход стартует с ускорением прошлого забега; на переходе между зонами
     // приходит явный speedMult (carryover) и имеет приоритет.
     this.speedMult = data.speedMult ?? MetaStore.getRunSpeed();
-    this.carryoverBelt = data.carryoverBelt ?? [];
-    this.carryoverQueue = data.carryoverQueue ?? [];
+    this.carryoverBackpack = data.carryoverBackpack ?? [];
+    this.carryoverPendingLoot = data.carryoverPendingLoot ?? [];
     this.carryoverHp = data.carryoverHp ?? null;
     this.carryoverPlan = data.carryoverPlan ?? null;
     this.carryoverFightIdx = data.carryoverFightIdx ?? null;
@@ -264,7 +270,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   /**
    * Ресайз окна (чаще всего F11) сменил ширину холста — пересобираем сцену под новую раскладку,
-   * не выбрасывая игрока из похода. Переживают рестарт: лут на ленте и в очереди, HP героя,
+   * не выбрасывая игрока из похода. Переживают рестарт: рюкзак, открытая модалка находки, HP героя,
    * скорость, стойка, длина зоны, номер боя и сид. Текущий бой начинается заново, но противник,
    * его лут и фон зоны те же — они выводятся из сида (src/core/rng.ts), рероллить их нельзя.
    */
@@ -273,8 +279,8 @@ export class ExpeditionScene extends Phaser.Scene {
       zoneId: this.zoneId,
       standIndex: this.standIndex,
       speedMult: this.speedMult,
-      carryoverBelt: this.beltItems.map(o => o.item),
-      carryoverQueue: [...this.lootQueue],
+      carryoverBackpack: [...this.backpack],
+      carryoverPendingLoot: [...this.pendingLoot],
       carryoverHp: this.engine?.state.hero.hp,
       carryoverPlan: this.fightPlan,
       carryoverFightIdx: this.currentFightIdx,
@@ -288,10 +294,11 @@ export class ExpeditionScene extends Phaser.Scene {
     this.isWalking = false;
     this.walkTimer = 0;
     this.walkStepTimer = 0;
-    this.beltItems = [];
-    this.lootQueue = [];
+    this.backpack = [];
+    this.pendingLoot = [];
+    this.lootModalOpen = false;
+    this.backpackCellObjs = [];
     this.equipSlotObjs = [];
-    this.equipRefreshPending = false;
     this.standTabs = [];
     this.heroAtkBars = [];
     this.enemyGraphics = [];
@@ -322,9 +329,11 @@ export class ExpeditionScene extends Phaser.Scene {
       this.anims.resumeAll();
       EventBus.off('quest_completed', this.onQuestCompleted, this);
       this.resourceHUD.destroy();
-      this.dragDrop?.destroy();
     });
-    this.input.keyboard!.on('keydown-SPACE', () => { if (this.isPaused) this.resume(); else this.pause(); });
+    this.input.keyboard!.on('keydown-SPACE', () => {
+      if (this.lootModalOpen) return; // модалка находки держит свою паузу
+      if (this.isPaused) this.resume(); else this.pause();
+    });
     const speeds = [1, 2, 4];
     ['ONE', 'TWO', 'THREE'].forEach((key, i) => {
       this.input.keyboard!.on(`keydown-${key}`, () => {
@@ -334,8 +343,6 @@ export class ExpeditionScene extends Phaser.Scene {
         this.speedBtns.forEach((b, idx) => b.setFillStyle(idx === i ? 0x2244aa : 0x222233));
       });
     });
-    this.dragDrop = new DragDropManager(this);
-    this.setupHandInput();
     this.initEquipmentFromStand();
     this.generateFightPlan();
     this.buildUI();
@@ -343,11 +350,19 @@ export class ExpeditionScene extends Phaser.Scene {
     this.resourceHUD = new ResourceHUD(this, this.tooltip);
     this.questTracker = new QuestTracker(this);
     EventBus.on('quest_completed', this.onQuestCompleted, this);
-    // Перенос ленты при рестарте (только визуал — предметы всё равно уйдут в сундук).
-    for (const item of this.carryoverBelt) this.addToBelt(item);
-    for (const item of this.carryoverQueue) this.lootQueue.push(item);
-    this.carryoverBelt = [];
-    this.carryoverQueue = [];
+    // Перенос рюкзака при рестарте под новый размер окна.
+    this.backpack = [...this.carryoverBackpack];
+    this.carryoverBackpack = [];
+    this.refreshBackpackGrid();
+
+    // Рестарт застал открытую модалку находки: бой уже закончен и его индекс инкрементирован,
+    // следующий шаг похода висит на кнопке модалки — показываем её снова вместо старта боя.
+    if (this.carryoverPendingLoot.length > 0) {
+      const loot = this.carryoverPendingLoot;
+      this.carryoverPendingLoot = [];
+      this.showLootModal(loot);
+      return;
+    }
     this.startNextFight();
   }
 
@@ -399,7 +414,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.tooltip = new Tooltip(this);
     this.buildProgressBar();
     this.buildBattleArea();
-    this.buildLootBelt();
     this.buildBottomPanel();
     this.buildSpeedControls();
     this.buildStatusText();
@@ -460,8 +474,7 @@ export class ExpeditionScene extends Phaser.Scene {
     } else {
       this.add.rectangle(CX, 200, GAME_W, 320, 0x8899aa).setDepth(-3);
     }
-    this.add.line(0, 360, 0, 360, GAME_W, 360, 0x333355).setOrigin(0);
-
+    // Дно арены = верх нижней панели (PANEL_TOP): своя линия не нужна, границу рисует рамка панели.
     const hx = heroX();
     // Двухслойная тень героя — та же схема, что у мобов (см. addEnemyGraphic). Ширина от HERO_W=100.
     const heroShW = 100 * 0.8;
@@ -529,9 +542,10 @@ export class ExpeditionScene extends Phaser.Scene {
     far:  { cy: 148, h: 216, depth: -3, scroll: 0.20 },
     mid:  { cy: 210, h: 150, depth: -2, scroll: 0.50 },
     near: { cy: 308, h: 104, depth: -1, scroll: 1.00, scale: 0.36 },
-    // низ fore = 271+75 = 346: на 2px заходит за верх ленты (344), чтобы не было зазора с near;
-    // иконки лута начинаются ниже (y≈348), так что перекрытие невидимо.
-    fore: { cy: 271, h: 150, depth:  8, scroll: 1.50 },
+    // Низ fore = 285+75 = 360 = дно арены (PANEL_TOP, литерал — статик-поле объявлено ниже и на этот
+    // момент ещё не инициализировано). Это же значение — «линия земли» для scatter-силуэтов
+    // (buildScatterLayer: groundY = cy + h/2), поэтому они стоят на полу, а не висят над панелью.
+    fore: { cy: 285, h: 150, depth:  8, scroll: 1.50 },
   };
 
   // Пер-зональный оверрайд скорости параллакса слоёв (по умолчанию берётся scroll из LAYER_RENDER).
@@ -941,112 +955,147 @@ export class ExpeditionScene extends Phaser.Scene {
     }
   }
 
-  private buildLootBelt() {
-    const beltY = 370;
-    this.add.rectangle(CX, beltY, GAME_W, 52, 0x0a0a18).setStrokeStyle(1, 0x333355);
-    this.add.text(10, beltY, 'ЛЕНТА', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#333355' }).setOrigin(0, 0.5);
-  }
+  // Нижняя панель боя: три колонки — рюкзак | экипировка·стойки | резерв (пока пустая).
+  // Верх панели = дно арены (линия y=360, низ слоя near), низ — край экрана.
+  private static readonly PANEL_TOP = 360;
+  private static readonly PANEL_HEADER_Y = 366;
 
-  // Лента-очередь: предмет въезжает справа, упирается в левый край и копится. Уходит в сундук
-  // (carryOut) только при переполнении — когда под новый предмет не хватает места. Ни клика, ни drag.
-  private readonly BELT_SPACING = 56;
-  private readonly BELT_LEFT_X = 40;      // центр крайнего левого (упорного) предмета
-  // Правый край зависит от ширины холста, а та пересчитывается при ресайзе окна (src/ui/layout.ts).
-  // Поля экземпляра инициализировались бы один раз при создании сцены (restart их не пересоздаёт),
-  // поэтому — геттеры, считающие значение на каждое обращение.
-  private get BELT_ENTRY_X(): number { return rightX(40); }        // точка въезда справа
-  /** Сколько предметов помещается от левого упора до точки въезда (не считая уезжающих). */
-  private get BELT_CAPACITY(): number {
-    return Math.floor((this.BELT_ENTRY_X - this.BELT_LEFT_X) / this.BELT_SPACING) + 1;
-  }
-
-  private addToBelt(item: ItemInstance) {
-    const beltY = 370;
-    // Новый предмет встаёт правее самого правого — конвейер сам подтащит его к очереди.
-    const rightmost = this.beltItems.reduce((m, o) => Math.max(m, o.x), this.BELT_ENTRY_X - this.BELT_SPACING);
-    const x = Math.max(this.BELT_ENTRY_X, rightmost + this.BELT_SPACING);
-
-    const sprite = this.add.rectangle(x, beltY, 48, 44, 0x2a2a3a)
-      .setStrokeStyle(2, RARITY_COLORS[item.rarity])
-      .setInteractive({ useHandCursor: false });
-    const label = this.add.image(x, beltY, itemIconKey(item.item_id))
-      .setDisplaySize(36, 36)
-      .setDepth(3);
-
-    this.beltItems.push({ item, x, exiting: false, sprite, label });
-
-    // Наведение показывает предмет — единственное разрешённое взаимодействие с лентой.
-    sprite.on('pointerover', () => this.tooltip.showItem(item, sprite.x - 100, beltY - 80));
-    sprite.on('pointerout', () => this.tooltip.hide());
-  }
-
-  private tickBelt(dt: number) {
-    if (this.beltItems.length === 0) return;
-    const speed = 200 * (dt / 1000);
-
-    // Переполнение: всё, что не влезает в BELT_CAPACITY, помечаем «уезжающим» — только эти
-    // предметы едут за левый край и уходят в сундук. Уезжающие всегда слева (старейшие).
-    const overflow = this.beltItems.filter(o => !o.exiting).length - this.BELT_CAPACITY;
-    if (overflow > 0) {
-      let flagged = 0;
-      for (const o of this.beltItems) {
-        if (flagged >= overflow) break;
-        if (!o.exiting) { o.exiting = true; flagged++; }
-      }
-    }
-
-    const survivors: typeof this.beltItems = [];
-    let slot = 0; // packed-позиция среди не-уезжающих, слева направо
-    for (const obj of this.beltItems) {
-      const targetX = obj.exiting ? -60 : this.BELT_LEFT_X + slot * this.BELT_SPACING;
-      if (!obj.exiting) slot++;
-      // Двигаем только влево к цели — предметы въезжают справа и не откатываются назад.
-      if (obj.x > targetX) obj.x = Math.max(targetX, obj.x - speed);
-
-      if (obj.exiting && obj.x <= 30) {
-        this.carryOut(obj.item);
-        obj.sprite.destroy();
-        obj.label.destroy();
-        continue;
-      }
-      obj.sprite.setX(obj.x);
-      obj.label.setX(obj.x);
-      survivors.push(obj);
-    }
-    this.beltItems = survivors;
+  /** Границы колонки i (0..2) по живой ширине холста. */
+  private panelColumn(i: number): { left: number; right: number; cx: number } {
+    const w = GAME_W / 3;
+    const left = i * w;
+    return { left, right: left + w, cx: left + w / 2 };
   }
 
   private buildBottomPanel() {
-    // Панель занимает всё под лентой (beltY=370, низ=396) до низа экрана (800).
-    // Осталась только экипировка (просмотр стойки) — рюкзак/схрон/крафт убраны.
-    const zCy = 598;
-    const zH  = 404;
+    const TOP = ExpeditionScene.PANEL_TOP;
+    const zH  = GAME_H - TOP;
+    const zCy = TOP + zH / 2;
 
     this.add.rectangle(CX, zCy, GAME_W, zH, 0x201510).setStrokeStyle(2, 0x6b4020);
-    this.add.text(CX, 404, 'Экипировка · стойка', {
+
+    // Разделители колонок.
+    for (const i of [1, 2]) {
+      const x = this.panelColumn(i).left;
+      this.add.line(0, 0, x, TOP + 12, x, GAME_H - 10, 0x6b4020).setOrigin(0).setAlpha(0.6);
+    }
+
+    const header = (cx: number, text: string) => this.add.text(cx, ExpeditionScene.PANEL_HEADER_Y, text, {
       fontSize: '12px', fontFamily: FONT_FAMILY, color: '#a06030',
     }).setOrigin(0.5, 0);
 
+    header(this.panelColumn(0).cx, 'Рюкзак');
+    header(CX, 'Экипировка');
+    // Правая колонка зарезервирована — содержимого пока нет.
+
+    this.add.image(this.panelColumn(0).cx, 600, zoneDecorKey('backpack')).setTint(0xa06030).setAlpha(0.16);
     this.add.image(CX, 600, zoneDecorKey('warrior')).setTint(0xa06030).setAlpha(0.16);
 
     this.buildStandTabs(CX, 434);
     this.buildEquipSlots();
+    this.buildBackpackGrid();
+  }
+
+  // ─── Рюкзак (левая колонка нижней панели) ────────────────────────────
+
+  // Ячейка/зазор — те же 52/6, что в сундуке лагеря, помноженные на масштаб панели НПС: предмет
+  // должен быть одного размера в лагере и в бою. Геттеры, а не поля: panelScale() зависит от живой
+  // GAME_W и протухает после ресайза (см. docs/ui.md).
+  private get BACKPACK_CELL() { return Math.round(52 * panelScale()); }
+  private get BACKPACK_GAP() { return Math.round(6 * panelScale()); }
+  private readonly BACKPACK_COLS = 3;
+  private readonly BACKPACK_MIN_ROWS = 3;
+
+  /**
+   * Геометрия сетки: 3 колонки, минимум 3 строки, новые строки дорисовываются снизу по мере
+   * наполнения рюкзака. Блок центрируется в зоне рюкзака по обеим осям (координаты — от живых
+   * GAME_W/GAME_H, после ресайза колонка меняет ширину). Строки ограничены высотой колонки:
+   * что не влезло — уходит в счётчик «+N» последней ячейки.
+   */
+  private backpackGridGeom() {
+    const col = this.panelColumn(0);
+    const step = this.BACKPACK_CELL + this.BACKPACK_GAP;
+    const top = ExpeditionScene.PANEL_HEADER_Y + 24;
+    const bottom = GAME_H - 14;
+
+    const cols = this.BACKPACK_COLS;
+    const maxRows = Math.max(1, Math.floor((bottom - top + this.BACKPACK_GAP) / step));
+    const needRows = Math.ceil(this.backpack.length / cols);
+    const rows = Math.min(maxRows, Math.max(this.BACKPACK_MIN_ROWS, needRows));
+
+    const gridW = cols * step - this.BACKPACK_GAP;
+    const gridH = rows * step - this.BACKPACK_GAP;
+    return {
+      cols, rows, step,
+      startX: col.cx - gridW / 2 + this.BACKPACK_CELL / 2,
+      startY: top + (bottom - top - gridH) / 2 + this.BACKPACK_CELL / 2,
+    };
+  }
+
+  private buildBackpackGrid() {
+    const { cols, rows, step, startX, startY } = this.backpackGridGeom();
+    const SIZE = this.BACKPACK_CELL;
+    const capacity = cols * rows;
+    // Рюкзак безлимитен, а сетка конечна: последняя ячейка при переполнении показывает «+N».
+    const overflow = Math.max(0, this.backpack.length - capacity);
+
+    for (let i = 0; i < capacity; i++) {
+      const x = startX + (i % cols) * step;
+      const y = startY + Math.floor(i / cols) * step;
+      const isOverflowCell = overflow > 0 && i === capacity - 1;
+      const item = isOverflowCell ? undefined : this.backpack[i];
+
+      const bg = this.add.rectangle(x, y, SIZE, SIZE, 0x1a1a2a)
+        .setStrokeStyle(1, item ? RARITY_COLORS[item.rarity] : 0x333344);
+      this.backpackCellObjs.push(bg);
+
+      if (isOverflowCell) {
+        this.backpackCellObjs.push(this.add.text(x, y, `+${overflow + 1}`, {
+          fontSize: '14px', fontFamily: FONT_FAMILY, color: '#a06030',
+        }).setOrigin(0.5));
+        continue;
+      }
+      if (!item) continue;
+
+      const iconSize = Math.round(38 * panelScale()); // как в сундуке лагеря
+      this.backpackCellObjs.push(this.add.image(x, y, itemIconKey(item.item_id)).setDisplaySize(iconSize, iconSize));
+      // Единственное взаимодействие — наведение: в походе предмет применить нельзя.
+      bg.setInteractive({ useHandCursor: false });
+      bg.on('pointerover', () => this.tooltip.showItem(item, x + SIZE, y - 40));
+      bg.on('pointerout', () => this.tooltip.hide());
+    }
+  }
+
+  private refreshBackpackGrid() {
+    for (const o of this.backpackCellObjs) o.destroy();
+    this.backpackCellObjs = [];
+    this.buildBackpackGrid();
+  }
+
+  /** Находка уходит в рюкзак: применить её можно только вернувшись в лагерь. */
+  private addToBackpack(item: ItemInstance) {
+    this.backpack.push(item);
+    EventBus.emit('item_in_backpack', item.item_id);
+    this.refreshBackpackGrid();
   }
 
   // Табы смены активной стойки в походе (1/2/3). Клик — мгновенная замена снаряжения:
   // this.equipment пересобирается, а в идущем бою — и герой (HP переносится).
   private buildStandTabs(cx: number, y: number) {
     this.standTabs = [];
-    const W = 40, H = 22, GAP = 6;
-    const total = ARMOR_STAND_COUNT * W + (ARMOR_STAND_COUNT - 1) * GAP;
-    const startX = cx - total / 2 + W / 2;
+    // Ширина таба = ширине ячейки экипировки, шаг = шагу колонок креста (|dx| = 54 в ANATOMY):
+    // при трёх стойках табы встают ровно над колонками ring/head/amulet.
+    const S = panelScale();
+    const W = Math.round(48 * S), H = Math.round(22 * S);
+    const step = 54 * S;
+    const startX = cx - ((ARMOR_STAND_COUNT - 1) / 2) * step;
     for (let i = 0; i < ARMOR_STAND_COUNT; i++) {
-      const x = startX + i * (W + GAP);
+      const x = startX + i * step;
       const bg = this.add.rectangle(x, y, W, H, 0x222233)
         .setStrokeStyle(1, 0x444455)
         .setInteractive({ useHandCursor: true });
       const lbl = this.add.text(x, y, `${i + 1}`, {
-        fontSize: '10px', fontFamily: FONT_FAMILY, color: '#8899aa',
+        fontSize: `${Math.round(10 * S)}px`, fontFamily: FONT_FAMILY, color: '#8899aa',
       }).setOrigin(0.5);
       bg.on('pointerover', () => { if (i !== this.standIndex) bg.setFillStyle(0x2a2a3a); });
       bg.on('pointerout',  () => { if (i !== this.standIndex) bg.setFillStyle(0x222233); });
@@ -1092,18 +1141,24 @@ export class ExpeditionScene extends Phaser.Scene {
     // Крестовая раскладка вокруг портрета (см. docs/art-spec.md): ring/head/amulet сверху,
     // hand_left/body/hand_right в центре, legs снизу.
     const cx = CX;
-    const originY = 518;
-    const SIZE = 48;
+    // Раскладка и размер ячейки дублируют стойку лагеря (CampScene.buildArmorStands), включая
+    // масштаб панели НПС — иначе один и тот же слот в бою выглядел бы мельче, чем в лагере.
+    const S = panelScale();
+    const SIZE = Math.round(48 * S);
 
     const ANATOMY: Record<SlotId, { dx: number; dy: number }> = {
-      ring:        { dx: -54, dy:  28 },
-      head:        { dx:   0, dy:   0 },
-      amulet:      { dx:  54, dy:  28 },
-      hand_left:   { dx: -54, dy:  84 },
-      body:        { dx:   0, dy:  56 },
-      hand_right:  { dx:  54, dy:  84 },
-      legs:        { dx:   0, dy: 112 },
+      ring:        { dx: -54 * S, dy:  28 * S },
+      head:        { dx:   0,     dy:   0 },
+      amulet:      { dx:  54 * S, dy:  28 * S },
+      hand_left:   { dx: -54 * S, dy:  84 * S },
+      body:        { dx:   0,     dy:  56 * S },
+      hand_right:  { dx:  54 * S, dy:  84 * S },
+      legs:        { dx:   0,     dy: 112 * S },
     };
+
+    // Центр креста (body) выравниваем по центру сетки рюкзака — обе колонки читаются как одна линия.
+    const { rows, step, startY } = this.backpackGridGeom();
+    const originY = startY + ((rows - 1) / 2) * step - ANATOMY.body.dy;
 
     for (const slotId of EQUIP_SLOTS) {
       const { dx, dy } = ANATOMY[slotId];
@@ -1115,8 +1170,9 @@ export class ExpeditionScene extends Phaser.Scene {
         .setStrokeStyle(1, item ? RARITY_COLORS[item.rarity] : 0x333344)
         .setInteractive({ useHandCursor: false });
 
+      const iconSize = Math.round((item ? 38 : 36) * S);
       const icon = this.add.image(x, y, item ? itemIconKey(item.item_id) : slotSilhouetteKey(slotId))
-        .setDisplaySize(36, 36)
+        .setDisplaySize(iconSize, iconSize)
         .setAlpha(item ? 1 : 0.35)
         .setDepth(4);
 
@@ -1127,73 +1183,8 @@ export class ExpeditionScene extends Phaser.Scene {
       });
       bg.on('pointerout', () => this.tooltip.hide());
 
-      // Слот-цель для «руки»: предмет с ленты можно надеть, снятый — уходит обратно в руку.
-      this.dragDrop.registerSlot({
-        id: `equip:${slotId}`,
-        slotType: slotId as SlotType,
-        placeable: true,
-        rect: new Phaser.Geom.Rectangle(x - SIZE / 2, y - SIZE / 2, SIZE, SIZE),
-        item: item ?? null,
-        onRemove: () => { const it = this.equipment[slotId] ?? null; this.setEquip(slotId, undefined); return it; },
-        onAccept: (it) => { this.setEquip(slotId, it); EventBus.emit('item_equipped'); },
-      });
-
       this.equipSlotObjs.push({ bg, icon });
     }
-  }
-
-  // ─── Экипировка «в руке» прямо в походе ──────────────────────────────
-
-  // Клик по ленте берёт предмет в руку; клик по слоту надевает; клик мимо — возврат на ленту.
-  private setupHandInput() {
-    this.input.on('pointerup', (ptr: Phaser.Input.Pointer) => {
-      if (this.dragDrop.isHolding()) {
-        const target = this.dragDrop.findPlaceableAt(ptr.x, ptr.y);
-        if (target) {
-          if (this.dragDrop.placeAt(target.id) === 'rejected') this.showStatus('Не тот слот', 800);
-        } else {
-          const held = this.dragDrop.dropHeld();
-          if (held) this.addToBelt(held); // мимо слота — предмет возвращается на ленту
-        }
-        return;
-      }
-      // Свободная рука: клик по предмету на ленте берёт его.
-      const belt = this.beltItemAt(ptr.x, ptr.y);
-      if (belt) {
-        this.removeBeltItem(belt);
-        this.tooltip.hide();
-        this.dragDrop.holdItem(belt.item, 'belt');
-      }
-    });
-  }
-
-  private beltItemAt(x: number, y: number) {
-    return this.beltItems.find(o => !o.exiting
-      && Math.abs(x - o.x) <= 24 && Math.abs(y - 370) <= 22);
-  }
-
-  private removeBeltItem(obj: ExpeditionScene['beltItems'][number]) {
-    obj.sprite.destroy();
-    obj.label.destroy();
-    this.beltItems = this.beltItems.filter(o => o !== obj);
-  }
-
-  // Надеть/снять предмет: обновляем снимок, стойку в мете (персист) и — в идущем бою — героя.
-  private setEquip(slotId: SlotId, item: ItemInstance | undefined) {
-    this.equipment[slotId] = item;
-    MetaStore.setArmorStandSlot(this.standIndex, slotId, item ?? null);
-    this.scheduleEquipRefresh();
-  }
-
-  // Перестроение слотов ломает объекты, из которых нас позвали (onAccept/onRemove) — откладываем.
-  private scheduleEquipRefresh() {
-    if (this.equipRefreshPending) return;
-    this.equipRefreshPending = true;
-    this.time.delayedCall(0, () => {
-      this.equipRefreshPending = false;
-      this.refreshEquipSlots();
-      this.applyEquipToHero();
-    });
   }
 
   // Пересобирает героя из текущего снаряжения (для идущего боя), сохраняя абсолютный HP.
@@ -1230,7 +1221,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.pauseIcon = this.add.text(centers[0], rowY, '⏸', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaaacc' }).setOrigin(0.5);
     this.pauseBtn.on('pointerover', () => { if (!this.isPaused) this.pauseBtn!.setFillStyle(0x2a2a44); });
     this.pauseBtn.on('pointerout',  () => { if (!this.isPaused) this.pauseBtn!.setFillStyle(0x222233); });
-    this.pauseBtn.on('pointerdown', () => { if (this.isPaused) this.resume(); else this.pause(); });
+    this.pauseBtn.on('pointerdown', () => {
+      if (this.lootModalOpen) return; // модалка находки держит свою паузу
+      if (this.isPaused) this.resume(); else this.pause();
+    });
 
     // ×1 ×2 ×4
     const speeds = [1, 2, 4];
@@ -1272,9 +1266,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.curseText.setText(`Проклятие: ${pct}%`);
   }
 
-  // Подтверждение отступления: лут с ленты сохраняется, зона НЕ засчитывается.
+  // Подтверждение отступления: рюкзак сохраняется, зона НЕ засчитывается.
   private confirmRetreat() {
-    if (this.retreatDialogOpen) return;
+    if (this.retreatDialogOpen || this.lootModalOpen) return;
     this.retreatDialogOpen = true;
     // Если игрок уже сам поставил игру на паузу до клика — не снимаем её при отмене диалога.
     const wasPaused = this.isPaused;
@@ -1285,7 +1279,11 @@ export class ExpeditionScene extends Phaser.Scene {
     const title = this.add.text(CX, 340, 'Вернуться в лагерь?', {
       fontSize: '20px', fontFamily: FONT_FAMILY, color: '#ffcc88',
     }).setOrigin(0.5);
-    const sub = this.add.text(CX, 378, 'Собранный лут сохранится.\nЗона не будет зачтена.', {
+    // В endless-зоне «зачёта зоны» не существует — вместо него игроку важен рекорд глубины.
+    const subText = this.zoneCfg.endless
+      ? 'Собранный лут сохранится.\nРекорд глубины засчитается.'
+      : 'Собранный лут сохранится.\nЗона не будет зачтена.';
+    const sub = this.add.text(CX, 378, subText, {
       fontSize: '14px', fontFamily: FONT_FAMILY, color: '#bbbbbb', align: 'center',
     }).setOrigin(0.5);
 
@@ -1311,9 +1309,13 @@ export class ExpeditionScene extends Phaser.Scene {
     c.add([overlay, box, title, sub, yesBtn, yesLbl, noBtn, noLbl]);
   }
 
-  // Отступление: лут с ленты уходит в сундук, зона не засчитывается, возврат в лагерь.
+  // Отступление: рюкзак уходит в сундук, зона не засчитывается, возврат в лагерь.
   private retreatToCamp() {
-    this.collectBeltToChest();
+    this.dumpBackpackToChest();
+    // Endless-зона: отступление — легитимный конец забега (docs/zones/battlefield.md),
+    // рекорд глубины пишется так же, как при смерти, иначе уход на 40 бою оставил бы 0
+    // и не двинул бы квесты battlefield_survive_N.
+    if (this.zoneCfg.endless) MetaStore.recordBattlefieldDepth(this.currentFightIdx);
     this.scene.start('CampScene');
   }
 
@@ -1521,14 +1523,16 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const magicFind = sumMeta(this.equipment).magicFind;
 
+    let found: ItemInstance[] = [];
     if (fightType === 'mob') {
       if (this.zoneCfg.mob_loot) {
         // Индекс инкрементится ниже, уже после начисления — «бой N» и «лут боя N» согласованы.
         const loot = rollLootTable(this.zoneCfg.mob_loot, magicFind, rngFor(this.runSeed, 'loot', this.currentFightIdx));
         for (const item of loot.items) {
           MetaStore.recordItemDiscovered(item.item_id);
-          this.addToBelt(item);
+          this.addToBackpack(item);
         }
+        found = loot.items;
       }
     } else {
       // Босс НЕ даёт лут автоматически: награда за него — только выбранная карточка драфта
@@ -1542,12 +1546,108 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateProgressBar();
     this.updateCurseReadout();
 
+    // Находка ставит поход на паузу: дальше двинемся только по кнопке модалки.
+    if (found.length > 0) this.showLootModal(found);
+    else this.proceedAfterFight();
+  }
+
+  /** Следующий шаг похода после боя: ходьба к следующему врагу или финал зоны. */
+  private proceedAfterFight() {
     if (this.zoneCfg.endless) {
       this.scheduleDelayed(800, () => this.startWalking());
     } else if (this.currentFightIdx >= this.fightPlan.length) {
       this.scheduleDelayed(1000, () => this.onExpeditionComplete());
     } else {
       this.scheduleDelayed(800, () => this.startWalking());
+    }
+  }
+
+  // Модалка находки: показывает выпавшие предметы (они уже в рюкзаке) и держит поход на паузе,
+  // пока игрок не нажмёт «Продолжить поход». Карточки не кликабельны — надеть в походе нельзя.
+  private showLootModal(items: ItemInstance[]) {
+    this.pendingLoot = items;
+    this.lootModalOpen = true;
+    // Если игрок уже сам поставил игру на паузу до находки — не снимаем её кнопкой модалки.
+    const wasPaused = this.isPaused;
+    if (!wasPaused) this.pause();
+
+    const c = this.add.container(0, 0).setDepth(200);
+    const overlay = this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0.75).setInteractive();
+    const title = this.add.text(CX, 96, items.length > 1 ? 'Добыча' : 'Найден предмет', {
+      fontSize: '26px', fontFamily: FONT_FAMILY, color: '#ffdd44',
+    }).setOrigin(0.5);
+    c.add([overlay, title]);
+
+    // Геометрия карточек — та же, что у драфта награды (showRewardDraft).
+    const CARD_W = 150, CARD_H = 170, GAP = 24;
+    const total = items.length * CARD_W + (items.length - 1) * GAP;
+    const startX = CX - total / 2 + CARD_W / 2;
+    const cardY = 250;
+    const carriedOut = MetaStore.get().stats.items_carried_out;
+
+    items.forEach((item, i) => {
+      const x = startX + i * (CARD_W + GAP);
+      const card = this.add.rectangle(x, cardY, CARD_W, CARD_H, 0x1a1a2a)
+        .setStrokeStyle(2, RARITY_COLORS[item.rarity])
+        .setInteractive({ useHandCursor: false });
+      c.add(card);
+      c.add(this.add.image(x, cardY - 28, itemIconKey(item.item_id)).setDisplaySize(72, 72));
+      c.add(this.add.text(x, cardY + 34, getItemBehavior(item.item_id).name, {
+        fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
+        align: 'center', wordWrap: { width: CARD_W - 16 },
+      }).setOrigin(0.5, 0));
+      // Значок последним в карточке — рисуется поверх иконки и названия.
+      if (!carriedOut[item.item_id]) c.add(newBadge(this, x + CARD_W / 2 - 8, cardY - CARD_H / 2 + 6));
+
+      card.on('pointerover', () => this.tooltip.showItem(item, x + CARD_W / 2 + 8, cardY - CARD_H / 2));
+      card.on('pointerout',  () => this.tooltip.hide());
+    });
+
+    const hint = this.add.text(CX, cardY + CARD_H / 2 + 24, 'В рюкзаке — надеть можно только в лагере', {
+      fontSize: '13px', fontFamily: FONT_FAMILY, color: '#999999',
+    }).setOrigin(0.5);
+    const btnY = cardY + CARD_H / 2 + 66;
+    const BTN_W = 240, BTN_H = 44;
+    const btn = this.add.rectangle(CX, btnY, BTN_W, BTN_H, 0x222233).setStrokeStyle(1, 0x445588)
+      .setInteractive({ useHandCursor: true });
+    const btnLbl = this.add.text(CX, btnY, 'Продолжить поход', {
+      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#aaccff',
+    }).setOrigin(0.5);
+    btn.on('pointerover', () => btn.setFillStyle(0x2a2a44));
+    btn.on('pointerout',  () => btn.setFillStyle(0x222233));
+
+    // Закрытие зовут и клик, и автонажатие по заполнении полоски — closed страхует от двойного
+    // proceedAfterFight(), если клик и конец твина совпадут в одном кадре.
+    let closed = false;
+    let timerTween: Phaser.Tweens.Tween | null = null;
+    const closeModal = () => {
+      if (closed) return;
+      closed = true;
+      timerTween?.stop();
+      this.tooltip.hide();
+      c.destroy();
+      this.lootModalOpen = false;
+      this.pendingLoot = [];
+      if (!wasPaused) this.resume();
+      this.proceedAfterFight();
+    };
+    btn.on('pointerdown', closeModal);
+
+    if (wasPaused) {
+      // Игрок сам поставил игру на паузу до находки — не перебиваем её автонажатием, ждём клик.
+      c.add([hint, btn, btnLbl]);
+    } else {
+      // Полоска автонажатия: слой поверх кнопки, растёт слева направо (origin по левому краю,
+      // твин scaleX). Не интерактивна — клики по кнопке проходят сквозь неё. Именно твин, а не
+      // this.time/scheduleDelayed: на паузе часы сцены стоят, а update() выходит по isPaused.
+      const fill = this.add.rectangle(CX - BTN_W / 2, btnY, BTN_W, BTN_H, 0xaaccff, 0.22)
+        .setOrigin(0, 0.5)
+        .setScale(0, 1);
+      c.add([hint, btn, fill, btnLbl]); // fill выше фона кнопки, но под подписью — текст читаем
+      timerTween = this.tweens.add({
+        targets: fill, scaleX: 1, duration: this.LOOT_AUTO_MS, ease: 'Linear',
+        onComplete: closeModal,
+      });
     }
   }
 
@@ -1562,8 +1662,8 @@ export class ExpeditionScene extends Phaser.Scene {
       this.heroSprite.play(`${this.heroAnimPrefix}-death`, true);
       this.heroSprite.setDisplaySize(100, 140);
     }
-    // Лут гарантирован: всё, что ещё на ленте, уходит в сундук — смерть его не отнимает.
-    this.collectBeltToChest();
+    // Лут гарантирован: рюкзак уходит в сундук — смерть его не отнимает.
+    this.dumpBackpackToChest();
 
     // Endless-зона (docs/content.zones.format.md): цель — рекорд глубины, а не «прохождение».
     // Показываем полноэкранный recap вместо тоста+автоперехода — игроку нужно время прочитать числа.
@@ -1611,9 +1711,10 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private onExpeditionComplete() {
-    // Весь оставшийся лут с ленты гарантированно уходит в сундук.
-    this.collectBeltToChest();
-    // Гарант-драфт: до 5 карточек [золото, предмет·mob, предмет·boss, предмет·mob, эссенция],
+    // Рюкзак НЕ вываливаем здесь: пока идёт выбор награды, добыча похода должна оставаться
+    // видимой в сетке рюкзака — иначе игроку кажется, что предметы пропали. Уходит в сундук
+    // в finishExpedition(), сразу после выбора карточки.
+    // Гарант-драфт: до 4 карточек [предмет·mob, предмет·boss, предмет·mob, эссенция],
     // игрок берёт одну. Недостающие источники не показываются — см. buildRewardOptions.
     const options = buildRewardOptions(this.zoneCfg.boss?.loot, this.zoneCfg.mob_loot, rngFor(this.runSeed, 'reward'));
     this.showRewardDraft(options);
@@ -1700,31 +1801,23 @@ export class ExpeditionScene extends Phaser.Scene {
     }
   }
 
-  // Финал похода: зона зачтена, возврат в лагерь.
+  // Финал похода: рюкзак в сундук, зона зачтена, возврат в лагерь.
   private finishExpedition() {
+    this.dumpBackpackToChest();
     MetaStore.completeArea(this.zoneId);
     MetaStore.recordZoneReturned(this.zoneId);
     EventBus.emit('expedition_returned', this.zoneId);
     this.scene.start('CampScene');
   }
 
-  // Весь лут с ленты (и очереди) уходит в сундук — авто-сбор без разбора.
-  private collectBeltToChest() {
-    // Предмет «в руке» (взят с ленты для экипировки) тоже не теряется.
-    const held = this.dragDrop?.dropHeld();
-    if (held) this.carryOut(held);
-    for (const obj of this.beltItems) {
-      this.carryOut(obj.item);
-      obj.sprite.destroy();
-      obj.label.destroy();
-    }
-    for (const item of this.lootQueue) this.carryOut(item);
-    this.beltItems = [];
-    this.lootQueue = [];
+  // Рюкзак вываливается в сундук — на любом выходе из похода, включая смерть (лут гарантирован).
+  private dumpBackpackToChest() {
+    for (const item of this.backpack) this.carryOut(item);
+    this.backpack = [];
+    this.refreshBackpackGrid();
   }
 
   // Предмет покидает поход и попадает в сундук — фиксируем как «вынесенный».
-  // (Лента в сундук не идёт — она переплавляется, поэтому туда это не зовём.)
   private carryOut(item: ItemInstance) {
     MetaStore.addToChest(item);
     MetaStore.recordItemCarriedOut(item.item_id);
@@ -1854,9 +1947,6 @@ export class ExpeditionScene extends Phaser.Scene {
         fn();
       }
     }
-
-    // Лента движется всегда — и в бою, и на ходьбе (не завязана на фазу).
-    this.tickBelt(delta);
 
     if (this.isWalking) {
       this.walkTimer += delta * this.speedMult;

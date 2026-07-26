@@ -26,7 +26,7 @@ npm run preview  # превью production-сборки
 | [`docs/content.mobs.format.md`](docs/content.mobs.format.md)           | Json-формат мобов: attacks, summons, phases, лут                            |
 | [`docs/content.zones.format.md`](docs/content.zones.format.md)         | Json-формат зон: mob_pool, boss-ссылка, награда                             |
 | [`docs/meta-progression.md`](docs/meta-progression.md)                 | Ресурсы (золото/металл), персистентность, localStorage-схема                |
-| [`docs/ui.md`](docs/ui.md)                                             | Все экраны: лагерь, карта, экспедиция, лента лута, эффекты                  |
+| [`docs/ui.md`](docs/ui.md)                                             | Все экраны: лагерь, карта, экспедиция, рюкзак, модалка находки, эффекты     |
 | [`docs/art-spec.md`](docs/art-spec.md)                                 | Размеры спрайтов, анимации, paper doll / оверлеи экипировки                 |
 | [`docs/factions.md`](docs/factions.md)                                 | Боевая идентичность фракций: доминанты, контр-механики героя, матрица       |
 | [`docs/quests.md`](docs/quests.md)                                     | Квесты: обучающие, зональные цепочки, коллекционные                         |

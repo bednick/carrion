@@ -59,6 +59,24 @@ export function recomputeLayout(): boolean {
   return true;
 }
 
+/** Дизайновая высота панели меню НПС в лагере — база масштаба ячеек. */
+const PANEL_DESIGN_H = 520;
+/** Вертикальный отступ панели от краёв холста. */
+const PANEL_PAD = 70;
+
+/**
+ * Масштаб панели меню НПС (лагерь). Панель растягивается по высоте холста, но не сжимается ниже 1
+ * и не вылезает за левый край (вкладки торчат до 540 левее пивота).
+ *
+ * Экспедиция масштабирует свои ячейки экипировки/рюкзака этим же коэффициентом — иначе один и тот же
+ * предмет в лагере и в бою выглядел бы разного размера.
+ */
+export function panelScale(): number {
+  const desired = (GAME_H - 2 * PANEL_PAD) / PANEL_DESIGN_H;
+  const maxByWidth = (CX - 8) / 540;
+  return Math.max(1, Math.min(desired, maxByWidth));
+}
+
 /** X по отступу от правого края. */
 export function rightX(offsetFromRight: number): number {
   return GAME_W - offsetFromRight;

@@ -3,6 +3,9 @@
      xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--noto"
      preserveAspectRatio="xMidYMid meet">
 
+    <!-- зеркало по обеим осям + уменьшение в 1.3 раза относительно центра viewBox -->
+    <g transform="translate(64,64) scale(-0.7692,-0.7692) translate(-64,-64)">
+
     <path d="M105.41 9.81l.24 2.59c1.24-.13 3.52.28 6.73 3.5c3.22 3.22 3.63 5.49 3.5 6.73l2.59.24c3.06.28 5.83-2.44 5.5-5.49c-.31-2.87-1.8-6.08-4.4-8.68c-2.6-2.59-5.8-4.09-8.68-4.4c-3.04-.32-5.76 2.45-5.48 5.51z"
           fill="#9e740b">
 
@@ -64,5 +67,7 @@
           fill="#e2a610">
 
     </path>
+
+    </g>
 
 </svg>

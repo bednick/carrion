@@ -29,7 +29,7 @@ import { VolumeControl } from '../ui/VolumeControl';
 import { SoundManager } from '../core/SoundManager';
 import { SliderPopup } from '../ui/SliderPopup';
 import { spawnIconFloater } from '../ui/Floater';
-import { CX, DX, GAME_W, GAME_H, rightX } from '../ui/layout';
+import { CX, DX, GAME_W, GAME_H, rightX, panelScale as layoutPanelScale } from '../ui/layout';
 
 // Ширина, в которой нарисована композиция camp.png. Пока арт без бокового запаса (файл 1376×768) —
 // тянем картинку по ширине холста, как и раньше (это уже слегка сплющивало её). Когда придёт новый
@@ -154,10 +154,6 @@ export class CampScene extends Phaser.Scene {
   private set selectedStandIndex(i: number) { MetaStore.setActiveStand(i); }
   private tooltip!: Tooltip;
   private panelContainer!: Phaser.GameObjects.Container;
-  /** Дизайновая высота рамки панели НПС (buildPanelFrame). */
-  private static readonly PANEL_H = 520;
-  /** Целевой отступ панели до края холста — половина прежних 140. */
-  private static readonly PANEL_PAD = 70;
   /** Текущий масштаб panelContainer: 1 для карты, computePanelScale() для меню НПС. */
   private panelScale = 1;
   private hoverLabel!: Phaser.GameObjects.Text;
@@ -755,12 +751,10 @@ export class CampScene extends Phaser.Scene {
 
   // Меню НПС свёрстано в дизайновых 1280×800 и увеличивается масштабом контейнера вокруг
   // центра рамки (640, 400): панель растёт симметрично, отступ сверху/снизу падает 140 → 70.
+  // Масштаб живёт в layout.ts: тем же коэффициентом экспедиция тянет свои ячейки, чтобы предмет
+  // в лагере и в бою был одного размера. Константы PANEL_H/PANEL_PAD продублированы там же.
   private computePanelScale(): number {
-    const desired = (GAME_H - 2 * CampScene.PANEL_PAD) / CampScene.PANEL_H;
-    // Вкладки слева торчат до локального x=100, т.е. на 540 левее пивота. На узких холстах
-    // (аспект < ~1.6, GAME_W у нижней границы BASE_W) полный масштаб срезал бы их за краем экрана.
-    const maxByWidth = (CX - 8) / 540;
-    return Math.max(1, Math.min(desired, maxByWidth));
+    return layoutPanelScale();
   }
 
   private clearPanelResources() {

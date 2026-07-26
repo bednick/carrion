@@ -49,12 +49,25 @@ function statConditionValue(c: Extract<NonNullable<QuestDef['condition']>, { kin
 }
 
 /**
- * Сверяет все активные квесты (stat- и zone_items-условия) против текущей статистики и
- * засчитывает выполненные. Срабатывает и задним числом — при выдаче квеста
- * ('quest_granted') и при любом изменении статов ('stats_changed').
+ * Первый квест цепочки Поля битвы не выдаётся ничьим `next`: гейт центра — не квест, а
+ * completed_areas трёх финальных зон. Выдаём его сами, как только центр открылся;
+ * addActiveQuest идемпотентна по id, так что повторные вызовы — no-op.
+ */
+function grantBattlefieldChain() {
+  if (!MetaStore.isCenterUnlocked()) return;
+  MetaStore.addActiveQuest('battlefield_survive_10', QUEST_DEFS.battlefield_survive_10.target);
+}
+
+/**
+ * Сверяет все активные квесты (stat-, zone_items- и battlefield_depth-условия) против
+ * текущей статистики и засчитывает выполненные. Срабатывает и задним числом — при выдаче
+ * квеста ('quest_granted') и при любом изменении статов ('stats_changed').
  */
 function evaluateQuests() {
-  const carriedOut = MetaStore.get().stats.items_carried_out;
+  grantBattlefieldChain();
+
+  const meta = MetaStore.get();
+  const carriedOut = meta.stats.items_carried_out;
   // Копия: tryComplete мутирует список активных (и может выдать следующий квест).
   for (const q of [...MetaStore.get().quests.active]) {
     const def = QUEST_DEFS[q.id];
@@ -64,8 +77,14 @@ function evaluateQuests() {
       if (statConditionValue(def.condition) >= (def.condition.count ?? 1)) {
         tryComplete(q.id);
       }
-    } else {
+    } else if (def.condition.kind === 'zone_items') {
       const have = def.condition.itemIds.filter((id) => (carriedOut[id] ?? 0) > 0).length;
+      if (have > q.progress) {
+        tryComplete(q.id, have - q.progress);
+      }
+    } else {
+      // Догоняем прогресс дельтой (как zone_items), чтобы N/M в трекере был честным.
+      const have = Math.min(def.condition.depth, meta.battlefield_best_depth);
       if (have > q.progress) {
         tryComplete(q.id, have - q.progress);
       }
@@ -99,4 +118,6 @@ export function initQuestSystem() {
   // Зональные квесты (<zone>_clear) засчитываются через stat-условие
   // zones_returned в evaluateQuests (растёт при добивании босса зоны).
   // Квесты сбора (collect_<zone>_items) — через zone_items-условие там же.
+  // Квесты Поля битвы (battlefield_survive_N) — через battlefield_depth там же:
+  // отдельного события не нужно, забег в endless-зоне всегда кончается лагерем.
 }
