@@ -26,9 +26,9 @@ export interface CombatCallbacks {
   onDodge?: (enemyIdx: number) => void;
   // Герой вылечен (heal с target=hero); amount уже округлён и не выходит за maxHp-прирост.
   onHeal?: (amount: number) => void;
-  // Барьер героя поглотил часть/весь урона (docs/content.items.amulet.md); amount — сколько ушло
-  // в барьер, а не в HP. Не вызывается, если барьер пуст.
-  onBarrierAbsorb?: (amount: number) => void;
+  // Неуязвимость героя полностью погасила удар (docs/content.items.amulet.md); тратит один заряд.
+  // Не вызывается, если зарядов не осталось.
+  onInvulnHit?: () => void;
   // Контрудар героя: damage(enemy) порождён событием, целью которого был герой (блок/удар) —
   // отличает ответный удар от обычной атаки по расписанию стамины.
   onCounterAttack?: () => void;
@@ -78,24 +78,24 @@ function buildWeaponTimers(equipment: Partial<Record<SlotType, ItemInstance>>) {
 }
 
 /**
- * Барьер и аварийный хил героя (docs/content.items.amulet.md): оба читаются один раз при сборке
- * героя из деклараций экипировки (`ItemBehavior.barrierAmount`/`emergencyHeal`, тот же приём, что
- * у `buildWeaponTimers`), а не через `on`-хуки — сама механика (поглощение, разовый порог) живёт
+ * Неуязвимость и аварийный хил героя (docs/content.items.amulet.md): оба читаются один раз при сборке
+ * героя из деклараций экипировки (`ItemBehavior.invulnHitsGrant`/`emergencyHeal`, тот же приём, что
+ * у `buildWeaponTimers`), а не через `on`-хуки — сама механика (гашение урона, разовый порог) живёт
  * в `CombatEngine.applyDamage`, потому что ей нужно мутируемое per-fight состояние, которого у
  * стейтлес-хуков нет. Суммируются по всей экипировке (на практике — один амулет), не привязаны
  * жёстко к слоту `amulet`.
  */
 function buildHeroResources(equipment: Partial<Record<SlotType, ItemInstance>>) {
-  let barrierMax = 0;
+  let invulnHitsMax = 0;
   let emergencyHeal: HeroState['emergencyHeal'];
   for (const slot of HANDLER_ORDER) {
     const inst = equipment[slot];
     if (!inst) continue;
     const beh = getItemBehavior(inst.item_id);
-    if (beh.barrierAmount) barrierMax += beh.barrierAmount(inst.rarity);
+    if (beh.invulnHitsGrant) invulnHitsMax += beh.invulnHitsGrant(inst.rarity);
     if (beh.emergencyHeal) emergencyHeal = beh.emergencyHeal(inst.rarity);
   }
-  return { barrierMax, emergencyHeal };
+  return { invulnHitsMax, emergencyHeal };
 }
 
 export class CombatEngine {
@@ -455,12 +455,11 @@ export class CombatEngine {
     // как и любой другой источник урона по герою (в т.ч. шипы моба).
     if (hero.damageTakenMult !== 1) dmg = Math.round(dmg * hero.damageTakenMult);
 
-    // Барьер (docs/content.items.amulet.md) — временный пул перед HP, тает первым.
-    if (hero.barrier > 0) {
-      const absorbed = Math.min(hero.barrier, dmg);
-      hero.barrier -= absorbed;
-      dmg -= absorbed;
-      this.cb.onBarrierAbsorb?.(absorbed);
+    // Неуязвимость (docs/content.items.amulet.md) — полностью гасит удар, тратит один заряд.
+    if (hero.invulnHits > 0) {
+      hero.invulnHits--;
+      dmg = 0;
+      this.cb.onInvulnHit?.();
     }
 
     if (dmg > 0) {
@@ -547,15 +546,15 @@ export class CombatEngine {
   }
 
   static buildInitialHero(equipment: Partial<Record<SlotType, ItemInstance>>, damageTakenMult = 1): HeroState {
-    const { barrierMax, emergencyHeal } = buildHeroResources(equipment);
+    const { invulnHitsMax, emergencyHeal } = buildHeroResources(equipment);
     return {
       maxHp: 100,
       hp: 100,
       equipment,
       weaponTimers: buildWeaponTimers(equipment),
       unarmedTimer: 0,
-      barrier: barrierMax,
-      barrierMax,
+      invulnHits: invulnHitsMax,
+      invulnHitsMax,
       emergencyHeal,
       emergencyHealUsed: false,
       damageTakenMult,

@@ -1,6 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-  <rect width="40" height="40" rx="4" fill="#181c24"/>
-  <line x1="9" y1="35" x2="26" y2="15" stroke="#5a3010" stroke-width="4" stroke-linecap="round"/>
-  <path d="M24 18 C29 12 34 9 37 10 C35 14 30 19 25 23 Z" fill="#c0c8d4" stroke="#eef2f7" stroke-width="0.5"/>
-  <rect x="21" y="12" width="6" height="6" rx="1" fill="#8a929c" stroke="#eef2f7" stroke-width="0.5" transform="rotate(-40 24 15)"/>
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+	 viewBox="0 0 463.627 463.627" xml:space="preserve">
+<g id="XMLID_38_">
+	<g>
+		<path style="stroke:#4D4D4D;stroke-width:4;stroke-linejoin:round;stroke-linecap:round;fill:#B3B3B3;" d="M323.057,79.282l-6.36,6.36l-46.26-46.27c12.05,3.74,23.09,10.37,32.22,19.51L323.057,79.282z"/>
+		<polygon style="stroke:#4D4D4D;stroke-width:4;stroke-linejoin:round;stroke-linecap:round;fill:#808080;" points="359.827,107.562 330.137,137.262 308.217,115.342 337.907,85.642 		"/>
+		<path style="stroke:#4D4D4D;stroke-width:4;stroke-linejoin:round;stroke-linecap:round;fill:#B3B3B3;" d="M443.847,164.102c-16.87,20.67-35.8,39.6-56.47,56.47c-11.42-26.65-24.34-52.74-38.51-77.77
+			c5.95-5.5,11.71-11.26,17.22-17.21C391.107,139.762,417.197,152.682,443.847,164.102z"/>
+		<polygon style="stroke:#4D4D4D;stroke-width:4;stroke-linejoin:round;stroke-linecap:round;fill:#E0974F;" points="39.447,415.112 29.907,424.652 20.827,415.562 30.367,406.032 		"/>
+		<polygon style="stroke:#4D4D4D;stroke-width:4;stroke-linejoin:round;stroke-linecap:round;fill:#E0974F;" points="313.107,141.442 50.047,404.502 40.967,395.422 304.027,132.372 		"/>
+	</g>
+</g>
 </svg>

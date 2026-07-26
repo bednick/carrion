@@ -59,18 +59,18 @@ export interface HeroState {
   // его авторит хук предмета при срабатывании (docs/combat-events.md §5).
   weaponTimers: { slot: SlotType; interval: number; elapsed: number }[];
   unarmedTimer: number;
-  // Барьер (временный HP-пул поверх обычного HP, docs/content.items.amulet.md): выдаётся заново
-  // на каждый бой (buildInitialHero), тает по мере поглощения урона в applyDamage, не
-  // восстанавливается до следующего боя. barrierMax — для UI (бар текущий/максимум).
-  barrier: number;
-  barrierMax: number;
+  // Неуязвимость (полное гашение урона на N ударов, docs/content.items.amulet.md): выдаётся заново
+  // на каждый бой (buildInitialHero), тратится по одному заряду на поглощённый удар в applyDamage,
+  // не переносится в следующий бой. invulnHitsMax — для UI (счётчик текущий/максимум).
+  invulnHits: number;
+  invulnHitsMax: number;
   // Аварийный хил (docs/content.items.amulet.md): конфиг читается один раз при сборке героя из
   // ItemBehavior.emergencyHeal; emergencyHealUsed — флаг «уже сработал в этом бою», сбрасывается
   // на каждый buildInitialHero (новый бой), не на смену фазы одного боя.
   emergencyHeal?: EmergencyHealConfig;
   emergencyHealUsed: boolean;
   // Множитель входящего по герою урона («проклятие» endless-зон, docs/content.zones.format.md):
-  // 1 = без штрафа. В отличие от barrier/emergencyHeal НЕ сбрасывается каждый buildInitialHero —
+  // 1 = без штрафа. В отличие от invulnHits/emergencyHeal НЕ сбрасывается каждый buildInitialHero —
   // растёт с числом пройденных боёв, вызывающая сторона (ExpeditionScene) сама переносит его между
   // боями одной экспедиции.
   damageTakenMult: number;

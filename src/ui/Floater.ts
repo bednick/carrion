@@ -7,9 +7,9 @@ const COLORS: Record<FloaterType, number> = {
   heal: 0x44ff88,
   essence: 0x44ddff,
   miss: 0xcccccc,
-  block: 0x55bbff, // защитный голубой (отличается от бирюзового барьера)
+  block: 0x55bbff, // защитный голубой (отличается от бирюзового неуязвимости)
   counter: 0xff8844,
-  barrier: 0x66ccff,
+  invuln: 0x66ccff,
 };
 
 const LABELS: Record<FloaterType, (v: number) => string> = {
@@ -19,7 +19,7 @@ const LABELS: Record<FloaterType, (v: number) => string> = {
   miss: () => 'мимо',
   block: () => 'Блок',
   counter: () => 'Контрудар!',
-  barrier: v => `-${v} барьер`,
+  invuln: () => 'Неуязвимость!',
 };
 
 const FONT_SIZE = 20;

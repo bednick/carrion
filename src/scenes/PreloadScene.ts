@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ITEM_ICON_URLS, itemIconKey } from '../items/icons';
-import { SLOT_SILHOUETTE_URLS, slotSilhouetteKey, ZONE_DECOR_URLS, zoneDecorKey } from '../ui/silhouettes';
+import { SLOT_SILHOUETTE_URLS, slotSilhouetteKey, ZONE_DECOR_URLS, zoneDecorKey, UPGRADE_ICON_URLS, upgradeIconKey } from '../ui/silhouettes';
 import { REWARD_ICON_URLS, rewardIconKey } from '../ui/rewards';
 import { ZONE_BG_VARIANTS, zoneBgKey, type BgLayer, ZONE_BG_OBJECTS, zoneObjKey, type ScatterLayer } from '../zones/registry';
 import { ALL_MOB_IDS } from '../mobs/registry';
@@ -18,6 +18,9 @@ export class PreloadScene extends Phaser.Scene {
     }
     for (const [slotId, url] of Object.entries(SLOT_SILHOUETTE_URLS)) {
       this.load.svg(slotSilhouetteKey(slotId), url, { width: 40, height: 40 });
+    }
+    for (const [id, url] of Object.entries(UPGRADE_ICON_URLS)) {
+      this.load.svg(upgradeIconKey(id as 'plus' | 'question_mark'), url, { width: 32, height: 32 });
     }
     for (const [id, url] of Object.entries(REWARD_ICON_URLS)) {
       this.load.svg(rewardIconKey(id), url, { width: 72, height: 72 });
@@ -79,6 +82,21 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create() {
+    // SVG-иконки — векторная линия, не пиксель-арт: под глобальным NEAREST (pixelArt:true в main.ts,
+    // нужен для чётких спрайтов персонажей/мобов) их диагонали превращаются в лесенку без анти-алиасинга.
+    // Переключаем фильтрацию конкретно для этих текстур на LINEAR.
+    const smoothKeys = [
+      ...Object.keys(ITEM_ICON_URLS).map(itemIconKey),
+      ...Object.keys(SLOT_SILHOUETTE_URLS).map(slotSilhouetteKey),
+      ...Object.keys(REWARD_ICON_URLS).map(rewardIconKey),
+      ...Object.keys(UPGRADE_ICON_URLS).map(id => upgradeIconKey(id as 'plus' | 'question_mark')),
+      zoneDecorKey('warrior'), zoneDecorKey('backpack'), zoneDecorKey('anvil'), zoneDecorKey('belt'),
+      'hammer',
+    ];
+    for (const key of smoothKeys) {
+      this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+
     SoundManager.init(this.game);
     this.scene.start('CampScene');
   }

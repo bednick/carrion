@@ -178,7 +178,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private resourceHUD!: ResourceHUD;
   private heroHpFill!: Phaser.GameObjects.Rectangle;
   private heroHpText!: Phaser.GameObjects.Text;
-  private heroBarrierFill!: Phaser.GameObjects.Rectangle;
+  private heroInvulnOverlay!: Phaser.GameObjects.Rectangle;
+  private heroInvulnText!: Phaser.GameObjects.Text;
   private heroSprite!: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Sprite;
   private heroAnimPrefix: string | null = null;
   private heroAtkBars: { fill: Phaser.GameObjects.Rectangle; bg: Phaser.GameObjects.Rectangle }[] = [];
@@ -504,9 +505,11 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.add.rectangle(hx, 310, 80, 10, 0x333333).setOrigin(0.5);
     this.heroHpFill = this.add.rectangle(hx - 40, 310, 80, 10, 0x44aa44).setOrigin(0, 0.5);
+    // Неуязвимость (docs/content.items.amulet.md) — полупрозрачный оверлей поверх HP-бара, видна
+    // только пока остались заряды; счётчик ударов — слева от бара.
+    this.heroInvulnOverlay = this.add.rectangle(hx - 40, 310, 0, 10, 0x66ccff, 0.45).setOrigin(0, 0.5);
     this.heroHpText = this.add.text(hx, 323, '', { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5);
-    // Барьер (docs/content.items.amulet.md) — тонкая полоска над HP-баром, видна только пока барьер жив.
-    this.heroBarrierFill = this.add.rectangle(hx - 40, 302, 0, 4, 0x66ccff).setOrigin(0, 0.5);
+    this.heroInvulnText = this.add.text(hx - 46, 310, '', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#66ccff' }).setOrigin(1, 0.5);
 
     this.updateHeroHpBar();
   }
@@ -714,12 +717,15 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private updateHeroHpBar() {
     if (!this.engine) return;
-    const { hp, maxHp, barrier, barrierMax } = this.engine.state.hero;
+    const { hp, maxHp, invulnHits, invulnHitsMax } = this.engine.state.hero;
     const ratio = hp / maxHp;
     this.heroHpFill.setSize(80 * ratio, 10);
     this.heroHpText.setText(`${hp}/${maxHp}`);
-    const barrierRatio = barrierMax > 0 ? barrier / barrierMax : 0;
-    this.heroBarrierFill.setSize(80 * barrierRatio, 4);
+
+    const hasInvuln = invulnHitsMax > 0 && invulnHits > 0;
+    this.heroInvulnOverlay.setVisible(hasInvuln);
+    if (hasInvuln) this.heroInvulnOverlay.setSize(this.heroHpFill.width, 10);
+    this.heroInvulnText.setText(hasInvuln ? String(invulnHits) : '');
   }
 
   private buildHeroAtkBars() {
@@ -1436,10 +1442,10 @@ export class ExpeditionScene extends Phaser.Scene {
         spawnFloater(this, 'heal', amount, x, 130);
         this.updateHeroHpBar();
       },
-      onBarrierAbsorb: (amount) => {
+      onInvulnHit: () => {
         const b = this.heroSprite.getBounds();
         const x = b.x + Math.random() * b.width;
-        spawnFloater(this, 'barrier', amount, x, 130);
+        spawnFloater(this, 'invuln', 0, x, 130);
         this.updateHeroHpBar();
       },
       onEnemyDied: (enemy, enemyIdx, willReuseSlot) => {

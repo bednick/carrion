@@ -2,11 +2,15 @@ import type { ItemBehavior } from '../behavior';
 
 const DMG_COLOR = '#ffcc44';
 
-// Cleave: полный урон основной цели, фиксированный сплеш-процент — всем остальным живым врагам
-// на доске (не только соседям). Профильный стат — урон основной цели, сплеш-доля фиксирована.
+// Cleave: полный урон основной цели, сплеш затухает по дальности от неё (по board-слоту, не по
+// индексу массива — те расходятся после призывов, тот же приём, что у прошива в short_spear) —
+// ближайший прочий живой враг получает 50%, следующий 35%, следующий 25%. При равной дальности
+// (враг стоит по разные стороны от цели на одном расстоянии) побеждает меньший slot — та же логика,
+// что у дефолтного выбора цели движком (CombatEngine.nearestFreeSlot/выбор цели: чем меньше slot,
+// тем ближе). Профильный стат — урон основной цели, ступени сплеша фиксированы и не растут с редкостью.
 // damage/interval — явная таблица по редкости: одноцелевой DPS (`damage/interval`) растёт ×1.3 за
 // уровень от анкора common (4.0); damage подобран под целые числа, interval — остаточная подгонка.
-const SPLASH_RATIO = 0.5;
+const SPLASH_RATIOS = [0.5, 0.35, 0.25];
 
 const DAMAGE_BY_RARITY: Record<import('../types').Rarity, number> = {
   common: 5,
@@ -40,24 +44,36 @@ const behavior: ItemBehavior = {
       const source = e.source;
       const origin = e.origin;
       const dmg = damage(ctx.rarity);
-      const splashDmg = Math.round(dmg * SPLASH_RATIO);
       const spawn = [
         { type: 'attack' as const, source, target: e.target, amount: dmg, origin, splash: false },
       ];
 
-      if (e.target.side === 'enemy' && splashDmg > 0) {
+      if (e.target.side === 'enemy') {
         const primaryIdx = e.target.idx;
-        ctx.view.enemies.forEach((en, idx) => {
-          if (idx === primaryIdx || en.hp <= 0) return;
-          spawn.push({
-            type: 'attack' as const,
-            source,
-            target: { side: 'enemy', id: en.id, idx },
-            amount: splashDmg,
-            origin,
-            splash: true,
+        const primarySlot = ctx.view.enemies[primaryIdx]?.slot;
+        if (primarySlot !== undefined) {
+          const others = ctx.view.enemies
+            .map((en, idx) => ({ en, idx }))
+            .filter(({ en, idx }) => idx !== primaryIdx && en.hp > 0)
+            .sort((a, b) => {
+              const distA = Math.abs(a.en.slot - primarySlot);
+              const distB = Math.abs(b.en.slot - primarySlot);
+              return distA - distB || a.en.slot - b.en.slot;
+            });
+
+          others.slice(0, SPLASH_RATIOS.length).forEach(({ en, idx }, rank) => {
+            const splashDmg = Math.round(dmg * SPLASH_RATIOS[rank]);
+            if (splashDmg <= 0) return;
+            spawn.push({
+              type: 'attack' as const,
+              source,
+              target: { side: 'enemy', id: en.id, idx },
+              amount: splashDmg,
+              origin,
+              splash: true,
+            });
           });
-        });
+        }
       }
 
       return { replace: [], spawn };
@@ -68,7 +84,7 @@ const behavior: ItemBehavior = {
     return [
       { text: `Урон: ${dmg}`, color: DMG_COLOR },
       { text: `Перезарядка: ${interval(rarity).toFixed(2)}s`, color: DMG_COLOR },
-      { text: `Наносит сплеш урон всем прочим существам в размере ${Math.round(SPLASH_RATIO * 100)}%`, color: DMG_COLOR },
+      { text: `Сплеш урон до ${Math.round(SPLASH_RATIOS[0] * 100)}%`, color: DMG_COLOR },
     ];
   },
   baseDamage: damage,

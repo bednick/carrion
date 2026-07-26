@@ -16,7 +16,7 @@ import type { Rarity, SlotType, EssencePool, EssenceTier } from '../items/types'
 import { itemIconKey } from '../items/icons';
 import { resourceTag } from '../ui/priceTag';
 import { essenceIconKey, essenceIconKeyByRarity } from '../ui/rewards';
-import { slotSilhouetteKey } from '../ui/silhouettes';
+import { slotSilhouetteKey, upgradeIconKey } from '../ui/silhouettes';
 import { Tooltip } from '../ui/Tooltip';
 import { DragDropManager } from '../ui/DragDropManager';
 import { getZoneConfig, getZoneLootItemIds, isZoneFullyLooted, WIP_ZONE_IDS } from '../zones/registry';
@@ -961,7 +961,7 @@ export class CampScene extends Phaser.Scene {
       if (inst) {
         objs.push(this.add.image(x, y, itemIconKey(inst.item_id)).setDisplaySize(38, 38));
       } else {
-        objs.push(this.add.image(x, y, slotSilhouetteKey(slotId)).setDisplaySize(36, 36).setAlpha(0.35));
+        objs.push(this.add.image(x, y, slotSilhouetteKey(slotId)).setDisplaySize(36, 36).setAlpha(0.75));
       }
 
       if (this.dragDrop) {
@@ -1155,18 +1155,18 @@ export class CampScene extends Phaser.Scene {
         this.tryExchangeEssence(from, to, ptr.x, ptr.y);
       });
 
-      // Слева от кнопки — что получаем: «+3 [icon] Необычная».
+      // Слева от кнопки — что отдаём: «-1 [icon] Редкая».
       const toLabel = ESSENCE_NAMES[to].charAt(0).toUpperCase() + ESSENCE_NAMES[to].slice(1);
-      const getParts = this.layoutIconRow(
-        `+${output}`, TIER_HEX[to], essenceIconKey(to), toLabel, TIER_HEX[to], rowY, cx - 125, true,
-      );
-
-      // Справа от кнопки — что отдаём: «-1 [icon] Редкая».
       const giveParts = this.layoutIconRow(
-        '-1', TIER_HEX[from], essenceIconKey(from), fromLabel, TIER_HEX[from], rowY, cx + 40, false,
+        '-1', TIER_HEX[from], essenceIconKey(from), fromLabel, TIER_HEX[from], rowY, cx - 125, true,
       );
 
-      toAdd.push(rowBg, exchangeBtn, exchangeLbl, ...getParts, ...giveParts);
+      // Справа от кнопки — что получаем: «+3 [icon] Необычная».
+      const getParts = this.layoutIconRow(
+        `+${output}`, TIER_HEX[to], essenceIconKey(to), toLabel, TIER_HEX[to], rowY, cx + 40, false,
+      );
+
+      toAdd.push(rowBg, exchangeBtn, exchangeLbl, ...giveParts, ...getParts);
     });
 
     // Разделитель — та же линия, что и у блока улучшения на вкладке «Экипировка»
@@ -1231,7 +1231,7 @@ export class CampScene extends Phaser.Scene {
     const gap = 4, iconSize = 16;
     const iconX = alignRight ? anchorX : 0; // при !alignRight досчитаем ниже, после ширины numLbl
     const numLbl = this.add.text(0, rowY, numText, {
-      fontSize: '12px', fontFamily: FONT_FAMILY, color: numColor,
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: numColor,
     }).setOrigin(alignRight ? 1 : 0, 0.5);
     const icon = this.add.image(iconX, rowY, iconKey).setDisplaySize(iconSize, iconSize).setOrigin(0, 0.5);
     const tierLbl = this.add.text(0, rowY, labelText, {
@@ -1285,7 +1285,7 @@ export class CampScene extends Phaser.Scene {
       .setStrokeStyle(2, item ? RARITY_COLORS[item.rarity] : 0x555566);
     const s1Content = item
       ? this.add.image(inputX, slotY, itemIconKey(item.item_id)).setDisplaySize(34, 34)
-      : this.add.text(inputX, slotY, '+', { fontSize: '32px', fontFamily: FONT_FAMILY, color: '#333344' }).setOrigin(0.5);
+      : this.add.image(inputX, slotY, upgradeIconKey('plus')).setDisplaySize(22, 22);
 
     // "→"
     const arrowActive = !!(previewResult || resultItem);
@@ -1301,6 +1301,8 @@ export class CampScene extends Phaser.Scene {
       s3Content = this.add.image(resultX, slotY, itemIconKey(resultItem.item_id)).setDisplaySize(34, 34);
     } else if (previewResult) {
       s3Content = this.add.image(resultX, slotY, itemIconKey(previewResult.item_id)).setDisplaySize(34, 34).setAlpha(0.3);
+    } else {
+      s3Content = this.add.image(resultX, slotY, upgradeIconKey('question_mark')).setDisplaySize(20, 20);
     }
 
     // DragDrop: входной слот принимает только перетаскивание (клик по предмету в сундуке

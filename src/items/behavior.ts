@@ -69,9 +69,9 @@ export interface ItemIdentity {
  * - `weaponTimerMod` — кросс-slot модификатор таймера другого слота (см. `WeaponTimerMod`).
  * - `baseDamage` — «паспортный» урон оружия (без крита/риддеров), читается кросс-slot через
  *   `CombatView.mainWeaponBaseDamage` (напр. контрудар buckler «бьёт как обычная атака»).
- * - `barrierAmount`/`emergencyHeal` — не хуки-трансформеры, а декларативные значения, читаемые
+ * - `invulnHitsGrant`/`emergencyHeal` — не хуки-трансформеры, а декларативные значения, читаемые
  *   ДВИЖКОМ один раз при сборке героя (`CombatEngine.buildInitialHero`, тот же приём, что у
- *   `attackInterval`) — сама механика (поглощение барьером, разовый порог) живёт в
+ *   `attackInterval`) — сама механика (гашение урона неуязвимостью, разовый порог) живёт в
  *   `CombatEngine.applyDamage`, не в `on`-хуке предмета (нужно мутируемое per-fight состояние,
  *   которого у стейтлес-хуков нет), см. `docs/content.items.amulet.md`.
  */
@@ -82,7 +82,7 @@ export interface ItemBehavior extends ItemIdentity {
   meta?: (rarity: Rarity) => MetaModifiers;
   weaponTimerMod?: (rarity: Rarity, targetSlot: SlotType) => WeaponTimerMod | undefined;
   baseDamage?: (rarity: Rarity) => number;
-  barrierAmount?: (rarity: Rarity) => number;
+  invulnHitsGrant?: (rarity: Rarity) => number;
   emergencyHeal?: (rarity: Rarity) => EmergencyHealConfig;
 }
 
