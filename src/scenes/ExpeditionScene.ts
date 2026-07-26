@@ -14,11 +14,11 @@ import type { CombatState, EnemyState, SummonPlan } from '../combat/types';
 import { BOARD_SLOTS, placementAnchor } from '../combat/types';
 import type { ItemInstance, SlotId } from '../core/MetaStore';
 import { ARMOR_STAND_COUNT } from '../core/MetaStore';
-import type { SlotType, Rarity, EssenceTier } from '../items/types';
+import type { SlotType, EssenceTier } from '../items/types';
 import type { ZoneConfig, MobConfig, EnemySpec, PhaseOverride, SummonRef } from '../zones/types';
 import { getMobConfig } from '../mobs/registry';
-import { itemIconKey } from '../items/icons';
 import { slotSilhouetteKey, zoneDecorKey } from '../ui/silhouettes';
+import { addItemIcon, ItemIconView, RARITY_COLORS } from '../ui/itemIcon';
 import { essenceTag } from '../ui/priceTag';
 import { newBadge } from '../ui/newBadge';
 import { ESSENCE_TIERS } from '../items/craft';
@@ -119,14 +119,6 @@ function nearestFreeSlotFrom(from: number, occupied: Set<number>): number | null
   return best;
 }
 
-const RARITY_COLORS: Record<Rarity, number> = {
-  common: 0xffffff,
-  uncommon: 0x55ff55,
-  rare: 0x5555ff,
-  epic: 0xaa00ff,
-  legendary: 0xff8800,
-};
-
 
 const EQUIP_SLOTS: SlotId[] = ['head', 'body', 'legs', 'hand_left', 'hand_right', 'ring', 'amulet'];
 
@@ -208,7 +200,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private enemyGraphics: (EnemyGraphic | null)[] = [];
 
-  private equipSlotObjs: { bg: Phaser.GameObjects.Rectangle; icon: Phaser.GameObjects.Image }[] = [];
+  private equipSlotObjs: { bg: Phaser.GameObjects.Rectangle; icon: ItemIconView }[] = [];
   // Ячейки сетки рюкзака (левая колонка нижней панели) — пересобираются на каждую находку.
   private backpackCellObjs: Phaser.GameObjects.GameObject[] = [];
   // Табы смены стойки прямо в походе (1/2/3): выбор активной стойки на лету.
@@ -1045,8 +1037,10 @@ export class ExpeditionScene extends Phaser.Scene {
       const isOverflowCell = overflow > 0 && i === capacity - 1;
       const item = isOverflowCell ? undefined : this.backpack[i];
 
+      // Рамку редкости несёт плашка иконки (src/ui/itemIcon.ts) — у ячейки остаётся нейтральный
+      // контур, видимый только когда она пуста.
       const bg = this.add.rectangle(x, y, SIZE, SIZE, 0x1a1a2a)
-        .setStrokeStyle(1, item ? RARITY_COLORS[item.rarity] : 0x333344);
+        .setStrokeStyle(1, 0x333344);
       this.backpackCellObjs.push(bg);
 
       if (isOverflowCell) {
@@ -1057,12 +1051,12 @@ export class ExpeditionScene extends Phaser.Scene {
       }
       if (!item) continue;
 
-      const iconSize = Math.round(38 * panelScale()); // как в сундуке лагеря
-      this.backpackCellObjs.push(this.add.image(x, y, itemIconKey(item.item_id)).setDisplaySize(iconSize, iconSize));
+      const view = addItemIcon(this, x, y, { itemId: item.item_id, rarity: item.rarity, size: SIZE });
+      this.backpackCellObjs.push(view);
       // Единственное взаимодействие — наведение: в походе предмет применить нельзя.
       bg.setInteractive({ useHandCursor: false });
-      bg.on('pointerover', () => this.tooltip.showItem(item, x + SIZE, y - 40));
-      bg.on('pointerout', () => this.tooltip.hide());
+      bg.on('pointerover', () => { view.setHover(true); this.tooltip.showItem(item, x + SIZE, y - 40); });
+      bg.on('pointerout', () => { view.setHover(false); this.tooltip.hide(); });
     }
   }
 
@@ -1166,22 +1160,27 @@ export class ExpeditionScene extends Phaser.Scene {
       const y = originY + dy;
       const item = this.equipment[slotId];
 
+      // Рамку редкости несёт плашка иконки (src/ui/itemIcon.ts), у ячейки — нейтральный контур.
       const bg = this.add.rectangle(x, y, SIZE, SIZE, 0x1a1a2a)
-        .setStrokeStyle(1, item ? RARITY_COLORS[item.rarity] : 0x333344)
+        .setStrokeStyle(1, 0x333344)
         .setInteractive({ useHandCursor: false });
 
-      const iconSize = Math.round((item ? 38 : 36) * S);
-      const icon = this.add.image(x, y, item ? itemIconKey(item.item_id) : slotSilhouetteKey(slotId))
-        .setDisplaySize(iconSize, iconSize)
-        .setAlpha(item ? 1 : 0.35)
-        .setDepth(4);
+      const icon = addItemIcon(this, x, y, {
+        itemId: item?.item_id,
+        rarity: item?.rarity,
+        silhouette: slotSilhouetteKey(slotId),
+        size: SIZE,
+        iconAlpha: item ? 1 : 0.35,
+      }).setDepth(4);
 
       // Наведение показывает предмет.
       bg.on('pointerover', () => {
         const cur = this.equipment[slotId];
-        if (cur) this.tooltip.showItem(cur, x + SIZE, y - 40);
+        if (!cur) return;
+        icon.setHover(true);
+        this.tooltip.showItem(cur, x + SIZE, y - 40);
       });
-      bg.on('pointerout', () => this.tooltip.hide());
+      bg.on('pointerout', () => { icon.setHover(false); this.tooltip.hide(); });
 
       this.equipSlotObjs.push({ bg, icon });
     }
@@ -1591,7 +1590,7 @@ export class ExpeditionScene extends Phaser.Scene {
         .setStrokeStyle(2, RARITY_COLORS[item.rarity])
         .setInteractive({ useHandCursor: false });
       c.add(card);
-      c.add(this.add.image(x, cardY - 28, itemIconKey(item.item_id)).setDisplaySize(72, 72));
+      c.add(addItemIcon(this, x, cardY - 28, { itemId: item.item_id, rarity: item.rarity, size: 72 }));
       c.add(this.add.text(x, cardY + 34, getItemBehavior(item.item_id).name, {
         fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
         align: 'center', wordWrap: { width: CARD_W - 16 },
@@ -1760,7 +1759,9 @@ export class ExpeditionScene extends Phaser.Scene {
           fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
         }).setOrigin(0.5, 0));
       } else {
-        this.victoryContainer.add(this.add.image(x, cardY - 28, itemIconKey(opt.item.item_id)).setDisplaySize(72, 72));
+        this.victoryContainer.add(addItemIcon(this, x, cardY - 28, {
+          itemId: opt.item.item_id, rarity: opt.item.rarity, size: 72,
+        }));
         this.victoryContainer.add(this.add.text(x, cardY + 34, getItemBehavior(opt.item.item_id).name, {
           fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
           align: 'center', wordWrap: { width: CARD_W - 16 },

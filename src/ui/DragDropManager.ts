@@ -1,16 +1,8 @@
 import Phaser from 'phaser';
-import type { Rarity, SlotType } from '../items/types';
+import type { SlotType } from '../items/types';
 import type { ItemInstance } from '../items/types';
 import { getItemBehavior } from '../items/registry';
-import { itemIconKey } from '../items/icons';
-
-const RARITY_COLORS: Record<Rarity, number> = {
-  common: 0xffffff,
-  uncommon: 0x55ff55,
-  rare: 0x5555ff,
-  epic: 0xaa00ff,
-  legendary: 0xff8800,
-};
+import { addItemIcon, ItemIconView } from './itemIcon';
 
 /** Цвет подсветки слотов, в которые взятый в руку предмет можно положить. */
 const HIGHLIGHT_COLOR = 0xffcc44;
@@ -48,15 +40,15 @@ export class DragDropManager {
   private slots = new Map<string, SlotZone>();
 
   // Перетаскивание зажатой мышью (drag&drop).
-  private dragSprite: Phaser.GameObjects.Image | null = null;
+  private dragSprite: ItemIconView | null = null;
   private draggingFrom: string | null = null;
   private draggingItem: ItemInstance | null = null;
 
   // «Рука»: предмет взят по клику и держится у курсора между кликами.
   private heldItem: ItemInstance | null = null;
   private heldFrom: string | null = null;
-  private heldSprite: Phaser.GameObjects.Image | null = null;
-  private heldBorder: Phaser.GameObjects.Rectangle | null = null;
+  // Рамку редкости несёт плашка иконки (src/ui/itemIcon.ts) — отдельный heldBorder не нужен.
+  private heldSprite: ItemIconView | null = null;
 
   // Подсветка слотов, куда подходит взятый в руку предмет.
   private highlights: Phaser.GameObjects.Rectangle[] = [];
@@ -74,9 +66,8 @@ export class DragDropManager {
   /** Масштаб иконки предмета в руке/драге — под размер ячеек текущей панели. */
   setIconScale(s: number) {
     this.iconScale = s;
-    this.dragSprite?.setDisplaySize(44 * s, 44 * s);
-    this.heldSprite?.setDisplaySize(44 * s, 44 * s);
-    this.heldBorder?.setSize(48 * s, 48 * s);
+    this.dragSprite?.setPlateSize(48 * s);
+    this.heldSprite?.setPlateSize(48 * s);
   }
 
   registerSlot(zone: SlotZone) {
@@ -103,18 +94,16 @@ export class DragDropManager {
     this.draggingFrom = fromSlotId;
     this.draggingItem = slot.item;
 
-    this.dragSprite = this.scene.add
-      .image(pointerX, pointerY, itemIconKey(slot.item.item_id))
-      .setDisplaySize(44 * this.iconScale, 44 * this.iconScale)
-      .setDepth(200)
-      .setAlpha(0.85)
-      .setOrigin(0.5);
+    this.dragSprite = addItemIcon(this.scene, pointerX, pointerY, {
+      itemId: slot.item.item_id,
+      rarity: slot.item.rarity,
+      size: 48 * this.iconScale,
+    }).setDepth(200).setAlpha(0.85);
   }
 
   private onPointerMove(ptr: Phaser.Input.Pointer) {
     this.dragSprite?.setPosition(ptr.x, ptr.y);
     this.heldSprite?.setPosition(ptr.x, ptr.y);
-    this.heldBorder?.setPosition(ptr.x, ptr.y);
   }
 
   private onPointerUp(ptr: Phaser.Input.Pointer) {
@@ -168,17 +157,11 @@ export class DragDropManager {
     this.heldItem = item;
     this.heldFrom = fromId;
     const p = this.scene.input.activePointer;
-    this.heldBorder = this.scene.add
-      .rectangle(p.x, p.y, 48 * this.iconScale, 48 * this.iconScale)
-      .setStrokeStyle(2, RARITY_COLORS[item.rarity])
-      .setDepth(299)
-      .setOrigin(0.5);
-    this.heldSprite = this.scene.add
-      .image(p.x, p.y, itemIconKey(item.item_id))
-      .setDisplaySize(44 * this.iconScale, 44 * this.iconScale)
-      .setDepth(300)
-      .setAlpha(0.95)
-      .setOrigin(0.5);
+    this.heldSprite = addItemIcon(this.scene, p.x, p.y, {
+      itemId: item.item_id,
+      rarity: item.rarity,
+      size: 48 * this.iconScale,
+    }).setDepth(300).setAlpha(0.95);
     this.updateHighlights();
     return true;
   }
@@ -216,8 +199,7 @@ export class DragDropManager {
     this.heldItem = swapped;
     this.heldFrom = slotId;
     if (swapped && this.heldSprite) {
-      this.heldSprite.setTexture(itemIconKey(swapped.item_id));
-      this.heldBorder?.setStrokeStyle(2, RARITY_COLORS[swapped.rarity]);
+      this.heldSprite.setItem(swapped.item_id, swapped.rarity);
       this.updateHighlights(); // тип предмета в руке сменился — пересветить подходящие слоты
     } else {
       this.clearHand();
@@ -306,8 +288,6 @@ export class DragDropManager {
     this.clearHighlights();
     this.heldSprite?.destroy();
     this.heldSprite = null;
-    this.heldBorder?.destroy();
-    this.heldBorder = null;
     this.heldItem = null;
     this.heldFrom = null;
   }

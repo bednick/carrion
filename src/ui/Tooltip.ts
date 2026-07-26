@@ -3,6 +3,7 @@ import { FONT_FAMILY } from './theme';
 import { getItemBehavior } from '../items/registry';
 import { salvageEssence, ESSENCE_TIERS } from '../items/craft';
 import { essenceIconKey } from './rewards';
+import { NEUTRAL_PLATE_KEY } from './itemIcon';
 import type { ItemInstance, Rarity, EssenceTier } from '../items/types';
 
 // Метрики тултипа (x1.6 от исходных — читаемость).
@@ -156,9 +157,12 @@ export class Tooltip {
           let sx = PAD;
           for (const cell of line.iconRow) {
             const cx = sx + ROW_ICON / 2, cy = PAD + totalH + ROW_ICON / 2;
-            const frame = this.scene.add.rectangle(cx, cy, ROW_ICON + ROW_FRAME_PAD, ROW_ICON + ROW_FRAME_PAD)
-              .setStrokeStyle(1, 0xffffff, 0.8);
-            this.decor.push(frame);
+            // Плашка вместо прежней белой рамки: редкость здесь неизвестна (у зоны есть только
+            // item_id), поэтому нейтральный вариант — см. src/ui/itemIcon.ts.
+            const plate = this.scene.add.image(cx, cy, NEUTRAL_PLATE_KEY)
+              .setDisplaySize(ROW_ICON + ROW_FRAME_PAD, ROW_ICON + ROW_FRAME_PAD);
+            if (!cell.discovered) plate.setAlpha(0.6);
+            this.icons.push(plate);
             const img = this.scene.add.image(cx, cy, cell.texture)
               .setDisplaySize(ROW_ICON, ROW_ICON);
             if (!cell.discovered) img.setTint(0x555566).setAlpha(0.6);

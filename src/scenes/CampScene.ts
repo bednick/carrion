@@ -14,6 +14,7 @@ import {
 } from '../items/craft';
 import type { Rarity, SlotType, EssencePool, EssenceTier } from '../items/types';
 import { itemIconKey } from '../items/icons';
+import { addItemIcon, ItemIconView, RARITY_COLORS } from '../ui/itemIcon';
 import { resourceTag } from '../ui/priceTag';
 import { essenceIconKey, essenceIconKeyByRarity } from '../ui/rewards';
 import { slotSilhouetteKey, upgradeIconKey } from '../ui/silhouettes';
@@ -107,14 +108,6 @@ for (const def of Object.values(QUEST_DEFS)) {
     if (reward.type === 'unlock_area') AREA_UNLOCK_QUEST[reward.areaId] = def.id;
   }
 }
-
-const RARITY_COLORS: Record<Rarity, number> = {
-  common: 0xffffff,
-  uncommon: 0x55ff55,
-  rare: 0x5555ff,
-  epic: 0xaa00ff,
-  legendary: 0xff8800,
-};
 
 // Цвет названия зоны в тултипе = цвет эссенции, которую даёт её босс. Поле Битвы эссенции
 // не даёт (финал без награды-выбора) — берём легендарный цвет как высший тир.
@@ -386,7 +379,7 @@ export class CampScene extends Phaser.Scene {
       const beh = getItemBehavior(id);
       const card = this.add.rectangle(x, y, CARD_W, CARD_H, 0x1a1a2a)
         .setStrokeStyle(2, 0x666666).setDepth(91).setInteractive({ useHandCursor: true });
-      const icon = this.add.image(x, y - 24, itemIconKey(id)).setDisplaySize(56, 56).setDepth(92);
+      const icon = addItemIcon(this, x, y - 24, { itemId: id, rarity: 'common', size: 56 }).setDepth(92);
       const label = this.add.text(x, y + 32, beh.name, {
         fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd', align: 'center',
         wordWrap: { width: CARD_W - 12 },
@@ -947,16 +940,20 @@ export class CampScene extends Phaser.Scene {
       const y = originY + dy;
       const inst = stand[slotId];
 
+      // Рамку редкости несёт плашка иконки (src/ui/itemIcon.ts), у ячейки — нейтральный контур.
       const bg = this.add.rectangle(x, y, SIZE, SIZE, 0x2a2a3a)
-        .setStrokeStyle(1, inst ? RARITY_COLORS[inst.rarity] : 0x444455);
+        .setStrokeStyle(1, 0x444455);
 
       objs.push(bg);
 
-      if (inst) {
-        objs.push(this.add.image(x, y, itemIconKey(inst.item_id)).setDisplaySize(38, 38));
-      } else {
-        objs.push(this.add.image(x, y, slotSilhouetteKey(slotId)).setDisplaySize(36, 36).setAlpha(0.75));
-      }
+      const view = addItemIcon(this, x, y, {
+        itemId: inst?.item_id,
+        rarity: inst?.rarity,
+        silhouette: slotSilhouetteKey(slotId),
+        size: SIZE,
+        iconAlpha: inst ? 1 : 0.75,
+      });
+      objs.push(view);
 
       if (this.dragDrop) {
         const sid = slotId;
@@ -974,8 +971,8 @@ export class CampScene extends Phaser.Scene {
       if ((onSlotClick || this.dragDrop) && inst) {
         bg.setInteractive({ useHandCursor: true });
         const sid = slotId;
-        bg.on('pointerover', () => { bg.setFillStyle(0x3a3a5a); if (inst) this.tooltip.showItem(inst, this.panelX(x + SIZE / 2 + 8), this.panelY(y - SIZE / 2 - 8)); });
-        bg.on('pointerout',  () => { bg.setFillStyle(0x2a2a3a); this.tooltip.hide(); });
+        bg.on('pointerover', () => { view.setHover(true); if (inst) this.tooltip.showItem(inst, this.panelX(x + SIZE / 2 + 8), this.panelY(y - SIZE / 2 - 8)); });
+        bg.on('pointerout',  () => { view.setHover(false); this.tooltip.hide(); });
         if (this.dragDrop) {
           bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
             if (this.dragDrop?.isHolding()) return; // клик с предметом в руке обрабатывает pointerup
@@ -1275,11 +1272,14 @@ export class CampScene extends Phaser.Scene {
     const divider = this.add.rectangle(cx, top - 2, 340, 1, 0x333344);
 
     // Входной слот
+    // Рамку редкости несёт плашка иконки (src/ui/itemIcon.ts), у пустой ячейки — свой контур.
     const s1Bg = this.add.rectangle(inputX, slotY, S, S, 0x2a2a3a)
-      .setStrokeStyle(2, item ? RARITY_COLORS[item.rarity] : 0x555566);
-    const s1Content = item
-      ? this.add.image(inputX, slotY, itemIconKey(item.item_id)).setDisplaySize(34, 34)
-      : this.add.image(inputX, slotY, upgradeIconKey('plus')).setDisplaySize(22, 22);
+      .setStrokeStyle(2, 0x555566);
+    const s1View = item
+      ? addItemIcon(this, inputX, slotY, { itemId: item.item_id, rarity: item.rarity, size: S })
+      : null;
+    const s1Content: Phaser.GameObjects.GameObject = s1View
+      ?? this.add.image(inputX, slotY, upgradeIconKey('plus')).setDisplaySize(22, 22);
 
     // "→"
     const arrowActive = !!(previewResult || resultItem);
@@ -1289,12 +1289,17 @@ export class CampScene extends Phaser.Scene {
 
     // Слот результата: пока идёт выбор — полупрозрачное превью; после апгрейда — настоящий предмет, который можно забрать.
     const s3Bg = this.add.rectangle(resultX, slotY, S, S, 0x252530)
-      .setStrokeStyle(2, resultItem ? RARITY_COLORS[resultItem.rarity] : previewResult ? RARITY_COLORS[previewResult.rarity] : 0x333344);
-    let s3Content: Phaser.GameObjects.Image | null = null;
+      .setStrokeStyle(2, 0x333344);
+    let s3View: ItemIconView | null = null;
+    let s3Content: Phaser.GameObjects.GameObject | null = null;
     if (resultItem) {
-      s3Content = this.add.image(resultX, slotY, itemIconKey(resultItem.item_id)).setDisplaySize(34, 34);
+      s3View = addItemIcon(this, resultX, slotY, { itemId: resultItem.item_id, rarity: resultItem.rarity, size: S });
+      s3Content = s3View;
     } else if (previewResult) {
-      s3Content = this.add.image(resultX, slotY, itemIconKey(previewResult.item_id)).setDisplaySize(34, 34).setAlpha(0.3);
+      // Превью следующей ступени — та же плашка, но приглушённая целиком (иконка + фон).
+      s3Content = addItemIcon(this, resultX, slotY, {
+        itemId: previewResult.item_id, rarity: previewResult.rarity, size: S,
+      }).setAlpha(0.3);
     } else {
       s3Content = this.add.image(resultX, slotY, upgradeIconKey('question_mark')).setDisplaySize(20, 20);
     }
@@ -1340,10 +1345,10 @@ export class CampScene extends Phaser.Scene {
     if (item) {
       s1Bg.setInteractive({ useHandCursor: true });
       s1Bg.on('pointerover', () => {
-        s1Bg.setFillStyle(0x3a3a5a);
+        s1View?.setHover(true);
         this.tooltip.showItem(item, this.panelX(inputX + S / 2 + 8), this.panelY(slotY - S / 2 - 8));
       });
-      s1Bg.on('pointerout', () => { s1Bg.setFillStyle(0x2a2a3a); this.tooltip.hide(); });
+      s1Bg.on('pointerout', () => { s1View?.setHover(false); this.tooltip.hide(); });
       if (this.dragDrop) {
         s1Bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
           if (this.dragDrop?.isHolding()) return;
@@ -1362,10 +1367,10 @@ export class CampScene extends Phaser.Scene {
       // Готовый предмет — можно забрать drag'ом (клик берёт в руку / зажатие тащит).
       s3Bg.setInteractive({ useHandCursor: true });
       s3Bg.on('pointerover', () => {
-        s3Bg.setFillStyle(0x35354a);
+        s3View?.setHover(true);
         this.tooltip.showItem(resultItem, this.panelX(resultX + S / 2 + 8), this.panelY(slotY - S / 2 - 8));
       });
-      s3Bg.on('pointerout', () => { s3Bg.setFillStyle(0x252530); this.tooltip.hide(); });
+      s3Bg.on('pointerout', () => { s3View?.setHover(false); this.tooltip.hide(); });
       if (this.dragDrop) {
         s3Bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
           if (this.dragDrop?.isHolding()) return;
@@ -1683,12 +1688,14 @@ export class CampScene extends Phaser.Scene {
 
         const entry = stacks[i];
         const inst = entry?.item;
+        // Рамку редкости несёт плашка иконки (src/ui/itemIcon.ts), у ячейки — нейтральный контур.
         const slotBg = this.add.rectangle(x, yc, SIZE, SIZE, 0x2a2a3a)
-          .setStrokeStyle(1, inst ? RARITY_COLORS[inst.rarity] : 0x555566);
+          .setStrokeStyle(1, 0x555566);
         itemsCtr.add(slotBg);
 
         if (inst) {
-          itemsCtr.add(this.add.image(x, yc, itemIconKey(inst.item_id)).setDisplaySize(38, 38));
+          const view = addItemIcon(this, x, yc, { itemId: inst.item_id, rarity: inst.rarity, size: SIZE });
+          itemsCtr.add(view);
           if (entry.count > 1) {
             itemsCtr.add(this.add.text(x + SIZE / 2 - 3, yc + SIZE / 2 - 3, `${entry.count}`, {
               fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffffff',
@@ -1699,12 +1706,12 @@ export class CampScene extends Phaser.Scene {
           const item = inst;
           slotBg.setInteractive({ useHandCursor: true });
           slotBg.on('pointerover', () => {
-            slotBg.setFillStyle(0x3a3a5a);
+            view.setHover(true);
             this.tooltip.showItem(item, this.panelX(x + SIZE / 2 + 8), this.panelY(yc - SIZE / 2 - 8), {
               defaultCost: this.panelState === 'smith' ? 'essence' : 'none',
             });
           });
-          slotBg.on('pointerout', () => { slotBg.setFillStyle(0x2a2a3a); this.tooltip.hide(); });
+          slotBg.on('pointerout', () => { view.setHover(false); this.tooltip.hide(); });
 
           if (this.dragDrop) {
             const chestSlotId = `chest_${idx}`;

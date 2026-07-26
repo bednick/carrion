@@ -2,10 +2,15 @@ import Phaser from 'phaser';
 import { ITEM_ICON_URLS, itemIconKey } from '../items/icons';
 import { SLOT_SILHOUETTE_URLS, slotSilhouetteKey, ZONE_DECOR_URLS, zoneDecorKey, UPGRADE_ICON_URLS, upgradeIconKey } from '../ui/silhouettes';
 import { REWARD_ICON_URLS, rewardIconKey } from '../ui/rewards';
+import { ensureItemPlates } from '../ui/itemIcon';
 import { ZONE_BG_VARIANTS, zoneBgKey, type BgLayer, ZONE_BG_OBJECTS, zoneObjKey, type ScatterLayer } from '../zones/registry';
 import { ALL_MOB_IDS } from '../mobs/registry';
 import { SOUND_FILES, MUSIC_FILES, soundVariants, soundAssetKey, musicVariants, musicAssetKey, type SoundKey, type MusicKey } from '../core/SoundRegistry';
 import { SoundManager } from '../core/SoundManager';
+
+function isSvgUrl(url: string): boolean {
+  return url.split('?')[0].endsWith('.svg');
+}
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -13,8 +18,12 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
+    // Иконки предметов постепенно переезжают с SVG на растровый пиксель-арт (icon.png) —
+    // грузим по расширению URL. assetsInlineLimit:0 в vite.config.ts гарантирует, что оба
+    // формата приходят настоящим путём с расширением, а не data-URI.
     for (const [item_id, url] of Object.entries(ITEM_ICON_URLS)) {
-      this.load.svg(itemIconKey(item_id), url, { width: 40, height: 40 });
+      if (isSvgUrl(url)) this.load.svg(itemIconKey(item_id), url, { width: 40, height: 40 });
+      else this.load.image(itemIconKey(item_id), url);
     }
     for (const [slotId, url] of Object.entries(SLOT_SILHOUETTE_URLS)) {
       this.load.svg(slotSilhouetteKey(slotId), url, { width: 40, height: 40 });
@@ -85,8 +94,9 @@ export class PreloadScene extends Phaser.Scene {
     // SVG-иконки — векторная линия, не пиксель-арт: под глобальным NEAREST (pixelArt:true в main.ts,
     // нужен для чётких спрайтов персонажей/мобов) их диагонали превращаются в лесенку без анти-алиасинга.
     // Переключаем фильтрацию конкретно для этих текстур на LINEAR.
+    // PNG-иконки предметов — наоборот, пиксель-арт: оставляем им глобальный NEAREST.
     const smoothKeys = [
-      ...Object.keys(ITEM_ICON_URLS).map(itemIconKey),
+      ...Object.entries(ITEM_ICON_URLS).filter(([, url]) => isSvgUrl(url)).map(([id]) => itemIconKey(id)),
       ...Object.keys(SLOT_SILHOUETTE_URLS).map(slotSilhouetteKey),
       ...Object.keys(REWARD_ICON_URLS).map(rewardIconKey),
       ...Object.keys(UPGRADE_ICON_URLS).map(id => upgradeIconKey(id as 'plus' | 'question_mark')),
@@ -96,6 +106,10 @@ export class PreloadScene extends Phaser.Scene {
     for (const key of smoothKeys) {
       this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
+
+    // Программный фон под иконками предметов (src/ui/itemIcon.ts): PNG-иконки прозрачные, плашку
+    // рисуем сами. Текстуры глобальны для game.textures — достаточно одного вызова здесь.
+    ensureItemPlates(this);
 
     SoundManager.init(this.game);
     this.scene.start('CampScene');
