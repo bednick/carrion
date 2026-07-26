@@ -19,7 +19,7 @@ import { essenceIconKey, essenceIconKeyByRarity } from '../ui/rewards';
 import { slotSilhouetteKey } from '../ui/silhouettes';
 import { Tooltip } from '../ui/Tooltip';
 import { DragDropManager } from '../ui/DragDropManager';
-import { getZoneConfig, getZoneLootItemIds, WIP_ZONE_IDS } from '../zones/registry';
+import { getZoneConfig, getZoneLootItemIds, isZoneFullyLooted, WIP_ZONE_IDS } from '../zones/registry';
 import type { ZoneConfig } from '../zones/types';
 import { HAMMER_CURSOR } from '../ui/hammerCursor';
 import { QuestTracker } from '../ui/QuestTracker';
@@ -1770,7 +1770,7 @@ export class CampScene extends Phaser.Scene {
     this.buildMapConnections();
 
     for (const entry of MAP_ZONE_LAYOUT) {
-      this.buildMapZoneNode(entry, meta.unlocked_areas, meta.completed_areas);
+      this.buildMapZoneNode(entry, meta.unlocked_areas, meta.completed_areas, meta.stats.items_carried_out);
     }
   }
 
@@ -1806,10 +1806,14 @@ export class CampScene extends Phaser.Scene {
     this.panelContainer.add(g);
   }
 
-  private buildMapZoneNode(entry: MapZoneEntry, unlocked: string[], completed: string[]) {
+  private buildMapZoneNode(entry: MapZoneEntry, unlocked: string[], completed: string[], carriedOut: Record<string, number>) {
     const isWip = WIP_ZONE_IDS.has(entry.id);
     const isCenter = entry.id === 'battlefield';
+    // Босс убит хотя бы раз — управляет гейтами (блокировка ниже, zonePrereqMet, isCenterUnlocked).
     const isCompleted = completed.includes(entry.id);
+    // Зелёная метка «✓ Пройдена»: весь лут-пул зоны вынесен в сундук И босс убит хотя бы раз.
+    // Чисто визуальный критерий, на геймплейные гейты открытия зон не влияет (см. план).
+    const isFullyLooted = !isWip && !isCenter && isCompleted && isZoneFullyLooted(entry.id, carriedOut);
     // Центр — гейт по топологии (все 9 зон), а не через проходку/квесты.
     const isUnlocked = isCenter
       ? MetaStore.isCenterUnlocked()
@@ -1822,8 +1826,8 @@ export class CampScene extends Phaser.Scene {
     if (isWip) {
       fillColor = 0x222233; borderColor = 0x333344; labelColor = '#444455';
     } else if (isUnlocked || isCompleted) {
-      fillColor = isCompleted ? 0x224422 : 0x224466;
-      borderColor = isCompleted ? 0x44aa44 : 0x4488cc;
+      fillColor = isFullyLooted ? 0x224422 : 0x224466;
+      borderColor = isFullyLooted ? 0x44aa44 : 0x4488cc;
       labelColor = '#ddddff';
     }
 
@@ -1845,7 +1849,7 @@ export class CampScene extends Phaser.Scene {
       this.buildQuestMarker(entry.x + 78, entry.y - 28);
     }
 
-    if (isCompleted) {
+    if (isFullyLooted) {
       this.panelContainer.add(this.add.text(entry.x, entry.y + 20, '✓ Пройдена', {
         fontSize: '14px', fontFamily: FONT_FAMILY, color: '#44aa44',
       }).setOrigin(0.5));
@@ -1929,7 +1933,7 @@ export class CampScene extends Phaser.Scene {
     const cfg = getZoneConfig(entry.id);
     [node, nameText].forEach(obj => {
       obj.on('pointerover', () => {
-        node.setFillStyle(isCompleted ? 0x336633 : 0x336688);
+        node.setFillStyle(isFullyLooted ? 0x336633 : 0x336688);
         // Имя — в цвет эссенции награды зоны; ниже — краткий лор. Бои/фракцию не показываем.
         const lines: { text: string; color: string; iconRow?: { texture: string; discovered: boolean }[] }[] = [
           { text: cfg.name, color: zoneNameColor(cfg) },

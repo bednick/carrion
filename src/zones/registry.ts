@@ -39,6 +39,12 @@ export function getZoneLootItemIds(zoneId: string): string[] {
   return [...new Set(ids)];
 }
 
+/** Все предметы лут-пула зоны хоть раз вынесены в сундук (см. stats.items_carried_out). */
+export function isZoneFullyLooted(zoneId: string, carriedOut: Record<string, number>): boolean {
+  const ids = getZoneLootItemIds(zoneId);
+  return ids.length > 0 && ids.every((id) => (carriedOut[id] ?? 0) > 0);
+}
+
 export const ALL_ZONE_IDS = [
   'dead-fields',
   'trampled-meadows',
