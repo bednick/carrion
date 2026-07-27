@@ -52,8 +52,10 @@ export interface ArmorOpts {
   cap?: number;
 }
 
-/** Броня: мультипликативно снижает входящий по герою урон (стакается с другой бронёй по порядку,
- *  никогда не обнуляет удар целиком — см. `mitigateDamage`). */
+/** Броня: мультипликативно снижает входящий по герою урон (стакается с другой бронёй по порядку).
+ *  Результат дробный — округляется один раз, стохастически, в `CombatEngine.applyDamage`, поэтому
+ *  процент работает и на мелких ударах, а на самых слабых может свести удар в 0 («Блок»).
+ *  См. `mitigateDamage`. */
 export function standardArmor(opts: ArmorOpts): ItemCombatBehavior {
   const scale = opts.scale ?? 1.5;
   const cap = opts.cap ?? 0.6;

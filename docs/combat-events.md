@@ -256,13 +256,13 @@ const behavior: ItemBehavior = {
 
 | Эффект                       | Подписка → результат                                                |
 |------------------------------|---------------------------------------------------------------------|
-| Броня (`damage_reduction`)   | на `damage`(target=hero): `replace:[damage с меньшим amount]`       |
+| Броня (`damage_reduction`)   | на `damage`(target=hero): `replace:[damage с меньшим (дробным) amount]` |
 | Щит (`block_chance`)         | на `damage`(target=hero): шанс → `replace:[]` + `spawn:[block]`     |
 | Лечение за убийство (амулет) | на `kill`: `spawn:[heal(target=hero)]`                              |
 | Лайфстил за удар             | на `damage`(source=hero, target=enemy), кроме `splash: true`: `spawn:[heal(target=hero)]` |
 | Контрудар (`buckler`)        | на `damage`(target=hero), независимый ролл: `spawn:[attack(source.slot=hand_right, target=атакующий враг) + counter]` — `attack`, не `damage` напрямую, чтобы поймать крит-хуки вроде `heavy_gloves`; `counter` — чисто презентационный дубль рядом (см. §2, `content.items.hand_left.md`) |
 | Шипы (`spiked_shield`)       | на `damage`(target=hero), кроме `thorns: true`: `spawn:[damage(target=атакующий враг, thorns: true)]` (доля дошедшего урона) |
-| Броня врага (`armor`)        | на `damage`(target=enemy): `replace:[damage с меньшим amount]`      |
+| Броня врага (`armor`)        | на `damage`(target=enemy): `replace:[damage с меньшим (дробным) amount]` |
 | Уклонение врага              | на `damage`(target=enemy): шанс → `replace:[]` + `spawn:[dodge]`    |
 | Шипы врага                   | на `damage`(target=enemy), кроме `thorns: true`: `spawn:[damage(target=hero, thorns: true)]` |
 
@@ -276,12 +276,23 @@ const behavior: ItemBehavior = {
 `origin: { from: 'enemy', id }`. Ничего отдельно не скейлится — значения берутся как есть.
 
 Броня (`armor`) — процентная и мультипликативная (0..1, с 2026-07, см. `docs/mechanics.md` §«Броня vs щит»,
-`src/combat/mitigation.ts`): снижает `amount`, но никогда не обнуляет удар целиком — округление гарантирует
-минимум 1, если исходный урон был > 0. `armorPierce` удара (напр. крит `war_pick`, см.
-`content.items.hand_right.md`) снижает эффективную броню для конкретного удара. Терминальное `block`(target=enemy)
-от брони больше не спавнится (не может сработать при мультипликативной модели, ветка убрана вместе с
-FloaterType `absorb`/надписью «Отражено», ныне мёртвым UI) — единственная реакция врага на входящий удар с
-собственной надписью теперь `dodge` → UI «мимо».
+`src/combat/mitigation.ts`): умножает `amount` на `1-armor` и **не округляет** — дробь доезжает до
+`applyDamage`. `armorPierce` удара (напр. крит `war_pick`, см. `content.items.hand_right.md`) снижает
+эффективную броню для конкретного удара.
+
+### Округление урона (`applyDamage`)
+
+`amount` в цепочке `damage` — **дробный**: ни один хук не округляет, иначе стак брони терял бы точность
+`(1-p₁)×(1-p₂)×…`, а процент не работал бы на мелких ударах. Единственное округление — в
+`CombatEngine.applyDamage`, и оно **стохастическое**: дробный остаток становится вероятностью округлить
+вверх (`stochasticRound`, `src/combat/mitigation.ts`). Порядок для героя: проклятие endless (`damageTakenMult`,
+по дробному) → округление → неуязвимость → HP.
+
+Пола в 1 урон нет. Если после округления вышел 0, а исходный урон был > 0, `applyDamage` возвращает
+follow-up `block`(target=та же сторона) вместо изменения HP — тот же терминал, что спавнит `heavy_shield`,
+только автор — движок (`origin: { from: 'engine' }`). Поэтому `block` теперь достижим и на стороне врага
+(UI: надпись «Блок» над мобом, `ExpeditionScene.onBlock`), а не только на герое; `dodge` остаётся отдельной
+реакцией врага (UI «мимо»). Заряд неуязвимости на погашенный бронёй удар не тратится.
 
 Эмерджентность бесплатна: «лайфстил за удар» автоматически сильнее с `fast`-оружием — больше срабатываний `damage`,
 без спец-кода на пару (§4.B).

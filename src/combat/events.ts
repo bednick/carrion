@@ -55,7 +55,7 @@ export type GameEvent = EventMeta &
     // так же, как armorPierce/splash, и отдаёт его в onDamageDealt для крит-флоатера.
     | { type: 'attack'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; crit?: boolean } // взмах, авторённый предметом
     | { type: 'damage'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; thorns?: boolean; crit?: boolean } // экземпляр урона «в полёте»
-    | { type: 'block'; source: Side; target: Side; prevented: number } // урон полностью отклонён (щит)
+    | { type: 'block'; source: Side; target: Side; prevented: number } // урон полностью отклонён (щит либо броня, срезавшая удар в 0)
     | { type: 'dodge'; source: Side; target: Side } // враг уклонился — входящий урон погашен
     | { type: 'counter'; source: Side; target: Side } // чисто презентационное: «это был контрудар», HP не трогает
     | { type: 'heal'; source: Side; target: Side; amount: number }

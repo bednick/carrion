@@ -7,7 +7,7 @@ import type { GameEvent, Side, Origin, EventResult } from './events';
 import { UNARMED_DAMAGE } from './events';
 import { getItemBehavior } from '../items/registry';
 import { HANDLER_ORDER, MAX_CASCADE, runPass, stampOrigin } from './dispatcher';
-import { mitigateDamage } from './mitigation';
+import { mitigateDamage, stochasticRound } from './mitigation';
 import { unseededRng, type Rng } from '../core/rng';
 
 const UNARMED_INTERVAL = 1500;
@@ -304,7 +304,7 @@ export class CombatEngine {
       const event = queue.shift()!;
       const terminals = runPass(event, equipment, ctx, queue, (e, c) => this.enemyDefend(e, c.rng));
       for (const t of terminals) {
-        const followups = this.apply(t);
+        const followups = this.apply(t, ctx.rng);
         for (const f of followups) queue.push(stampOrigin(f, { from: 'engine' }, t));
       }
     }
@@ -330,7 +330,9 @@ export class CombatEngine {
       };
     }
 
-    // armor — мультипликативный срез входящего урона (доля 0..1, никогда не обнуляет удар целиком).
+    // armor — мультипликативный срез входящего урона (доля 0..1). Результат остаётся ДРОБНЫМ и едет
+    // дальше по цепочке: единственное (стохастическое) округление ждёт в applyDamage. На малом уроне
+    // это значит, что броня может свести удар в 0 — движок покажет его как `block`.
     // armorPierce удара (напр. крит `war_pick`) снижает эффективную броню для ЭТОГО удара — переносится
     // с `attack` на `damage` в `apply()`, здесь не скейлится и не стакается (одно значение на удар).
     const before = e.amount;
@@ -361,8 +363,9 @@ export class CombatEngine {
     };
   }
 
-  /** Применяет терминальное событие к состоянию + UI; возвращает порождённые follow-up события. */
-  private apply(e: GameEvent): GameEvent[] {
+  /** Применяет терминальное событие к состоянию + UI; возвращает порождённые follow-up события.
+   *  `rng` — общая с хуками нессиженная ручка (см. `dispatch`), нужна стохастическому округлению урона. */
+  private apply(e: GameEvent, rng: () => number): GameEvent[] {
     switch (e.type) {
       case 'attack_ready':
         // Дошло до движка нетронутым → дефолт-автор (безоружный герой).
@@ -375,7 +378,7 @@ export class CombatEngine {
         return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, armorPierce: e.armorPierce, splash: e.splash, crit: e.crit, origin: e.origin }];
 
       case 'damage':
-        return this.applyDamage(e.source, e.target, e.amount, e.crit);
+        return this.applyDamage(e.source, e.target, e.amount, rng, e.crit);
 
       case 'block':
         this.cb.onBlock(e.target.side === 'hero' ? 'hero' : 'enemy', e.target.side === 'enemy' ? e.target.idx : -1);
@@ -430,16 +433,26 @@ export class CombatEngine {
     return [];
   }
 
-  private applyDamage(source: Side, target: Side, rawAmount: number, crit?: boolean): GameEvent[] {
-    const amount = Math.max(0, Math.round(rawAmount));
+  /**
+   * Единственное место, где дробный урон превращается в целые HP. Округление стохастическое
+   * (см. `stochasticRound`): вся цепочка хуков перед этим считает в дробях, поэтому стак брони
+   * точен, а процент снижения работает одинаково на ударе любого размера.
+   *
+   * Пола в 1 урон нет: если броня срезала удар в 0, вместо урона уходит `block` — тот же терминал,
+   * что спавнит щит, только автор — движок (docs/mechanics.md §«Броня vs щит»).
+   */
+  private applyDamage(source: Side, target: Side, rawAmount: number, rng: () => number, crit?: boolean): GameEvent[] {
+    const blocked = (): GameEvent[] => [{ type: 'block', source, target, prevented: rawAmount, origin: { from: 'engine' } }];
 
     if (target.side === 'enemy') {
       const enemy = this.state.enemies[target.idx];
       if (!enemy || enemy.hp <= 0) return [];
-      if (amount > 0) {
-        enemy.hp = Math.max(0, enemy.hp - amount);
-        this.cb.onDamageDealt('enemy', amount, target.idx, crit);
-      }
+
+      const amount = Math.max(0, stochasticRound(rawAmount, rng));
+      if (amount <= 0) return rawAmount > 0 ? blocked() : [];
+
+      enemy.hp = Math.max(0, enemy.hp - amount);
+      this.cb.onDamageDealt('enemy', amount, target.idx, crit);
       if (enemy.hp <= 0) {
         return [{ type: 'kill', source, target, origin: { from: 'engine' } }];
       }
@@ -447,13 +460,16 @@ export class CombatEngine {
     }
 
     // target = hero
-    if (amount <= 0) return [];
     const hero = this.state.hero;
-    let dmg = amount;
 
     // Проклятие endless-зон (docs/content.zones.format.md) — масштабирует сырой урон до барьера,
-    // как и любой другой источник урона по герою (в т.ч. шипы моба).
-    if (hero.damageTakenMult !== 1) dmg = Math.round(dmg * hero.damageTakenMult);
+    // как и любой другой источник урона по герою (в т.ч. шипы моба). Домножаем ДО округления,
+    // чтобы округление на весь удар осталось ровно одно.
+    const scaled = hero.damageTakenMult !== 1 ? rawAmount * hero.damageTakenMult : rawAmount;
+
+    let dmg = Math.max(0, stochasticRound(scaled, rng));
+    // Броня погасила удар целиком — заряд неуязвимости на него не тратится.
+    if (dmg <= 0) return scaled > 0 ? blocked() : [];
 
     // Неуязвимость (docs/content.items.amulet.md) — полностью гасит удар, тратит один заряд.
     if (hero.invulnHits > 0) {

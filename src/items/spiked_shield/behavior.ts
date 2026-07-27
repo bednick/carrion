@@ -16,7 +16,9 @@ const behavior: ItemBehavior = {
       // e.thorns: урон уже порождён чужими шипами (моба) — не отражаем его снова, иначе шипы
       // моба и героя отражают друг друга по кругу до предохранителя каскада.
       if (e.target.side !== 'hero' || e.amount <= 0 || e.thorns) return {};
-      const reflected = Math.round(e.amount * THORNS_RATIO[ctx.rarity]);
+      // Дробь не округляем: спавненный `damage` округлится один раз в applyDamage (стохастически),
+      // иначе шипы 10% от удара в 1 всегда давали бы 0.
+      const reflected = e.amount * THORNS_RATIO[ctx.rarity];
       if (reflected <= 0) return {};
       return {
         spawn: [{

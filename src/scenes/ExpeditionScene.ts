@@ -1410,13 +1410,23 @@ export class ExpeditionScene extends Phaser.Scene {
           this.updateEnemyGraphics();
         }
       },
-      onBlock: (target) => {
-        // target=enemy сейчас недостижим: броня мобов процентная и не обнуляет удар целиком
-        // (см. docs/mechanics.md §«Броня vs щит»), полный блок остаётся только за щитом героя.
-        if (target !== 'hero') return;
+      onBlock: (target, enemyIdx) => {
+        // Два автора блока: щит героя (бросок до урона) и броня, срезавшая удар в 0 —
+        // второй достижим на обеих сторонах (см. docs/mechanics.md §«Броня vs щит»).
         SoundManager.play('block');
-        this.flashSprite(this.heroSprite, 0xffdd00);
-        spawnFloater(this, 'block', 0, heroX(), 130);
+        if (target === 'hero') {
+          this.flashSprite(this.heroSprite, 0xffdd00);
+          spawnFloater(this, 'block', 0, heroX(), 130);
+          return;
+        }
+        const g = this.enemyGraphics[enemyIdx];
+        if (!g) return;
+        // Надпись — над головой моба, как «мимо» у уклонения (цифры урона живут ниже, в damageSpot).
+        const headY = g.sprite instanceof Phaser.GameObjects.Sprite
+          ? g.sprite.y - g.sprite.displayHeight - 10
+          : g.sprite.y - 60;
+        this.flashSprite(g.sprite, 0xffdd00);
+        spawnFloater(this, 'block', 0, g.sprite.x, headY);
       },
       onDodge: (enemyIdx) => {
         SoundManager.play('block');
