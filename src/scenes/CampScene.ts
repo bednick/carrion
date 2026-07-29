@@ -10,7 +10,7 @@ import { ARMOR_STAND_COUNT } from '../core/MetaStore';
 import { getItemBehavior } from '../items/registry';
 import {
   craftPreview, formatEssence, ESSENCE_TIERS, ESSENCE_NAMES,
-  ESSENCE_EXCHANGE_RATE, ESSENCE_EXCHANGE_TARGET, emptyEssence,
+  ESSENCE_EXCHANGE_RATE, ESSENCE_EXCHANGE_TARGET, isEssenceExchangeUnlocked, emptyEssence,
   findDuplicateChestIndices, sumSalvageEssence,
 } from '../items/craft';
 import type { Rarity, SlotType, EssencePool, EssenceTier } from '../items/types';
@@ -113,6 +113,11 @@ for (const def of Object.values(QUEST_DEFS)) {
 // не даёт (финал без награды-выбора) — берём легендарный цвет как высший тир.
 const TIER_HEX: Record<string, string> = {
   uncommon: '#55ff55', rare: '#5555ff', epic: '#aa00ff', legendary: '#ff8800',
+};
+
+/** Тир в винительном падеже для фразы «Сначала пройти <тир> область» (тултип закрытого обмена). */
+const TIER_AREA_ADJ: Record<EssenceTier, string> = {
+  uncommon: 'Необычную', rare: 'Редкую', epic: 'Эпическую',
 };
 
 function zoneNameColor(cfg: ZoneConfig): string {
@@ -1159,22 +1164,28 @@ export class CampScene extends Phaser.Scene {
     exchangePairs.forEach(([from, to], j) => {
       const rowY = exchangeYStart + j * ROW_SPACING;
       const owned = meta.essence[from];
-      const canExchange = owned >= 1;
+      // Пока нет прямого источника эссенции `from` (не пройдена ни одна зона с такой наградой),
+      // строка обмена закрыта: затемнена, с замочком и без клика.
+      const unlocked = isEssenceExchangeUnlocked(from, meta.completed_areas);
+      const canExchange = unlocked && owned >= 1;
       const output = ESSENCE_EXCHANGE_RATE;
       const fromLabel = ESSENCE_NAMES[from].charAt(0).toUpperCase() + ESSENCE_NAMES[from].slice(1);
 
-      const rowBg = this.add.rectangle(cx + 7, rowY, 356, ROW_H, 0x222233).setStrokeStyle(1, 0x444455);
+      const rowBg = this.add.rectangle(cx + 7, rowY, 356, ROW_H, unlocked ? 0x222233 : 0x1a1a22)
+        .setStrokeStyle(1, unlocked ? 0x444455 : 0x333344);
 
       const exchangeBtn = this.add.rectangle(cx + 7, rowY, 50, 26, canExchange ? 0x224422 : 0x332222)
-        .setStrokeStyle(1, canExchange ? 0x44aa44 : 0x664444)
-        .setInteractive({ useHandCursor: true });
+        .setStrokeStyle(1, canExchange ? 0x44aa44 : 0x664444);
       const exchangeLbl = this.add.text(cx + 7, rowY, 'Обменять', {
         fontSize: '10px', fontFamily: FONT_FAMILY, color: canExchange ? '#aaffaa' : '#886666', align: 'center',
       }).setOrigin(0.5);
-      exchangeBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
-        if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не меняет
-        this.tryExchangeEssence(from, to, ptr.x, ptr.y);
-      });
+      if (unlocked) {
+        exchangeBtn.setInteractive({ useHandCursor: true });
+        exchangeBtn.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+          if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не меняет
+          this.tryExchangeEssence(from, to, ptr.x, ptr.y);
+        });
+      }
 
       // Слева от кнопки — что отдаём: «-1 [icon] Редкая».
       const toLabel = ESSENCE_NAMES[to].charAt(0).toUpperCase() + ESSENCE_NAMES[to].slice(1);
@@ -1188,6 +1199,28 @@ export class CampScene extends Phaser.Scene {
       );
 
       toAdd.push(rowBg, exchangeBtn, exchangeLbl, ...giveParts, ...getParts);
+
+      if (!unlocked) {
+        // Гасим содержимое строки и кладём замочек поверх (добавляем последним — порядок
+        // добавления в контейнер и есть порядок отрисовки).
+        [exchangeBtn, exchangeLbl, ...giveParts, ...getParts].forEach(o => o.setAlpha(0.35));
+        const lock = this.add.image(cx + 7, rowY, slotSilhouetteKey('lock')).setDisplaySize(22, 22);
+        toAdd.push(lock);
+
+        rowBg.setInteractive({ useHandCursor: false });
+        rowBg.on('pointerover', () => {
+          rowBg.setFillStyle(0x24242e);
+          this.tooltip.showLines([
+            { text: 'Обмен закрыт', color: '#ffffff' },
+            { text: '', color: '#ffffff', parts: [
+              { text: 'Сначала пройти ', color: '#ffffff' },
+              { text: TIER_AREA_ADJ[from], color: TIER_HEX[from] },
+              { text: ' область', color: '#ffffff' },
+            ] },
+          ], this.panelX(cx + 7), this.panelY(rowY - 30));
+        });
+        rowBg.on('pointerout', () => { rowBg.setFillStyle(0x1a1a22); this.tooltip.hide(); });
+      }
     });
 
     // Разделитель — та же линия, что и у блока улучшения на вкладке «Экипировка»
@@ -1227,6 +1260,10 @@ export class CampScene extends Phaser.Scene {
   /** Обмен дорогой эссенции на дешёвую по невыгодному курсу 1:ESSENCE_EXCHANGE_RATE, без золота. */
   private tryExchangeEssence(from: EssenceTier, to: EssenceTier, x?: number, y?: number) {
     const meta = MetaStore.get();
+    if (!isEssenceExchangeUnlocked(from, meta.completed_areas)) {
+      this.showMessage('Обмен ещё не открыт!');
+      return;
+    }
     if (meta.essence[from] < 1) {
       this.showMessage('Недостаточно эссенции!');
       return;

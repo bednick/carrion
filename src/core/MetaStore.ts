@@ -357,6 +357,22 @@ export const MetaStore = {
     EventBus.emit('quest_granted', id);
   },
 
+  /**
+   * Записывает прогресс квеста абсолютным значением — для условий, которые всегда можно
+   * пересчитать по стате (zone_items, battlefield_depth), а не копить дельтой.
+   * Заодно чинит `target`: в сейве он заморожен на момент выдачи квеста, а определение
+   * с тех пор могло измениться (в зону добавили предмет — цель сбора выросла).
+   * Возвращает true, когда квест выполнен.
+   */
+  setQuestProgress(id: string, progress: number, target: number): boolean {
+    const q = state.quests.active.find(q => q.id === id);
+    if (!q) return false;
+    q.target = Math.max(1, target);
+    q.progress = Math.min(q.target, Math.max(0, progress));
+    this.save();
+    return q.progress >= q.target;
+  },
+
   progressQuest(id: string, amount = 1): boolean {
     const q = state.quests.active.find(q => q.id === id);
     if (!q) return false;

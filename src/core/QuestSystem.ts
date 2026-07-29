@@ -41,6 +41,19 @@ function tryComplete(questId: string, amount = 1) {
   }
 }
 
+/**
+ * Пересчёт прогресса «с нуля» для условий, которые целиком выводятся из статы.
+ * Дельта тут не годится: и цель, и её слагаемые живут в QUEST_DEFS, а не в сейве —
+ * поменяли список предметов зоны, и накопленный прогресс перестал ему соответствовать.
+ */
+function setProgress(questId: string, value: number, target: number) {
+  if (!MetaStore.isQuestActive(questId)) return;
+  if (MetaStore.setQuestProgress(questId, value, target)) {
+    MetaStore.moveToPendingReward(questId);
+    EventBus.emit('quest_completed', questId);
+  }
+}
+
 /** Текущее значение stat-условия (по конкретному id или сумма по всем id). */
 function statConditionValue(c: Extract<NonNullable<QuestDef['condition']>, { kind: 'stat' }>): number {
   const bucket = MetaStore.get().stats[c.stat];
@@ -74,20 +87,19 @@ function evaluateQuests() {
     if (!def?.condition) continue;
 
     if (def.condition.kind === 'stat') {
+      // Целью такого квеста прогресс копится дельтой, поэтому её только освежаем из определения.
+      if (q.target !== def.target) setProgress(q.id, q.progress, def.target);
       if (statConditionValue(def.condition) >= (def.condition.count ?? 1)) {
         tryComplete(q.id);
       }
     } else if (def.condition.kind === 'zone_items') {
+      // Цель — длина самого списка: перечень предметов зоны и есть источник правды,
+      // иначе разъехавшийся `target` сделал бы квест невыполнимым.
       const have = def.condition.itemIds.filter((id) => (carriedOut[id] ?? 0) > 0).length;
-      if (have > q.progress) {
-        tryComplete(q.id, have - q.progress);
-      }
+      setProgress(q.id, have, def.condition.itemIds.length);
     } else {
-      // Догоняем прогресс дельтой (как zone_items), чтобы N/M в трекере был честным.
-      const have = Math.min(def.condition.depth, meta.battlefield_best_depth);
-      if (have > q.progress) {
-        tryComplete(q.id, have - q.progress);
-      }
+      // Прогресс — сам рекорд глубины, чтобы N/M в трекере был честным.
+      setProgress(q.id, Math.min(def.condition.depth, meta.battlefield_best_depth), def.target);
     }
   }
 }

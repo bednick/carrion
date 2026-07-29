@@ -1,4 +1,5 @@
 import type { ZoneConfig } from './types';
+import type { EssenceTier } from '../items/types';
 import deadFieldsCfg from './dead-fields/config.json';
 import trampledMeadowsCfg from './trampled-meadows/config.json';
 import armorDumpCfg from './armor-dump/config.json';
@@ -43,6 +44,14 @@ export function getZoneLootItemIds(zoneId: string): string[] {
 export function isZoneFullyLooted(zoneId: string, carriedOut: Record<string, number>): boolean {
   const ids = getZoneLootItemIds(zoneId);
   return ids.length > 0 && ids.every((id) => (carriedOut[id] ?? 0) > 0);
+}
+
+/**
+ * Зоны, чей босс даёт эссенцию этого тира — единственный прямой источник эссенции в игре
+ * (рядовые мобы её не дают). По этому списку гейтится обмен у кузнеца, см. craft.ts.
+ */
+export function essenceSourceZoneIds(tier: string): string[] {
+  return ALL_ZONE_IDS.filter((id) => !!ZONE_CONFIGS[id]?.boss?.loot?.essence?.[tier as EssenceTier]);
 }
 
 export const ALL_ZONE_IDS = [

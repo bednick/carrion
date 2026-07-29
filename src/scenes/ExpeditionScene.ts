@@ -22,6 +22,7 @@ import { addItemIcon, ItemIconView, RARITY_COLORS } from '../ui/itemIcon';
 import { essenceTag } from '../ui/priceTag';
 import { newBadge } from '../ui/newBadge';
 import { ESSENCE_TIERS } from '../items/craft';
+import { LootPopupStack } from '../ui/LootPopup';
 import { QuestTracker } from '../ui/QuestTracker';
 import { ResourceHUD } from '../ui/ResourceHUD';
 import { VolumeControl } from '../ui/VolumeControl';
@@ -157,8 +158,6 @@ export class ExpeditionScene extends Phaser.Scene {
   // скоростью боя). На событие SoundManager берёт случайный из walking.* вариантов.
   private walkStepTimer = 0;
   private readonly STEP_INTERVAL = 300;
-  // Модалка находки закрывается сама через это время; прогресс показан полоской на кнопке.
-  private readonly LOOT_AUTO_MS = 3000;
 
   // Экипировка героя — снимок выбранной стойки, только для просмотра (без drag).
   private equipment: Partial<Record<SlotId, ItemInstance>> = {};
@@ -203,17 +202,15 @@ export class ExpeditionScene extends Phaser.Scene {
   private equipSlotObjs: { bg: Phaser.GameObjects.Rectangle; icon: ItemIconView }[] = [];
   // Ячейки сетки рюкзака (левая колонка нижней панели) — пересобираются на каждую находку.
   private backpackCellObjs: Phaser.GameObjects.GameObject[] = [];
+  // Иконки занятых ячеек по индексу предмета в рюкзаке — по ним подсвечивается свежая находка.
+  private backpackIconViews: ItemIconView[] = [];
   // Табы смены стойки прямо в походе (1/2/3): выбор активной стойки на лету.
   private standTabs: { bg: Phaser.GameObjects.Rectangle; lbl: Phaser.GameObjects.Text }[] = [];
   private tooltip!: Tooltip;
   private statusText!: Phaser.GameObjects.Text;
   private victoryContainer!: Phaser.GameObjects.Container;
-  // Модалка находки открыта: поход стоит на паузе и ждёт кнопку «Продолжить поход». Пока она
-  // открыта, пауза не переключается (иначе рассинхрон с wasPaused) и отступление не открывается.
-  private lootModalOpen = false;
-  // Предметы, показанные в открытой модалке. В рюкзак они уже добавлены — список нужен только
-  // чтобы переоткрыть модалку после рестарта сцены под новый размер окна.
-  private pendingLoot: ItemInstance[] = [];
+  // Попапы находок над сеткой рюкзака: показывают выпавший предмет, не останавливая поход.
+  private lootPopups!: LootPopupStack;
 
   constructor() {
     super({ key: 'ExpeditionScene' });
@@ -222,9 +219,6 @@ export class ExpeditionScene extends Phaser.Scene {
   // Кэрриовер при рестарте сцены без выхода из похода — рюкзак и HP. Сейчас единственный
   // такой рестарт — перекладка под новый размер окна, см. relayoutOnResize.
   private carryoverBackpack: ItemInstance[] = [];
-  // Предметы открытой модалки находки: после рестарта её нужно показать снова, иначе поход
-  // «залипнет» — переход к следующему бою висит на кнопке «Продолжить поход».
-  private carryoverPendingLoot: ItemInstance[] = [];
   // Текущее здоровье героя переносится при рестарте (не восстанавливается).
   private carryoverHp: number | null = null;
   // План боёв и номер текущего боя — иначе generateFightPlan заново бросит кубик на длину зоны.
@@ -240,7 +234,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   init(data: {
     zoneId: string; standIndex?: number; speedMult?: number;
-    carryoverBackpack?: ItemInstance[]; carryoverPendingLoot?: ItemInstance[]; carryoverHp?: number;
+    carryoverBackpack?: ItemInstance[]; carryoverHp?: number;
     carryoverPlan?: ('mob' | 'boss')[]; carryoverFightIdx?: number; resumed?: boolean;
     seed?: string;
   }) {
@@ -251,7 +245,6 @@ export class ExpeditionScene extends Phaser.Scene {
     // приходит явный speedMult (carryover) и имеет приоритет.
     this.speedMult = data.speedMult ?? MetaStore.getRunSpeed();
     this.carryoverBackpack = data.carryoverBackpack ?? [];
-    this.carryoverPendingLoot = data.carryoverPendingLoot ?? [];
     this.carryoverHp = data.carryoverHp ?? null;
     this.carryoverPlan = data.carryoverPlan ?? null;
     this.carryoverFightIdx = data.carryoverFightIdx ?? null;
@@ -272,7 +265,6 @@ export class ExpeditionScene extends Phaser.Scene {
       standIndex: this.standIndex,
       speedMult: this.speedMult,
       carryoverBackpack: [...this.backpack],
-      carryoverPendingLoot: [...this.pendingLoot],
       carryoverHp: this.engine?.state.hero.hp,
       carryoverPlan: this.fightPlan,
       carryoverFightIdx: this.currentFightIdx,
@@ -287,9 +279,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.walkTimer = 0;
     this.walkStepTimer = 0;
     this.backpack = [];
-    this.pendingLoot = [];
-    this.lootModalOpen = false;
     this.backpackCellObjs = [];
+    this.backpackIconViews = [];
     this.equipSlotObjs = [];
     this.standTabs = [];
     this.heroAtkBars = [];
@@ -321,9 +312,9 @@ export class ExpeditionScene extends Phaser.Scene {
       this.anims.resumeAll();
       EventBus.off('quest_completed', this.onQuestCompleted, this);
       this.resourceHUD.destroy();
+      this.lootPopups.destroy();
     });
     this.input.keyboard!.on('keydown-SPACE', () => {
-      if (this.lootModalOpen) return; // модалка находки держит свою паузу
       if (this.isPaused) this.resume(); else this.pause();
     });
     const speeds = [1, 2, 4];
@@ -347,14 +338,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.carryoverBackpack = [];
     this.refreshBackpackGrid();
 
-    // Рестарт застал открытую модалку находки: бой уже закончен и его индекс инкрементирован,
-    // следующий шаг похода висит на кнопке модалки — показываем её снова вместо старта боя.
-    if (this.carryoverPendingLoot.length > 0) {
-      const loot = this.carryoverPendingLoot;
-      this.carryoverPendingLoot = [];
-      this.showLootModal(loot);
-      return;
-    }
     this.startNextFight();
   }
 
@@ -986,6 +969,17 @@ export class ExpeditionScene extends Phaser.Scene {
     this.buildStandTabs(CX, 434);
     this.buildEquipSlots();
     this.buildBackpackGrid();
+
+    // Якорь попапов находок — над сеткой рюкзака. Функция, а не числа: геометрия колонки
+    // выводится из живых GAME_W/GAME_H и протухает после ресайза (см. backpackGridGeom).
+    this.lootPopups = new LootPopupStack(this, () => {
+      const col = this.panelColumn(0);
+      return {
+        x: col.cx,
+        y: this.backpackGridGeom().startY - this.BACKPACK_CELL / 2 - 8,
+        width: col.right - col.left - 24,
+      };
+    });
   }
 
   // ─── Рюкзак (левая колонка нижней панели) ────────────────────────────
@@ -1053,6 +1047,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
       const view = addItemIcon(this, x, y, { itemId: item.item_id, rarity: item.rarity, size: SIZE });
       this.backpackCellObjs.push(view);
+      this.backpackIconViews[i] = view;
       // Единственное взаимодействие — наведение: в походе предмет применить нельзя.
       bg.setInteractive({ useHandCursor: false });
       bg.on('pointerover', () => { view.setHover(true); this.tooltip.showItem(item, x + SIZE, y - 40); });
@@ -1063,7 +1058,22 @@ export class ExpeditionScene extends Phaser.Scene {
   private refreshBackpackGrid() {
     for (const o of this.backpackCellObjs) o.destroy();
     this.backpackCellObjs = [];
+    this.backpackIconViews = [];
     this.buildBackpackGrid();
+  }
+
+  /**
+   * Короткий «пых» ячейки: связывает попап находки с местом, куда предмет лёг. Предмет мог не
+   * влезть в сетку (ушёл в счётчик «+N») — тогда подсвечивать нечего.
+   */
+  private flashBackpackCell(index: number) {
+    const view = this.backpackIconViews[index];
+    if (!view) return;
+    const tween = this.tweens.add({
+      targets: view, scale: 1.18, duration: 130, yoyo: true, ease: 'Quad.easeOut',
+    });
+    // Иначе следующая находка пересоберёт сетку, а твин продолжит писать в уничтоженный объект.
+    view.once('destroy', () => tween.remove());
   }
 
   /** Находка уходит в рюкзак: применить её можно только вернувшись в лагерь. */
@@ -1071,6 +1081,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.backpack.push(item);
     EventBus.emit('item_in_backpack', item.item_id);
     this.refreshBackpackGrid();
+    this.flashBackpackCell(this.backpack.length - 1);
   }
 
   // Табы смены активной стойки в походе (1/2/3). Клик — мгновенная замена снаряжения:
@@ -1221,7 +1232,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.pauseBtn.on('pointerover', () => { if (!this.isPaused) this.pauseBtn!.setFillStyle(0x2a2a44); });
     this.pauseBtn.on('pointerout',  () => { if (!this.isPaused) this.pauseBtn!.setFillStyle(0x222233); });
     this.pauseBtn.on('pointerdown', () => {
-      if (this.lootModalOpen) return; // модалка находки держит свою паузу
       if (this.isPaused) this.resume(); else this.pause();
     });
 
@@ -1267,7 +1277,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   // Подтверждение отступления: рюкзак сохраняется, зона НЕ засчитывается.
   private confirmRetreat() {
-    if (this.retreatDialogOpen || this.lootModalOpen) return;
+    if (this.retreatDialogOpen) return;
     this.retreatDialogOpen = true;
     // Если игрок уже сам поставил игру на паузу до клика — не снимаем её при отмене диалога.
     const wasPaused = this.isPaused;
@@ -1532,16 +1542,16 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const magicFind = sumMeta(this.equipment).magicFind;
 
-    let found: ItemInstance[] = [];
     if (fightType === 'mob') {
       if (this.zoneCfg.mob_loot) {
         // Индекс инкрементится ниже, уже после начисления — «бой N» и «лут боя N» согласованы.
         const loot = rollLootTable(this.zoneCfg.mob_loot, magicFind, rngFor(this.runSeed, 'loot', this.currentFightIdx));
+        const carriedOut = MetaStore.get().stats.items_carried_out;
         for (const item of loot.items) {
           MetaStore.recordItemDiscovered(item.item_id);
           this.addToBackpack(item);
+          this.lootPopups.push(item, !carriedOut[item.item_id]);
         }
-        found = loot.items;
       }
     } else {
       // Босс НЕ даёт лут автоматически: награда за него — только выбранная карточка драфта
@@ -1555,9 +1565,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateProgressBar();
     this.updateCurseReadout();
 
-    // Находка ставит поход на паузу: дальше двинемся только по кнопке модалки.
-    if (found.length > 0) this.showLootModal(found);
-    else this.proceedAfterFight();
+    // Находка поход не останавливает: предмет уже в рюкзаке, попап над сеткой гаснет сам.
+    this.proceedAfterFight();
   }
 
   /** Следующий шаг похода после боя: ходьба к следующему врагу или финал зоны. */
@@ -1568,95 +1577,6 @@ export class ExpeditionScene extends Phaser.Scene {
       this.scheduleDelayed(1000, () => this.onExpeditionComplete());
     } else {
       this.scheduleDelayed(800, () => this.startWalking());
-    }
-  }
-
-  // Модалка находки: показывает выпавшие предметы (они уже в рюкзаке) и держит поход на паузе,
-  // пока игрок не нажмёт «Продолжить поход». Карточки не кликабельны — надеть в походе нельзя.
-  private showLootModal(items: ItemInstance[]) {
-    this.pendingLoot = items;
-    this.lootModalOpen = true;
-    // Если игрок уже сам поставил игру на паузу до находки — не снимаем её кнопкой модалки.
-    const wasPaused = this.isPaused;
-    if (!wasPaused) this.pause();
-
-    const c = this.add.container(0, 0).setDepth(200);
-    const overlay = this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0.75).setInteractive();
-    const title = this.add.text(CX, 96, items.length > 1 ? 'Добыча' : 'Найден предмет', {
-      fontSize: '26px', fontFamily: FONT_FAMILY, color: '#ffdd44',
-    }).setOrigin(0.5);
-    c.add([overlay, title]);
-
-    // Геометрия карточек — та же, что у драфта награды (showRewardDraft).
-    const CARD_W = 150, CARD_H = 170, GAP = 24;
-    const total = items.length * CARD_W + (items.length - 1) * GAP;
-    const startX = CX - total / 2 + CARD_W / 2;
-    const cardY = 250;
-    const carriedOut = MetaStore.get().stats.items_carried_out;
-
-    items.forEach((item, i) => {
-      const x = startX + i * (CARD_W + GAP);
-      const card = this.add.rectangle(x, cardY, CARD_W, CARD_H, 0x1a1a2a)
-        .setStrokeStyle(2, RARITY_COLORS[item.rarity])
-        .setInteractive({ useHandCursor: false });
-      c.add(card);
-      c.add(addItemIcon(this, x, cardY - 28, { itemId: item.item_id, rarity: item.rarity, size: 72 }));
-      c.add(this.add.text(x, cardY + 34, getItemBehavior(item.item_id).name, {
-        fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
-        align: 'center', wordWrap: { width: CARD_W - 16 },
-      }).setOrigin(0.5, 0));
-      // Значок последним в карточке — рисуется поверх иконки и названия.
-      if (!carriedOut[item.item_id]) c.add(newBadge(this, x + CARD_W / 2 - 8, cardY - CARD_H / 2 + 6));
-
-      card.on('pointerover', () => this.tooltip.showItem(item, x + CARD_W / 2 + 8, cardY - CARD_H / 2));
-      card.on('pointerout',  () => this.tooltip.hide());
-    });
-
-    const hint = this.add.text(CX, cardY + CARD_H / 2 + 24, 'В рюкзаке — надеть можно только в лагере', {
-      fontSize: '14px', fontFamily: FONT_FAMILY, color: '#999999',
-    }).setOrigin(0.5);
-    const btnY = cardY + CARD_H / 2 + 66;
-    const BTN_W = 240, BTN_H = 44;
-    const btn = this.add.rectangle(CX, btnY, BTN_W, BTN_H, 0x222233).setStrokeStyle(1, 0x445588)
-      .setInteractive({ useHandCursor: true });
-    const btnLbl = this.add.text(CX, btnY, 'Продолжить поход', {
-      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#aaccff',
-    }).setOrigin(0.5);
-    btn.on('pointerover', () => btn.setFillStyle(0x2a2a44));
-    btn.on('pointerout',  () => btn.setFillStyle(0x222233));
-
-    // Закрытие зовут и клик, и автонажатие по заполнении полоски — closed страхует от двойного
-    // proceedAfterFight(), если клик и конец твина совпадут в одном кадре.
-    let closed = false;
-    let timerTween: Phaser.Tweens.Tween | null = null;
-    const closeModal = () => {
-      if (closed) return;
-      closed = true;
-      timerTween?.stop();
-      this.tooltip.hide();
-      c.destroy();
-      this.lootModalOpen = false;
-      this.pendingLoot = [];
-      if (!wasPaused) this.resume();
-      this.proceedAfterFight();
-    };
-    btn.on('pointerdown', closeModal);
-
-    if (wasPaused) {
-      // Игрок сам поставил игру на паузу до находки — не перебиваем её автонажатием, ждём клик.
-      c.add([hint, btn, btnLbl]);
-    } else {
-      // Полоска автонажатия: слой поверх кнопки, растёт слева направо (origin по левому краю,
-      // твин scaleX). Не интерактивна — клики по кнопке проходят сквозь неё. Именно твин, а не
-      // this.time/scheduleDelayed: на паузе часы сцены стоят, а update() выходит по isPaused.
-      const fill = this.add.rectangle(CX - BTN_W / 2, btnY, BTN_W, BTN_H, 0xaaccff, 0.22)
-        .setOrigin(0, 0.5)
-        .setScale(0, 1);
-      c.add([hint, btn, fill, btnLbl]); // fill выше фона кнопки, но под подписью — текст читаем
-      timerTween = this.tweens.add({
-        targets: fill, scaleX: 1, duration: this.LOOT_AUTO_MS, ease: 'Linear',
-        onComplete: closeModal,
-      });
     }
   }
 
@@ -1734,7 +1654,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.victoryContainer.setVisible(true);
     this.victoryContainer.removeAll(true);
 
-    const overlay = this.add.rectangle(CX, 192, GAME_W, 320, 0x000000, 0.82).setInteractive();
+    // Затемнение точно по дно арены (PANEL_TOP=360), иначе снизу остаётся полоска неприкрытого фона.
+    const overlay = this.add.rectangle(CX, 196, GAME_W, 328, 0x000000, 0.82).setInteractive();
     const title = this.add.text(CX, 78, 'Победа! Выбери награду', {
       fontSize: '26px', fontFamily: FONT_FAMILY, color: '#ffdd44',
     }).setOrigin(0.5);

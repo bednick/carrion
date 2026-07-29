@@ -1,4 +1,5 @@
 import type { ItemInstance, Rarity, EssenceTier, EssencePool } from './types';
+import { essenceSourceZoneIds } from '../zones/registry';
 
 // Единый источник правды о крафте — обе сцены (лагерь/экспедиция) считают результат,
 // стоимость (эссенция) и разбор через этот модуль, чтобы правила не расходились.
@@ -106,6 +107,15 @@ export const ESSENCE_EXCHANGE_RATE = 3;
 export const ESSENCE_EXCHANGE_TARGET: Record<EssenceTier, EssenceTier | null> = {
   uncommon: null, rare: 'uncommon', epic: 'rare',
 };
+
+/**
+ * Обмен тира `from` открыт, только когда у игрока появился прямой источник этой эссенции —
+ * пройдена хотя бы одна зона, чей босс её даёт. Пока источника нет, строка обмена бесполезна
+ * (менять нечего) и только путает, поэтому у кузнеца она под замком.
+ */
+export function isEssenceExchangeUnlocked(from: EssenceTier, completedAreas: string[]): boolean {
+  return essenceSourceZoneIds(from).some((z) => completedAreas.includes(z));
+}
 
 // Сколько эссенции целевого тира стоит улучшение (см. docs/meta-progression.md).
 const UPGRADE_ESSENCE_AMOUNT = 10;
