@@ -1613,14 +1613,14 @@ export class ExpeditionScene extends Phaser.Scene {
     });
 
     const hint = this.add.text(CX, cardY + CARD_H / 2 + 24, 'В рюкзаке — надеть можно только в лагере', {
-      fontSize: '13px', fontFamily: FONT_FAMILY, color: '#999999',
+      fontSize: '14px', fontFamily: FONT_FAMILY, color: '#999999',
     }).setOrigin(0.5);
     const btnY = cardY + CARD_H / 2 + 66;
     const BTN_W = 240, BTN_H = 44;
     const btn = this.add.rectangle(CX, btnY, BTN_W, BTN_H, 0x222233).setStrokeStyle(1, 0x445588)
       .setInteractive({ useHandCursor: true });
     const btnLbl = this.add.text(CX, btnY, 'Продолжить поход', {
-      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#aaccff',
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#aaccff',
     }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(0x2a2a44));
     btn.on('pointerout',  () => btn.setFillStyle(0x222233));
@@ -1710,7 +1710,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const btn = this.add.rectangle(CX, 420, 200, 44, 0x332222).setStrokeStyle(1, 0x885555)
       .setInteractive({ useHandCursor: true });
     const btnLbl = this.add.text(CX, 420, 'В лагерь', {
-      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#ddaaaa',
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#ddaaaa',
     }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(0x442a2a));
     btn.on('pointerout', () => btn.setFillStyle(0x332222));

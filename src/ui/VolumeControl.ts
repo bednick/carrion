@@ -33,7 +33,7 @@ export class VolumeControl {
 
     // Динамик-кнопка (мьют). Цвет отражает состояние.
     this.icon = scene.add.text(rightX(22), CY, '♪', {
-      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#66ccff',
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#66ccff',
     }).setOrigin(0.5).setDepth(101).setInteractive({ useHandCursor: true });
     this.icon.on('pointerdown', () => {
       const muted = SoundManager.toggleMute();

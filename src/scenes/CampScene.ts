@@ -9,8 +9,9 @@ import type { ItemInstance, SlotId } from '../core/MetaStore';
 import { ARMOR_STAND_COUNT } from '../core/MetaStore';
 import { getItemBehavior } from '../items/registry';
 import {
-  craftPreview, salvageEssence, formatEssence, ESSENCE_TIERS, ESSENCE_NAMES,
+  craftPreview, formatEssence, ESSENCE_TIERS, ESSENCE_NAMES,
   ESSENCE_EXCHANGE_RATE, ESSENCE_EXCHANGE_TARGET, emptyEssence,
+  findDuplicateChestIndices, sumSalvageEssence,
 } from '../items/craft';
 import type { Rarity, SlotType, EssencePool, EssenceTier } from '../items/types';
 import { itemIconKey } from '../items/icons';
@@ -22,7 +23,6 @@ import { Tooltip } from '../ui/Tooltip';
 import { DragDropManager } from '../ui/DragDropManager';
 import { getZoneConfig, getZoneLootItemIds, isZoneFullyLooted, WIP_ZONE_IDS } from '../zones/registry';
 import type { ZoneConfig } from '../zones/types';
-import { HAMMER_CURSOR } from '../ui/hammerCursor';
 import { QuestTracker } from '../ui/QuestTracker';
 import { claimQuestReward } from '../core/QuestSystem';
 import { ResourceHUD } from '../ui/ResourceHUD';
@@ -154,7 +154,8 @@ export class CampScene extends Phaser.Scene {
   private upgradeInputItem: ItemInstance | null = null;
   /** Готовый предмет после улучшения — лежит в правой ячейке, пока игрок не заберёт его drag'ом. */
   private upgradeResultItem: ItemInstance | null = null;
-  private smithHammerMode = false;
+  /** Открыта модалка поверх панели — ESC/клик должны закрывать её, а не панель под ней. */
+  private blockingModal = false;
   private panelState: 'smith' | 'dealer' | 'chest' | 'map' | null = null;
   private panelWheelHandler: ((...args: unknown[]) => void) | null = null;
   private chestMaskGraphics: Phaser.GameObjects.Graphics | null = null;
@@ -215,7 +216,7 @@ export class CampScene extends Phaser.Scene {
     // иначе обработчики живут после ухода в экспедицию и падают на уничтоженном трекере.
     this.events.once('shutdown', this.shutdown, this);
     this.input.keyboard!.on('keydown-ESC', () => {
-      if (this.smithHammerMode) { this.exitSmithHammerMode(); return; }
+      if (this.blockingModal) return; // модалка закрывает себя сама, панель под ней остаётся
       if (this.panelContainer.visible) this.closePanel();
     });
 
@@ -261,8 +262,8 @@ export class CampScene extends Phaser.Scene {
       const dx = ptr.x - this.pendingDrag.downX;
       const dy = ptr.y - this.pendingDrag.downY;
       if (dx * dx + dy * dy < 64) {
-        // Shift или режим разборки — старое быстрое действие; обычный клик — взять предмет в руку.
-        const quick = (ptr.event as MouseEvent | undefined)?.shiftKey || this.smithHammerMode;
+        // Shift — старое быстрое действие; обычный клик — взять предмет в руку.
+        const quick = !!(ptr.event as MouseEvent | undefined)?.shiftKey;
         if (quick) {
           this.tooltip.hide();
           this.pendingDrag.fallback?.();
@@ -309,7 +310,7 @@ export class CampScene extends Phaser.Scene {
 
     const resetBtn = this.add.rectangle(rightX(52), 785, 90, 22, 0x1a0000)
       .setStrokeStyle(1, 0x551111).setInteractive({ useHandCursor: true });
-    this.add.text(rightX(52), 785, 'Сброс данных', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#663333' }).setOrigin(0.5);
+    this.add.text(rightX(52), 785, 'Сброс данных', { fontSize: '8px', fontFamily: FONT_FAMILY, color: '#663333' }).setOrigin(0.5);
     resetBtn.on('pointerover', () => resetBtn.setFillStyle(0x2a0000));
     resetBtn.on('pointerout',  () => resetBtn.setFillStyle(0x1a0000));
     resetBtn.on('pointerdown', () => this.confirmReset());
@@ -319,7 +320,7 @@ export class CampScene extends Phaser.Scene {
     if (import.meta.env.DEV) {
       const balanceBtn = this.add.rectangle(rightX(152), 785, 90, 22, 0x0a1a1a)
         .setStrokeStyle(1, 0x225555).setInteractive({ useHandCursor: true });
-      this.add.text(rightX(152), 785, 'Баланс-тул', { fontSize: '9px', fontFamily: FONT_FAMILY, color: '#337766' }).setOrigin(0.5);
+      this.add.text(rightX(152), 785, 'Баланс-тул', { fontSize: '8px', fontFamily: FONT_FAMILY, color: '#337766' }).setOrigin(0.5);
       balanceBtn.on('pointerover', () => balanceBtn.setFillStyle(0x143030));
       balanceBtn.on('pointerout',  () => balanceBtn.setFillStyle(0x0a1a1a));
       balanceBtn.on('pointerdown', () => window.open('./balance.html', '_blank'));
@@ -763,7 +764,6 @@ export class CampScene extends Phaser.Scene {
   }
 
   private togglePanel(state: 'smith' | 'dealer' | 'chest' | 'map', open: () => void) {
-    if (this.smithHammerMode) return; // не мешаем режиму разборки
     if (this.panelState === state && this.panelContainer.visible) this.closePanel();
     else open();
   }
@@ -779,9 +779,6 @@ export class CampScene extends Phaser.Scene {
     this.dragDrop = null;
     if (this.upgradeInputItem) { MetaStore.addToChest(this.upgradeInputItem); this.upgradeInputItem = null; }
     if (this.upgradeResultItem) { MetaStore.addToChest(this.upgradeResultItem); this.upgradeResultItem = null; }
-    this.smithHammerMode = false;
-    this.input.setDefaultCursor('default');
-    this.input.off('pointermove', this.forceHammerCursor, this);
     this.chestSlotFilter = null;
     this.chestRarityFilter = null;
     this.panelState = null;
@@ -1035,39 +1032,90 @@ export class CampScene extends Phaser.Scene {
   private switchTab(state: 'smith' | 'dealer' | 'chest') {
     if (this.panelState === state) return;
     this.tabClickGuard = true; // pointerup этого клика не должен уронить предмет из руки
-    // Уходим с кузнеца — гасим режим молота (курсор), не трогая «руку».
-    if (this.panelState === 'smith' && this.smithHammerMode) {
-      this.smithHammerMode = false;
-      this.input.setDefaultCursor('default');
-      this.input.off('pointermove', this.forceHammerCursor, this);
-    }
     this.tooltip.hide();
     this.panelState = state;
     this.rebuildPanel();
   }
 
-  private smithCalcEssence(item: ItemInstance): EssencePool {
-    return salvageEssence(item);
+  /**
+   * Дубликаты в сундуке: для каждого item_id оставляем один экземпляр максимальной редкости
+   * среди сундука и надетого на всех стойках. Надетое не разбирается, но занимает право остаться.
+   */
+  private findSmithDuplicates(): number[] {
+    return findDuplicateChestIndices(MetaStore.get().chest, MetaStore.getEquippedItems());
   }
 
-  /** Разбирает предмет: начисляет весь пул эссенции, шлёт событие, возвращает подпись. */
-  private grantSalvage(item: ItemInstance): string {
-    const pool = this.smithCalcEssence(item);
+  /** Массовый разбор: эссенция в мету, всплывающие иконки, обновление панели. */
+  private performBulkSalvage(indices: number[], x: number, y: number) {
+    const removed = MetaStore.removeFromChestBatch(indices);
+    if (!removed.length) return;
+    const pool = sumSalvageEssence(removed);
     for (const tier of ESSENCE_TIERS) {
       if (pool[tier] > 0) MetaStore.addEssence(tier, pool[tier]);
     }
+    // Одно событие на всю пачку: подписчики — звук разбора и квест tutorial_disassemble,
+    // счётчиков-статов на нём нет, а N событий подряд дали бы только наложение звука.
     EventBus.emit('item_disassembled');
-    return formatEssence(pool);
+    this.spawnSalvageFloaters(pool, x, y);
+    this.showMessage(`Разобрано ${removed.length}: +${formatEssence(pool)} эссенции`);
+    this.refreshHUD();
+    this.rebuildPanel();
   }
 
-  /** Разбирает предмет: эссенция в мету, всплывающие иконки на месте клика, обновление панели. */
-  private performSalvage(item: ItemInstance, x: number, y: number, keepHammer: boolean) {
-    const pool = this.smithCalcEssence(item);
-    const label = this.grantSalvage(item);
-    this.spawnSalvageFloaters(pool, x, y);
-    this.showMessage(`+${label} эссенции`);
-    this.refreshHUD();
-    if (!keepHammer) this.exitSmithHammerMode(); else this.rebuildPanel();
+  /** Подтверждение массового разбора: сколько предметов уйдёт и сколько эссенции придёт. */
+  private confirmSalvageDuplicates(indices: number[]) {
+    const chest = MetaStore.get().chest;
+    const pool = sumSalvageEssence(indices.map((i) => chest[i]).filter(Boolean));
+
+    // Глубины — поверх panelContainer (depth 150), но под тултипом (400).
+    const D_OVERLAY = 300, D_BOX = 301, D_TEXT = 302;
+    const objs: Phaser.GameObjects.GameObject[] = [];
+    const overlay = this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0.7).setDepth(D_OVERLAY).setInteractive();
+    const box = this.add.rectangle(CX, 400, 460, 200, 0x1a1a12).setDepth(D_BOX).setStrokeStyle(2, 0x556633);
+    const title = this.add.text(CX, 330, 'Разобрать дубликаты?', {
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#ffdd88',
+    }).setOrigin(0.5).setDepth(D_TEXT);
+    const count = this.add.text(CX, 358, `Будет разобрано: ${indices.length} шт.  ·  действие необратимо`, {
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: '#999999',
+    }).setOrigin(0.5).setDepth(D_TEXT);
+    objs.push(overlay, box, title, count);
+
+    // Строка получаемой эссенции: [иконка] +N по каждому ненулевому тиру, центрирована в боксе.
+    const gained = ESSENCE_TIERS.filter((t) => pool[t] > 0);
+    const ICON = 20, ICON_GAP = 4, SEG_GAP = 18;
+    const labels = gained.map((tier) => this.add.text(0, 392, `+${pool[tier]}`, {
+      fontSize: '14px', fontFamily: FONT_FAMILY, color: TIER_HEX[tier],
+    }).setOrigin(0, 0.5).setDepth(D_TEXT));
+    const rowW = labels.reduce((w, lbl) => w + ICON + ICON_GAP + lbl.width + SEG_GAP, -SEG_GAP);
+    let x = CX - rowW / 2;
+    gained.forEach((tier, i) => {
+      const icon = this.add.image(x, 392, essenceIconKey(tier)).setDisplaySize(ICON, ICON).setOrigin(0, 0.5).setDepth(D_TEXT);
+      labels[i].x = x + ICON + ICON_GAP;
+      x += ICON + ICON_GAP + labels[i].width + SEG_GAP;
+      objs.push(icon, labels[i]);
+    });
+
+    const yesBtn = this.add.rectangle(CX - 75, 445, 130, 34, 0x224422).setDepth(D_BOX).setInteractive({ useHandCursor: true });
+    const yesLbl = this.add.text(CX - 75, 445, 'Разобрать', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaffaa' }).setOrigin(0.5).setDepth(D_TEXT);
+    const noBtn  = this.add.rectangle(CX + 75, 445, 130, 34, 0x2a2a3a).setDepth(D_BOX).setInteractive({ useHandCursor: true });
+    const noLbl  = this.add.text(CX + 75, 445, 'Отмена', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#cccccc' }).setOrigin(0.5).setDepth(D_TEXT);
+    objs.push(yesBtn, yesLbl, noBtn, noLbl);
+
+    const onEsc = () => close();
+    const close = () => {
+      this.blockingModal = false;
+      this.input.keyboard?.off('keydown-ESC', onEsc);
+      objs.forEach((o) => o.destroy());
+    };
+    this.blockingModal = true;
+    this.input.keyboard?.on('keydown-ESC', onEsc);
+    yesBtn.on('pointerover', () => yesBtn.setFillStyle(0x2e5c2e));
+    yesBtn.on('pointerout',  () => yesBtn.setFillStyle(0x224422));
+    noBtn.on('pointerover', () => noBtn.setFillStyle(0x3a3a4a));
+    noBtn.on('pointerout',  () => noBtn.setFillStyle(0x2a2a3a));
+    yesBtn.on('pointerdown', () => { close(); this.performBulkSalvage(indices, CX, 400); });
+    noBtn.on('pointerdown', () => close());
+    overlay.on('pointerdown', () => close());
   }
 
   /** Иконка+число для каждого полученного тира эссенции — в случайной точке рядом с кликом. */
@@ -1083,24 +1131,6 @@ export class CampScene extends Phaser.Scene {
         TIER_HEX[tier],
       );
     }
-  }
-
-  private forceHammerCursor() {
-    this.game.canvas.style.cursor = HAMMER_CURSOR;
-  }
-
-  private enterSmithHammerMode() {
-    this.smithHammerMode = true;
-    this.input.setDefaultCursor(HAMMER_CURSOR);
-    this.input.on('pointermove', this.forceHammerCursor, this);
-    this.rebuildPanel();
-  }
-
-  private exitSmithHammerMode() {
-    this.smithHammerMode = false;
-    this.input.setDefaultCursor('default');
-    this.input.off('pointermove', this.forceHammerCursor, this);
-    this.rebuildPanel();
   }
 
   // Кузнец: обмен эссенции между тирами (по центру верхних 2/3) + разборка предметов
@@ -1165,26 +1195,30 @@ export class CampScene extends Phaser.Scene {
     const divider = this.add.rectangle(cx, 502, 340, 1, 0x333344);
     toAdd.push(divider);
 
-    // Кнопка-переключатель режима разборки (курсор-молот): пока включена, клик по предмету
-    // в общем сундуке (см. getChestClickHandler) сразу разбирает его без подтверждения.
+    // Кнопка массового разбора дубликатов: оставляет по одному экземпляру максимальной редкости
+    // на каждый item_id (с учётом надетого на стойках), остальное из сундука — в эссенцию.
     // По центру нижней трети панели (между разделителем 502 и нижним краем панели 660).
-    const hammerActive = this.smithHammerMode;
+    const dupes = this.findSmithDuplicates();
+    const hasDupes = dupes.length > 0;
     const btnY = 582;
-    const BTN_W = 220, BTN_H = 44;
-    const hammerBtn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, hammerActive ? 0x5a3a1a : 0x2a2a1a)
-      .setStrokeStyle(hammerActive ? 2 : 1, hammerActive ? 0xffaa44 : 0x446644)
-      .setInteractive({ useHandCursor: true });
-    const hammerG = this.add.image(cx - BTN_W / 2 + 30, btnY, 'hammer').setDisplaySize(24, 24);
-    const hammerLbl = this.add.text(cx - BTN_W / 2 + 54, btnY, 'Разобрать', {
-      fontSize: '14px', fontFamily: FONT_FAMILY,
-      color: hammerActive ? '#ffcc88' : '#aaddaa', align: 'center',
+    const BTN_W = 240, BTN_H = 44;
+    const hammerBtn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, hasDupes ? 0x2a2a1a : 0x332222)
+      .setStrokeStyle(1, hasDupes ? 0x446644 : 0x664444)
+      .setInteractive({ useHandCursor: hasDupes });
+    const hammerG = this.add.image(cx - BTN_W / 2 + 28, btnY, 'hammer')
+      .setDisplaySize(24, 24).setAlpha(hasDupes ? 1 : 0.4);
+    const hammerLbl = this.add.text(cx - BTN_W / 2 + 50, btnY, 'Разобрать дубликаты', {
+      fontSize: '12px', fontFamily: FONT_FAMILY,
+      color: hasDupes ? '#aaddaa' : '#886666', align: 'center',
     }).setOrigin(0, 0.5);
-    hammerBtn.on('pointerover', () => { if (!this.smithHammerMode) hammerBtn.setFillStyle(0x3a3a2a); });
-    hammerBtn.on('pointerout',  () => { if (!this.smithHammerMode) hammerBtn.setFillStyle(0x2a2a1a); });
-    hammerBtn.on('pointerdown', () => {
-      if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не переключает разборку
-      if (this.smithHammerMode) this.exitSmithHammerMode(); else this.enterSmithHammerMode();
-    });
+    if (hasDupes) {
+      hammerBtn.on('pointerover', () => hammerBtn.setFillStyle(0x3a3a2a));
+      hammerBtn.on('pointerout',  () => hammerBtn.setFillStyle(0x2a2a1a));
+      hammerBtn.on('pointerdown', () => {
+        if (this.dragDrop?.isHolding()) return; // с предметом в руке клик кладёт его в зону, а не разбирает
+        this.confirmSalvageDuplicates(dupes);
+      });
+    }
     toAdd.push(hammerBtn, hammerG, hammerLbl);
 
     this.panelContainer.add(toAdd);
@@ -1500,17 +1534,8 @@ export class CampScene extends Phaser.Scene {
   }
 
   private getChestClickHandler(): ((inst: ItemInstance, idx: number) => void) | undefined {
-    if (this.panelState === 'smith') {
-      if (!this.smithHammerMode) return undefined; // без режима разборки клик по сундуку ничего не делает
-      return (inst, idx) => {
-        // Разборка — мгновенно, без подтверждения.
-        const ptr = this.input.activePointer;
-        const keepHammer = !!(ptr?.event as MouseEvent)?.shiftKey;
-        const clickX = ptr?.x ?? CX, clickY = ptr?.y ?? 400;
-        MetaStore.removeFromChest(idx);
-        this.performSalvage(inst, clickX, clickY, keepHammer);
-      };
-    }
+    // На вкладке кузнеца клик по сундуку ничего не делает: разбор — только массовый,
+    // через кнопку «Разобрать дубликаты» (см. buildSmithContent).
     if (this.panelState === 'chest') {
       return (inst, idx) => {
         const beh = getItemBehavior(inst.item_id);
@@ -1910,7 +1935,7 @@ export class CampScene extends Phaser.Scene {
 
       const lockLabel = isPendingClaim ? '🔒 забери награду у Скупщика' : `🔒 собери предметы ${progress}/${target}`;
       this.panelContainer.add(this.add.text(entry.x, entry.y + 20, lockLabel, {
-        fontSize: '13px', fontFamily: FONT_FAMILY, color: '#886666', align: 'center', wordWrap: { width: 160 },
+        fontSize: '14px', fontFamily: FONT_FAMILY, color: '#886666', align: 'center', wordWrap: { width: 160 },
       }).setOrigin(0.5));
 
       node.setInteractive({ useHandCursor: true });
@@ -1971,7 +1996,7 @@ export class CampScene extends Phaser.Scene {
 
   private showMessage(msg: string) {
     const text = this.add.text(CX, 740, msg, {
-      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#ffaa44',
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#ffaa44',
     }).setOrigin(0.5).setDepth(200);
     this.time.delayedCall(2500, () => text.destroy());
   }

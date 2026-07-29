@@ -60,6 +60,44 @@ export function salvageEssence(item: ItemInstance): EssencePool {
   return pool;
 }
 
+/** Суммарный пул за разбор набора предметов. */
+export function sumSalvageEssence(items: ItemInstance[]): EssencePool {
+  const total = emptyEssence();
+  for (const item of items) {
+    const pool = salvageEssence(item);
+    for (const tier of ESSENCE_TIERS) total[tier] += pool[tier];
+  }
+  return total;
+}
+
+/**
+ * Индексы предметов сундука, которые лишние: для каждого item_id оставляем один экземпляр
+ * максимальной редкости среди сундука и надетого. Надетое само по себе не разбирается,
+ * но занимает место «оставленного» — тогда все копии этого item_id из сундука уходят в разбор.
+ */
+export function findDuplicateChestIndices(chest: ItemInstance[], equipped: ItemInstance[]): number[] {
+  // Максимальная редкость по всем предметам игрока — и в сундуке, и на стойках.
+  const best = new Map<string, number>();
+  for (const item of [...chest, ...equipped]) {
+    const idx = rarityIdx(item.rarity);
+    if (idx > (best.get(item.item_id) ?? -1)) best.set(item.item_id, idx);
+  }
+
+  // Надетый экземпляр максимальной редкости уже «занимает» право остаться за свой item_id.
+  const kept = new Set<string>();
+  for (const item of equipped) {
+    if (rarityIdx(item.rarity) === best.get(item.item_id)) kept.add(item.item_id);
+  }
+
+  const dupes: number[] = [];
+  chest.forEach((item, i) => {
+    if (rarityIdx(item.rarity) < (best.get(item.item_id) ?? -1)) { dupes.push(i); return; }
+    if (kept.has(item.item_id)) { dupes.push(i); return; }
+    kept.add(item.item_id); // первый встреченный максимум остаётся в сундуке
+  });
+  return dupes;
+}
+
 // Обмен дорогой эссенции на дешёвую — специально невыгодный курс, нужен только чтобы
 // разменять излишек одного тира на нехватку другого, а не как основной источник ресурса.
 export const ESSENCE_EXCHANGE_RATE = 3;

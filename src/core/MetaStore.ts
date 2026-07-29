@@ -281,6 +281,26 @@ export const MetaStore = {
     return item;
   },
 
+  /** Удаляет предметы по набору индексов за один проход + один save(). */
+  removeFromChestBatch(indices: number[]): ItemInstance[] {
+    const drop = new Set(indices);
+    const removed: ItemInstance[] = [];
+    state.chest = state.chest.filter((item, i) => {
+      if (!drop.has(i)) return true;
+      removed.push(item);
+      return false;
+    });
+    if (removed.length) this.save();
+    return removed;
+  },
+
+  /** Всё надетое на всех стойках одним списком (пустые слоты отброшены). */
+  getEquippedItems(): ItemInstance[] {
+    return state.armor_stands.flatMap(
+      (stand) => Object.values(stand).filter((it): it is ItemInstance => !!it),
+    );
+  },
+
   sortChest() {
     const order = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
     state.chest.sort((a, b) => {
