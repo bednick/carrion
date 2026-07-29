@@ -378,7 +378,7 @@ export class CombatEngine {
         return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, armorPierce: e.armorPierce, splash: e.splash, crit: e.crit, origin: e.origin }];
 
       case 'damage':
-        return this.applyDamage(e.source, e.target, e.amount, rng, e.crit);
+        return this.applyDamage(e.source, e.target, e.amount, rng, e.crit, e.thorns || e.splash);
 
       case 'block':
         this.cb.onBlock(e.target.side === 'hero' ? 'hero' : 'enemy', e.target.side === 'enemy' ? e.target.idx : -1);
@@ -440,9 +440,14 @@ export class CombatEngine {
    *
    * Пола в 1 урон нет: если броня срезала удар в 0, вместо урона уходит `block` — тот же терминал,
    * что спавнит щит, только автор — движок (docs/mechanics.md §«Броня vs щит»).
+   *
+   * `rider` — урон вторичный (`thorns`/`splash`), не самостоятельный удар. Такой, округлившись в 0,
+   * гаснет МОЛЧА: «Блок» за пшикнувший рикошет — шум, а не событие боя (шипы 10% от удара в 3 дают
+   * 0.3, то есть ноль в 70% случаев — флоатер «Блок» висел бы над мобом почти на каждом попадании).
    */
-  private applyDamage(source: Side, target: Side, rawAmount: number, rng: () => number, crit?: boolean): GameEvent[] {
-    const blocked = (): GameEvent[] => [{ type: 'block', source, target, prevented: rawAmount, origin: { from: 'engine' } }];
+  private applyDamage(source: Side, target: Side, rawAmount: number, rng: () => number, crit?: boolean, rider?: boolean): GameEvent[] {
+    const blocked = (): GameEvent[] =>
+      rider ? [] : [{ type: 'block', source, target, prevented: rawAmount, origin: { from: 'engine' } }];
 
     if (target.side === 'enemy') {
       const enemy = this.state.enemies[target.idx];

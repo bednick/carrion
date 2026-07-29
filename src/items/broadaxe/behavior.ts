@@ -62,7 +62,10 @@ const behavior: ItemBehavior = {
             });
 
           others.slice(0, SPLASH_RATIOS.length).forEach(({ en, idx }, rank) => {
-            const splashDmg = Math.round(dmg * SPLASH_RATIOS[rank]);
+            // Дробь не округляем: спавненный `attack` округлится один раз в applyDamage
+            // (стохастически), иначе сплеш 20% от урона в 2 всегда давал бы 0 и цель молча
+            // выпадала бы из списка — см. `spiked_shield/behavior.ts`.
+            const splashDmg = dmg * SPLASH_RATIOS[rank];
             if (splashDmg <= 0) return;
             spawn.push({
               type: 'attack' as const,
