@@ -1092,6 +1092,16 @@ export class ExpeditionScene extends Phaser.Scene {
     view.once('destroy', () => tween.remove());
   }
 
+  /**
+   * «Новый» предмет для значка NEW: ни разу не вынесен в сундук (MetaStore.stats.items_carried_out)
+   * И не лежит в рюкзаке текущего похода. Рюкзак уходит в сундук только в finishExpedition,
+   * поэтому без второй проверки предмет, поднятый в этом же походе, снова считался бы новым.
+   */
+  private isNewItem(itemId: string): boolean {
+    if (MetaStore.get().stats.items_carried_out[itemId]) return false;
+    return !this.backpack.some((it) => it.item_id === itemId);
+  }
+
   /** Находка уходит в рюкзак: применить её можно только вернувшись в лагерь. */
   private addToBackpack(item: ItemInstance) {
     this.backpack.push(item);
@@ -1567,11 +1577,13 @@ export class ExpeditionScene extends Phaser.Scene {
       if (this.zoneCfg.mob_loot) {
         // Индекс инкрементится ниже, уже после начисления — «бой N» и «лут боя N» согласованы.
         const loot = rollLootTable(this.zoneCfg.mob_loot, magicFind, rngFor(this.runSeed, 'loot', this.currentFightIdx));
-        const carriedOut = MetaStore.get().stats.items_carried_out;
         for (const item of loot.items) {
           MetaStore.recordItemDiscovered(item.item_id);
+          // Флаг считаем до addToBackpack: иначе только что положенный предмет сам себя
+          // вычеркнет из «новых».
+          const isNew = this.isNewItem(item.item_id);
           this.addToBackpack(item);
-          this.lootPopups.push(item, !carriedOut[item.item_id]);
+          this.lootPopups.push(item, isNew);
         }
       }
     } else {
@@ -1686,9 +1698,6 @@ export class ExpeditionScene extends Phaser.Scene {
     const total = options.length * CARD_W + (options.length - 1) * GAP;
     const startX = CX - total / 2 + CARD_W / 2;
     const cardY = 210;
-    // «Уже получал» = хоть раз вынесен в сундук — тот же критерий, что у иконок
-    // лута в тултипе зоны на карте (CampScene.buildMapContent).
-    const carriedOut = MetaStore.get().stats.items_carried_out;
 
     options.forEach((opt, i) => {
       const x = startX + i * (CARD_W + GAP);
@@ -1719,8 +1728,8 @@ export class ExpeditionScene extends Phaser.Scene {
           align: 'center', wordWrap: { width: CARD_W - 16 },
         }).setOrigin(0.5, 0));
         // Значок последним в карточке — рисуется поверх иконки и названия.
-        if (!carriedOut[opt.item.item_id]) {
-          this.victoryContainer.add(newBadge(this, x + CARD_W / 2 - 8, cardY - CARD_H / 2 + 6));
+        if (this.isNewItem(opt.item.item_id)) {
+          this.victoryContainer.add(newBadge(this, x + CARD_W / 2 - 8, cardY + CARD_H / 2 - 6));
         }
       }
 

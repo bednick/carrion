@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { FONT_FAMILY } from './theme';
 
 // Наклонённый пульсирующий значок «NEW» для карточек с предметом, который игрок
-// ещё ни разу не выносил из похода (MetaStore.stats.items_carried_out).
+// ещё ни разу не выносил из похода (MetaStore.stats.items_carried_out) и которого нет
+// в рюкзаке текущего похода (см. ExpeditionScene.isNewItem).
 // Не интерактивен: лежит поверх карточки, но хит-тест Phaser его игнорирует,
 // поэтому ховер и клик достаются карточке под ним.
 export function newBadge(

@@ -38,7 +38,7 @@ export class LootPopupStack {
 
   constructor(private scene: Phaser.Scene, private anchor: LootPopupAnchor) {}
 
-  /** Показать находку. isNew — предмет ещё ни разу не выносили из похода (значок «NEW»). */
+  /** Показать находку. isNew — предмет ещё ни разу не выносили из похода и его нет в рюкзаке (значок «NEW»). */
   push(item: ItemInstance, isNew: boolean) {
     const { x, width } = this.anchor();
     const W = Math.max(120, width);
