@@ -756,6 +756,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private clearEnemyGraphics() {
     for (const g of this.enemyGraphics) {
       if (!g) continue;
+      // Спрайт уходит без pointerout — снимаем его тултип, если показан именно он.
+      this.tooltip.hideFor(g.sprite);
       g.shadowOuter.destroy();
       g.shadowInner.destroy();
       g.sprite.destroy();
@@ -774,6 +776,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const g = this.enemyGraphics[idx];
     if (!g) return;
     this.enemyGraphics[idx] = null;
+    // Труп затухает 300 мс — за это время он не должен ловить наведение и показывать статы.
+    g.sprite.disableInteractive();
     const objs: Phaser.GameObjects.GameObject[] = [
       g.shadowOuter, g.shadowInner, g.sprite, g.nameText, g.hpBar, g.hpFill, g.hpText,
       ...g.atkBars.flatMap(b => [b.bg, b.fill]),
@@ -894,9 +898,9 @@ export class ExpeditionScene extends Phaser.Scene {
         if (def?.thorns) stats.push({ text: `Шипы: ${def.thorns}`, color: THORNS_COLOR });
 
         const nameColor = RARITY_TEXT_COLORS[getMobConfig(eCapture.id).tier ?? 'common'];
-        this.tooltip.showMob({ name: eCapture.name, nameColor, isBoss: eCapture.isBoss, stats }, x + 50, 140);
+        this.tooltip.showMob({ name: eCapture.name, nameColor, isBoss: eCapture.isBoss, stats }, x + 50, 140, sprite);
       });
-      sprite.on('pointerout', () => this.tooltip.hide());
+      sprite.on('pointerout', () => this.tooltip.hideFor(sprite));
 
       this.enemyGraphics[idx] = { baseX: x, shadowOuter, shadowInner, sprite, nameText, hpBar, hpFill, hpText, atkBars, summonBars };
     }
@@ -1050,16 +1054,28 @@ export class ExpeditionScene extends Phaser.Scene {
       this.backpackIconViews[i] = view;
       // Единственное взаимодействие — наведение: в походе предмет применить нельзя.
       bg.setInteractive({ useHandCursor: false });
-      bg.on('pointerover', () => { view.setHover(true); this.tooltip.showItem(item, x + SIZE, y - 40); });
-      bg.on('pointerout', () => { view.setHover(false); this.tooltip.hide(); });
+      bg.on('pointerover', () => { view.setHover(true); this.tooltip.showItem(item, x + SIZE, y - 40, {}, bg); });
+      bg.on('pointerout', () => { view.setHover(false); this.tooltip.hideFor(bg); });
     }
   }
 
+  /**
+   * Пересборка панели уничтожает объект под курсором: Phaser не выстрелит pointerover по новому,
+   * пока мышь не сдвинут. Переигрываем наведение вручную.
+   */
+  private reapplyHoverUnderPointer() {
+    const p = this.input.activePointer;
+    if (!p.camera) return;
+    for (const obj of this.input.hitTestPointer(p)) obj.emit('pointerover', p);
+  }
+
   private refreshBackpackGrid() {
-    for (const o of this.backpackCellObjs) o.destroy();
+    // Ячейка под курсором исчезает без pointerout — снимаем её тултип, чужой не трогаем.
+    for (const o of this.backpackCellObjs) { this.tooltip.hideFor(o); o.destroy(); }
     this.backpackCellObjs = [];
     this.backpackIconViews = [];
     this.buildBackpackGrid();
+    this.reapplyHoverUnderPointer();
   }
 
   /**
@@ -1120,9 +1136,10 @@ export class ExpeditionScene extends Phaser.Scene {
 
   // Пересобирает визуал ячеек экипировки из this.equipment (после смены стойки).
   private refreshEquipSlots() {
-    for (const o of this.equipSlotObjs) { o.bg.destroy(); o.icon.destroy(); }
+    for (const o of this.equipSlotObjs) { this.tooltip.hideFor(o.bg); o.bg.destroy(); o.icon.destroy(); }
     this.equipSlotObjs = [];
     this.buildEquipSlots();
+    this.reapplyHoverUnderPointer();
   }
 
   // Смена стойки на лету: обновляет мету (запоминаем выбор), снаряжение и — в идущем бою —
@@ -1133,8 +1150,9 @@ export class ExpeditionScene extends Phaser.Scene {
     MetaStore.setActiveStand(i);
     this.initEquipmentFromStand();
     this.refreshStandTabs();
-    this.refreshEquipSlots();
+    // Стойка сменилась — старый тултип неактуален; актуальный переигрывает refreshEquipSlots.
     this.tooltip.hide();
+    this.refreshEquipSlots();
 
     // HP переносим по абсолюту (maxHp не зависит от брони) — смена стойки не лечит и не ранит.
     this.applyEquipToHero();
@@ -1189,9 +1207,9 @@ export class ExpeditionScene extends Phaser.Scene {
         const cur = this.equipment[slotId];
         if (!cur) return;
         icon.setHover(true);
-        this.tooltip.showItem(cur, x + SIZE, y - 40);
+        this.tooltip.showItem(cur, x + SIZE, y - 40, {}, bg);
       });
-      bg.on('pointerout', () => { icon.setHover(false); this.tooltip.hide(); });
+      bg.on('pointerout', () => { icon.setHover(false); this.tooltip.hideFor(bg); });
 
       this.equipSlotObjs.push({ bg, icon });
     }
@@ -1478,12 +1496,15 @@ export class ExpeditionScene extends Phaser.Scene {
           // чтобы сменился спрайт (updateEnemyGraphics обновляет только имя/HP/полоски).
           this.clearEnemyGraphics();
           this.buildEnemyGraphics(this.engine!.state.enemies);
+          // Курсор мог висеть на старой форме: переигрываем наведение на новый спрайт.
+          this.reapplyHoverUnderPointer();
           return;
         }
         const g = this.enemyGraphics[enemyIdx];
         if (!g) return;
         // Спрайт исчезает без pointerout — тултип с его статами иначе остаётся висеть.
-        this.tooltip.hide();
+        // Гасим адресно: чужой показ (предмет под курсором) смерть моба сносить не должна.
+        this.tooltip.hideFor(g.sprite);
         // Босс на финальной смерти — затемняем (поверх ляжет экран победы). Обычный моб — убираем.
         if (enemy.isBoss) {
           // Гасим отложенный сброс вспышки от добивающего удара — иначе он снимет затемнение.

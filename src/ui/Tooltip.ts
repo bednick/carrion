@@ -57,6 +57,10 @@ export class Tooltip {
   private scene: Phaser.Scene;
   private ctrlKey?: Phaser.Input.Keyboard.Key;
 
+  // Кто попросил текущий показ. Тултип один на сцену, а источников много (ячейки рюкзака,
+  // слоты, спрайты мобов) — без владельца исчезнувший источник гасил бы чужой тултип (см. hideFor).
+  private owner: unknown = null;
+
   // Текущий показываемый предмет — нужен для живой перерисовки при нажатии/отпускании Ctrl.
   private currentItem: ItemInstance | null = null;
   private currentCtx: ItemTooltipCtx = {};
@@ -77,7 +81,8 @@ export class Tooltip {
     this.ctrlKey?.on('up', this.refreshIfVisible, this);
   }
 
-  showItem(item: ItemInstance, x: number, y: number, ctx: ItemTooltipCtx = {}) {
+  showItem(item: ItemInstance, x: number, y: number, ctx: ItemTooltipCtx = {}, owner?: unknown) {
+    this.owner = owner ?? null;
     this.currentItem = item;
     this.currentCtx = ctx;
     this.currentX = x;
@@ -85,20 +90,23 @@ export class Tooltip {
     this.render(this.buildItemSections(item, ctx), x, y);
   }
 
-  showText(lines: string[], x: number, y: number) {
+  showText(lines: string[], x: number, y: number, owner?: unknown) {
+    this.owner = owner ?? null;
     this.currentItem = null;
     this.render([lines.map(t => ({ text: t, color: '#ffffff' }))], x, y);
   }
 
   /** Как showText, но с цветом (и опц. иконкой ресурса / рядом иконок предметов) на строку; белый по умолчанию. */
-  showLines(lines: { text: string; color?: string; icon?: string; iconRow?: Line['iconRow']; parts?: Line['parts'] }[], x: number, y: number) {
+  showLines(lines: { text: string; color?: string; icon?: string; iconRow?: Line['iconRow']; parts?: Line['parts'] }[], x: number, y: number, owner?: unknown) {
+    this.owner = owner ?? null;
     this.currentItem = null;
     this.render([lines.map(l => ({ text: l.text, color: l.color ?? '#ffffff', icon: l.icon, iconRow: l.iconRow, parts: l.parts }))], x, y);
   }
 
   /** Тултип моба: имя (цвет по tier) + бейдж босса в одной секции, характеристики — во второй
    *  (тот же стиль, что у тултипа предмета — см. `buildItemSections`). */
-  showMob(data: { name: string; nameColor: string; isBoss?: boolean; stats: { text: string; color: string }[] }, x: number, y: number) {
+  showMob(data: { name: string; nameColor: string; isBoss?: boolean; stats: { text: string; color: string }[] }, x: number, y: number, owner?: unknown) {
+    this.owner = owner ?? null;
     this.currentItem = null;
     const identity: Line[] = [{ text: data.name, color: data.nameColor }];
     if (data.isBoss) identity.push({ text: 'БОСС', color: RARITY_COLORS.legendary });
@@ -260,9 +268,19 @@ export class Tooltip {
   }
 
   hide() {
+    this.owner = null;
     this.currentItem = null;
     this.container.setVisible(false);
     this.clearDynamic();
+  }
+
+  /**
+   * Гасит тултип, только если его показал именно этот объект. Для случаев, когда источник
+   * исчезает без pointerout (смерть моба, пересборка панели) и не должен сносить чужой показ.
+   */
+  hideFor(owner: unknown) {
+    if (this.owner !== owner) return;
+    this.hide();
   }
 
   destroy() {
