@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import type { ItemInstance } from '../core/MetaStore';
 import { getItemBehavior } from '../items/registry';
-import { addItemIcon, RARITY_COLORS } from './itemIcon';
-import { RARITY_COLORS as RARITY_TEXT_COLORS } from './Tooltip';
+import { addItemIcon } from './itemIcon';
+import { RARITY_COLORS, RARITY_HEX as RARITY_TEXT_COLORS } from '../items/rarity';
 import { newBadge } from './newBadge';
 import { FONT_FAMILY } from './theme';
 

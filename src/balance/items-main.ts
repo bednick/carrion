@@ -1,7 +1,7 @@
 // Браузерный UI баланса предметов (balance-items.html). Пока одна таблица — оружие
 // (см. src/balance/weaponStats.ts); остальные типы предметов добавлять по мере надобности.
 
-import { RARITIES, RARITY_LABEL } from './rarity';
+import { RARITY_ORDER as RARITIES, RARITY_LABEL } from '../items/rarity';
 import { getWeaponRows } from './weaponStats';
 import type { Rarity } from '../items/types';
 

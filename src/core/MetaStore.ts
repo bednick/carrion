@@ -1,6 +1,7 @@
 import type { QuestRecord } from '../quests/definitions';
 import { getItemBehavior, hasItemBehavior, ITEM_BEHAVIORS } from '../items/registry';
-import type { EssenceTier, EssencePool } from '../items/types';
+import type { EssenceTier, EssencePool, Rarity } from '../items/types';
+import { rarityIndex } from '../items/rarity';
 import { EventBus } from './EventBus';
 
 // Гейт центра: три конечные зоны фракций. Поле битвы открывается автоматически,
@@ -20,7 +21,7 @@ export type SlotId = 'head' | 'body' | 'legs' | 'hand_left' | 'hand_right' | 'ri
 
 export interface ItemInstance {
   item_id: string;
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  rarity: Rarity;
 }
 
 export type ArmorStand = Record<SlotId, ItemInstance | null>;
@@ -302,10 +303,9 @@ export const MetaStore = {
   },
 
   sortChest() {
-    const order = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
     state.chest.sort((a, b) => {
       if (a.item_id !== b.item_id) return a.item_id.localeCompare(b.item_id);
-      return order.indexOf(b.rarity) - order.indexOf(a.rarity);
+      return rarityIndex(b.rarity) - rarityIndex(a.rarity);
     });
     this.save();
   },

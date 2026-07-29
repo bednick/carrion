@@ -50,12 +50,12 @@
 |----------------------------------------------------------|-------------------|------------------|-----|
 | [`zones/dead-fields.md`](zones/dead-fields.md)           | Мёртвые поля      | Магия — Нежить   | ★☆☆ |
 | [`zones/mage-ruins.md`](zones/mage-ruins.md)             | Руины магов       | Магия — Нежить   | ★★☆ |
-| [`zones/crypt.md`](zones/crypt.md)                       | Склеп             | Магия — Нежить   | ★★☆ |
+| [`zones/crypt.md`](zones/crypt.md)                       | Склеп             | Магия — Нежить   | ★★★ |
 | [`zones/trampled-meadows.md`](zones/trampled-meadows.md) | Растоптанные луга | Конница — Звери  | ★☆☆ |
 | [`zones/beast-lair.md`](zones/beast-lair.md)             | Логово зверей     | Конница — Звери  | ★★☆ |
-| [`zones/predator-pasture.md`](zones/predator-pasture.md) | Пастбище хищников | Конница — Звери  | ★★☆ |
+| [`zones/predator-pasture.md`](zones/predator-pasture.md) | Пастбище хищников | Конница — Звери  | ★★★ |
 | [`zones/armor-dump.md`](zones/armor-dump.md)             | Свалка доспехов   | Мародёры — Броня | ★☆☆ |
-| [`zones/marauder-lair.md`](zones/marauder-lair.md)       | Логово мародёров  | Мародёры — Броня | ★★☆ |
+| [`zones/marauder-lair.md`](zones/marauder-lair.md)       | Логово мародёров  | Мародёры — Броня | ★★★ |
 | [`zones/abandoned-camp.md`](zones/abandoned-camp.md)     | Брошенный лагерь  | Мародёры — Броня | ★★☆ |
 | [`zones/battlefield.md`](zones/battlefield.md)           | Поле Битвы        | Все три          | ★★★ |
 

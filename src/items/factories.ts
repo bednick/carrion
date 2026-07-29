@@ -1,6 +1,6 @@
 import type { Rarity } from './types';
 import type { ItemCombatBehavior } from './behavior';
-import { scaleByRarity } from './scaleByRarity';
+import { scaleByRarity } from './rarity';
 import { mitigateDamage } from '../combat/mitigation';
 
 const DMG_COLOR = '#ffcc44';

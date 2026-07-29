@@ -1,5 +1,6 @@
 import type { EssenceLoot, LootEntry, LootTable } from '../zones/types';
-import type { EssenceTier, ItemInstance, Rarity } from '../items/types';
+import type { EssenceTier, ItemInstance } from '../items/types';
+import { RARITY_ORDER } from '../items/rarity';
 import type { Rng } from '../core/rng';
 
 export interface LootResult {
@@ -69,8 +70,6 @@ export function buildRewardOptions(bossLoot: LootTable | undefined, mobLoot: Loo
 
   return [left, center, right, essence].filter((o): o is RewardOption => o !== null);
 }
-
-const RARITY_ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 /**
  * magic_find: каждый успешный ролл поднимает редкость на тир (геометрически), вплоть до

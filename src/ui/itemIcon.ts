@@ -1,18 +1,7 @@
 import Phaser from 'phaser';
 import type { Rarity } from '../items/types';
+import { RARITY_COLORS } from '../items/rarity';
 import { itemIconKey } from '../items/icons';
-
-/**
- * Единый источник правды по цвету редкости для геометрии Phaser (число, не строка).
- * Строковый аналог для текста живёт в `Tooltip.ts` — это разные сущности, не дублирование.
- */
-export const RARITY_COLORS: Record<Rarity, number> = {
-  common: 0xffffff,
-  uncommon: 0x55ff55,
-  rare: 0x5555ff,
-  epic: 0xaa00ff,
-  legendary: 0xff8800,
-};
 
 /** Плашка без редкости: пустой слот экипировки, ряд иконок зоны в тултипе. */
 const NEUTRAL_COLOR = 0x333344;

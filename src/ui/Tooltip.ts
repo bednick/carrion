@@ -2,9 +2,10 @@ import Phaser from 'phaser';
 import { FONT_FAMILY } from './theme';
 import { getItemBehavior } from '../items/registry';
 import { salvageEssence, ESSENCE_TIERS } from '../items/craft';
+import { RARITY_HEX } from '../items/rarity';
 import { essenceIconKey } from './rewards';
 import { NEUTRAL_PLATE_KEY } from './itemIcon';
-import type { ItemInstance, Rarity, EssenceTier } from '../items/types';
+import type { ItemInstance, EssenceTier } from '../items/types';
 
 // Метрики тултипа (x1.6 от исходных — читаемость).
 const FONT_SIZE = 21;
@@ -17,14 +18,6 @@ const ROW_ICON = 32;     // иконка предмета в iconRow
 const ROW_GAP = 8;
 const ROW_FRAME_PAD = 6; // рамка вокруг иконки iconRow
 const SEG_GAP = 19;
-
-export const RARITY_COLORS: Record<Rarity, string> = {
-  common: '#ffffff',
-  uncommon: '#55ff55',
-  rare: '#5555ff',
-  epic: '#aa00ff',
-  legendary: '#ff8800',
-};
 
 interface Line {
   text: string;
@@ -109,7 +102,7 @@ export class Tooltip {
     this.owner = owner ?? null;
     this.currentItem = null;
     const identity: Line[] = [{ text: data.name, color: data.nameColor }];
-    if (data.isBoss) identity.push({ text: 'БОСС', color: RARITY_COLORS.legendary });
+    if (data.isBoss) identity.push({ text: 'БОСС', color: RARITY_HEX.legendary });
     this.render([identity, data.stats], x, y);
   }
 
@@ -118,7 +111,7 @@ export class Tooltip {
     const beh = getItemBehavior(item.item_id);
     const full = !!this.ctrlKey?.isDown;
 
-    const identity: Line[] = [{ text: beh.name, color: RARITY_COLORS[item.rarity] }];
+    const identity: Line[] = [{ text: beh.name, color: RARITY_HEX[item.rarity] }];
     // Слоты несёт цвет имени и рамка слота — раскрываем только под Ctrl.
     if (full) identity.push({ text: `Слоты: ${beh.slots.join(', ')}`, color: '#aaaaaa' });
 

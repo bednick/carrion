@@ -111,7 +111,7 @@ Combat-статы живут в `behavior.ts` (R9), `stats()` — единый �
 
 **Лестница апгрейда** — как везде: `common → uncommon → rare → epic` (4 ступени), скейл капается на `epic`;
 `legendary` — авторская редкость, скейлом недостижима. `scaleByRarity(base, r, s) = base·s^index`
-(`src/items/scaleByRarity.ts`).
+(`src/items/rarity.ts`).
 
 > ✅ **Исправлено (2026-07).** `heavy_shield` раньше скейлился через `standardShield({ scale: 1.0 })` —
 > геометрически нулевой рост (`block_chance` не менялся с редкостью). Заменено на плоскую таблицу **+5пп за

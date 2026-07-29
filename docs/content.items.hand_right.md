@@ -94,7 +94,7 @@ Combat-статы живут в `behavior.ts` (R9), скейл — по редк
 
 **Лестница апгрейда** — как в семействе `legs`: `common → uncommon → rare → epic` (4 ступени), скейл капается на
 `epic`; `legendary` — авторская редкость (значения вручную, скейлом недостижима). Скейл — `scaleByRarity(base, r, s)`
-= `base·s^index` (`src/items/scaleByRarity.ts`).
+= `base·s^index` (`src/items/rarity.ts`).
 
 ## Предметы
 

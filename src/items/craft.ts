@@ -1,19 +1,10 @@
 import type { ItemInstance, Rarity, EssenceTier, EssencePool } from './types';
+import { NEXT_RARITY, rarityIndex } from './rarity';
 import { essenceSourceZoneIds } from '../zones/registry';
 
 // Единый источник правды о крафте — обе сцены (лагерь/экспедиция) считают результат,
 // стоимость (эссенция) и разбор через этот модуль, чтобы правила не расходились.
 // Крафт = только улучшение редкости + разбор. Рецептов больше нет (см. docs/mechanics.md).
-
-export const RARITY_ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-
-export const NEXT_RARITY: Record<Rarity, Rarity | null> = {
-  common: 'uncommon', uncommon: 'rare', rare: 'epic', epic: 'legendary', legendary: null,
-};
-
-export const RARITY_NAMES: Record<Rarity, string> = {
-  common: 'обычный', uncommon: 'необычный', rare: 'редкий', epic: 'эпический', legendary: 'легендарный',
-};
 
 // Эссенция — ингредиент повышения редкости. Тиров три: обычного (упразднён) и
 // легендарного (снаряжение только находится) нет.
@@ -29,10 +20,6 @@ const ESSENCE_SHORT: Record<EssenceTier, string> = {
 
 /** Потолок крафта: улучшить или скрафтить выше эпика нельзя — легендарное только находится. */
 export const CRAFT_RARITY_CAP: Rarity = 'epic';
-
-function rarityIdx(r: Rarity): number {
-  return RARITY_ORDER.indexOf(r);
-}
 
 export function emptyEssence(): EssencePool {
   return { uncommon: 0, rare: 0, epic: 0 };
@@ -80,19 +67,19 @@ export function findDuplicateChestIndices(chest: ItemInstance[], equipped: ItemI
   // Максимальная редкость по всем предметам игрока — и в сундуке, и на стойках.
   const best = new Map<string, number>();
   for (const item of [...chest, ...equipped]) {
-    const idx = rarityIdx(item.rarity);
+    const idx = rarityIndex(item.rarity);
     if (idx > (best.get(item.item_id) ?? -1)) best.set(item.item_id, idx);
   }
 
   // Надетый экземпляр максимальной редкости уже «занимает» право остаться за свой item_id.
   const kept = new Set<string>();
   for (const item of equipped) {
-    if (rarityIdx(item.rarity) === best.get(item.item_id)) kept.add(item.item_id);
+    if (rarityIndex(item.rarity) === best.get(item.item_id)) kept.add(item.item_id);
   }
 
   const dupes: number[] = [];
   chest.forEach((item, i) => {
-    if (rarityIdx(item.rarity) < (best.get(item.item_id) ?? -1)) { dupes.push(i); return; }
+    if (rarityIndex(item.rarity) < (best.get(item.item_id) ?? -1)) { dupes.push(i); return; }
     if (kept.has(item.item_id)) { dupes.push(i); return; }
     kept.add(item.item_id); // первый встреченный максимум остаётся в сундуке
   });
@@ -170,7 +157,7 @@ export function craftPreview(
 
   const up = NEXT_RARITY[single.rarity];
   if (!up) return { ...EMPTY, error: 'Легендарный — выше некуда' };
-  if (rarityIdx(up) > rarityIdx(CRAFT_RARITY_CAP)) {
+  if (rarityIndex(up) > rarityIndex(CRAFT_RARITY_CAP)) {
     return { ...EMPTY, error: 'Легендарное только находится' };
   }
   const result: ItemInstance = { item_id: single.item_id, rarity: up };

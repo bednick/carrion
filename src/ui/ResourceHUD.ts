@@ -3,20 +3,15 @@ import { FONT_FAMILY } from './theme';
 import { MetaStore } from '../core/MetaStore';
 import { essenceIconKey } from './rewards';
 import { ESSENCE_TIERS, ESSENCE_NAMES } from '../items/craft';
-import type { EssenceTier, Rarity } from '../items/types';
-import { Tooltip, RARITY_COLORS } from './Tooltip';
+import { RARITY_HEX, RARITY_GENITIVE } from '../items/rarity';
+import type { Rarity } from '../items/types';
+import { Tooltip } from './Tooltip';
 
 const ICON = 29;      // сторона иконки, px
 const GAP = 9;        // зазор иконка↔число, px
 const CELL_W = 90;    // ширина ячейки (иконка + число), px
 const ORIGIN_X = 10;
 const ORIGIN_Y = 38;
-
-// Родительный падеж редкости, к которой ведёт улучшение на эссенции тира — для тултипа
-// («до необычного уровня»); согласуется с сущ. «уровень» (муж. род).
-const RARITY_GENITIVE: Record<EssenceTier, string> = {
-  uncommon: 'необычного', rare: 'редкого', epic: 'эпического',
-};
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -75,9 +70,9 @@ export class ResourceHUD {
       store: (c: Cell) => (this.essenceCells[tier] = c),
       title: `${capitalize(ESSENCE_NAMES[tier])} эссенция`, titleColor: '#cbe6ff',
       descLines: buildDescLines(
-        `Позволяет улучшить предмет до ${RARITY_GENITIVE[tier]} уровня редкости`,
+        `Позволяет улучшить предмет до ${RARITY_GENITIVE[tier as Rarity]} уровня редкости`,
         DESC_COLOR,
-        [{ word: RARITY_GENITIVE[tier], color: RARITY_COLORS[tier as Rarity] }],
+        [{ word: RARITY_GENITIVE[tier as Rarity], color: RARITY_HEX[tier as Rarity] }],
       ),
     }));
 

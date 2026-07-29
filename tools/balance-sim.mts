@@ -6,7 +6,7 @@
 // Без --build — безоружный герой (базовый урон 1/3.0s, без брони).
 
 import { readFileSync } from 'node:fs';
-import { getZoneConfig } from '../src/zones/registry.ts';
+import { getZoneConfig, zoneStars } from '../src/zones/registry.ts';
 import { runMonteCarlo } from '../src/balance/simulate.ts';
 import type { ItemInstance, SlotType, Rarity } from '../src/items/types';
 import type { ZoneConfig } from '../src/zones/types';
@@ -44,9 +44,9 @@ function main() {
   const s = runMonteCarlo(equipment, zoneCfg, trials);
 
   if (zoneCfg.endless) {
-    console.log(`Зона: ${zoneCfg.name} (${zoneId}), звёзд: ${zoneCfg.star}, endless (проклятие +${zoneCfg.endless.curse_per_fight}%/бой)`);
+    console.log(`Зона: ${zoneCfg.name} (${zoneId}), звёзд: ${zoneStars(zoneCfg)}, endless (проклятие +${zoneCfg.endless.curse_per_fight}%/бой)`);
   } else {
-    console.log(`Зона: ${zoneCfg.name} (${zoneId}), звёзд: ${zoneCfg.star}, боёв: ${zoneCfg.fights?.min ?? 0}-${zoneCfg.fights?.max ?? 0} + босс`);
+    console.log(`Зона: ${zoneCfg.name} (${zoneId}), звёзд: ${zoneStars(zoneCfg)}, боёв: ${zoneCfg.fights?.min ?? 0}-${zoneCfg.fights?.max ?? 0} + босс`);
   }
   console.log(`Сборка: ${buildPath ?? '(безоружный, без брони)'}`);
   console.log(`Прогонов: ${trials}`);

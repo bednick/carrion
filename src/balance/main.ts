@@ -2,10 +2,10 @@
 // Вся боевая логика — в src/balance/simulate.ts, общей с CLI (tools/balance-sim.mts):
 // числа тут и в консоли гарантированно совпадают, потому что это один и тот же код.
 
-import { ALL_ZONE_IDS, getZoneConfig } from '../zones/registry';
+import { ALL_ZONE_IDS, getZoneConfig, zoneStarLabel } from '../zones/registry';
 import { ITEM_BEHAVIORS } from '../items/registry';
 import { emptySummary, mergeResult, runExpedition, HIST_BUCKETS, HIST_BUCKET_SIZE, type SimSummary } from './simulate';
-import { RARITIES, RARITY_LABEL } from './rarity';
+import { RARITY_ORDER as RARITIES, RARITY_LABEL } from '../items/rarity';
 import type { ItemInstance, SlotType, Rarity } from '../items/types';
 import type { ZoneConfig } from '../zones/types';
 
@@ -222,7 +222,7 @@ function renderDetails(zoneCfg: ZoneConfig, s: SimSummary) {
   const winrate = (s.wins / s.trials * 100);
   const avgBossStartHp = s.bossStartHpCount > 0 ? s.bossStartHpSum / s.bossStartHpCount : null;
   const avgBossEndHp = s.bossEndHpCount > 0 ? s.bossEndHpSum / s.bossEndHpCount : null;
-  let html = `<h3 class="details-title">${zoneCfg.name} (${'★'.repeat(zoneCfg.star)}${'☆'.repeat(3 - zoneCfg.star)}) — ${zoneCfg.faction}</h3>`;
+  let html = `<h3 class="details-title">${zoneCfg.name} (${zoneStarLabel(zoneCfg)}) — ${zoneCfg.faction}</h3>`;
   html += `<div class="stat-grid">
     ${statTile(`${winrate.toFixed(1)}%`, 'Winrate')}
     ${statTile(`${(s.deaths / s.trials * 100).toFixed(1)}%`, 'Смерть до босса')}
@@ -298,7 +298,7 @@ function renderZoneTable(rows: { zoneCfg: ZoneConfig; s: SimSummary }[], selecte
       : `${(s.fightsSum / s.trials).toFixed(1)} / ${zoneCfg.fights ? ((zoneCfg.fights.min + zoneCfg.fights.max) / 2).toFixed(1) : '0'}`;
     html += `<tr data-zone-id="${zoneCfg.id}"${selected}>
       <td>${zoneCfg.name}</td>
-      <td>${'★'.repeat(zoneCfg.star)}${'☆'.repeat(3 - zoneCfg.star)}</td>
+      <td>${zoneStarLabel(zoneCfg)}</td>
       <td>${winrateCell}</td>
       <td>${avgBossStartHp}</td>
       <td>${avgBossEndHp}</td>

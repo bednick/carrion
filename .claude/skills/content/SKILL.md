@@ -53,7 +53,7 @@ description: Используй при создании или изменени�
 ## Новая зона
 
 1. Создай `src/zones/<zone-id>/config.json` по формату из `content.zones.format.md`: `id`, `name`, `faction`,
-   `star`, `fights {min,max}`, `mob_pool: [{ mob_id, weight }]`, `mob_loot` (общий лут рядовых мобов зоны),
+   `rarity` (тир награды босса: uncommon/rare/epic/legendary — звёзды выводятся из него), `fights {min,max}`, `mob_pool: [{ mob_id, weight }]`, `mob_loot` (общий лут рядовых мобов зоны),
    `boss: { mob_id, loot }`. Босс — ссылка на моба + награда за финальный бой (фазы/призыв босса живут в конфиге
    его моба, **не** здесь). Лут (`mob_loot`/`boss.loot` → `items[].item_id`) должен ссылаться на существующий предмет.
 2. Зарегистрируй в `src/zones/registry.ts`:

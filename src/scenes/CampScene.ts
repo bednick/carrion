@@ -15,7 +15,8 @@ import {
 } from '../items/craft';
 import type { Rarity, SlotType, EssencePool, EssenceTier } from '../items/types';
 import { itemIconKey } from '../items/icons';
-import { addItemIcon, ItemIconView, RARITY_COLORS } from '../ui/itemIcon';
+import { addItemIcon, ItemIconView } from '../ui/itemIcon';
+import { RARITY_COLORS, RARITY_HEX, RARITY_ORDER } from '../items/rarity';
 import { resourceTag } from '../ui/priceTag';
 import { essenceIconKey, essenceIconKeyByRarity } from '../ui/rewards';
 import { slotSilhouetteKey, upgradeIconKey } from '../ui/silhouettes';
@@ -109,23 +110,13 @@ for (const def of Object.values(QUEST_DEFS)) {
   }
 }
 
-// Цвет названия зоны в тултипе = цвет эссенции, которую даёт её босс. Поле Битвы эссенции
-// не даёт (финал без награды-выбора) — берём легендарный цвет как высший тир.
-const TIER_HEX: Record<string, string> = {
-  uncommon: '#55ff55', rare: '#5555ff', epic: '#aa00ff', legendary: '#ff8800',
-};
-
 /** Тир в винительном падеже для фразы «Сначала пройти <тир> область» (тултип закрытого обмена). */
 const TIER_AREA_ADJ: Record<EssenceTier, string> = {
   uncommon: 'Необычную', rare: 'Редкую', epic: 'Эпическую',
 };
 
 function zoneNameColor(cfg: ZoneConfig): string {
-  // Endless-зона (battlefield) без boss/наград-выбора — легендарный цвет как высший тир.
-  if (cfg.endless || !cfg.boss) return TIER_HEX.legendary;
-  const ess = cfg.boss.loot?.essence;
-  const tier = ess ? Object.keys(ess)[0] : undefined;
-  return (tier && TIER_HEX[tier]) || '#ffffff';
+  return RARITY_HEX[cfg.rarity] ?? '#ffffff';
 }
 
 // Тултип не переносит текст сам — режем лор на строки по словам (≤ maxChars символов).
@@ -1094,7 +1085,7 @@ export class CampScene extends Phaser.Scene {
     const gained = ESSENCE_TIERS.filter((t) => pool[t] > 0);
     const ICON = 20, ICON_GAP = 4, SEG_GAP = 18;
     const labels = gained.map((tier) => this.add.text(0, 392, `+${pool[tier]}`, {
-      fontSize: '14px', fontFamily: FONT_FAMILY, color: TIER_HEX[tier],
+      fontSize: '14px', fontFamily: FONT_FAMILY, color: RARITY_HEX[tier],
     }).setOrigin(0, 0.5).setDepth(D_TEXT));
     const rowW = labels.reduce((w, lbl) => w + ICON + ICON_GAP + lbl.width + SEG_GAP, -SEG_GAP);
     let x = CX - rowW / 2;
@@ -1138,7 +1129,7 @@ export class CampScene extends Phaser.Scene {
       spawnIconFloater(
         this, essenceIconKey(tier), `+${amount}`,
         x + Math.cos(angle) * radius, y + Math.sin(angle) * radius,
-        TIER_HEX[tier],
+        RARITY_HEX[tier],
       );
     }
   }
@@ -1195,12 +1186,12 @@ export class CampScene extends Phaser.Scene {
       // Слева от кнопки — что отдаём: «-1 [icon] Редкая».
       const toLabel = ESSENCE_NAMES[to].charAt(0).toUpperCase() + ESSENCE_NAMES[to].slice(1);
       const giveParts = this.layoutIconRow(
-        '-1', TIER_HEX[from], essenceIconKey(from), fromLabel, TIER_HEX[from], rowY, cx - 125, true,
+        '-1', RARITY_HEX[from], essenceIconKey(from), fromLabel, RARITY_HEX[from], rowY, cx - 125, true,
       );
 
       // Справа от кнопки — что получаем: «+3 [icon] Необычная».
       const getParts = this.layoutIconRow(
-        `+${output}`, TIER_HEX[to], essenceIconKey(to), toLabel, TIER_HEX[to], rowY, cx + 40, false,
+        `+${output}`, RARITY_HEX[to], essenceIconKey(to), toLabel, RARITY_HEX[to], rowY, cx + 40, false,
       );
 
       toAdd.push(rowBg, exchangeBtn, exchangeLbl, ...giveParts, ...getParts);
@@ -1219,7 +1210,7 @@ export class CampScene extends Phaser.Scene {
             { text: 'Обмен закрыт', color: '#ffffff' },
             { text: '', color: '#ffffff', parts: [
               { text: 'Сначала пройти ', color: '#ffffff' },
-              { text: TIER_AREA_ADJ[from], color: TIER_HEX[from] },
+              { text: TIER_AREA_ADJ[from], color: RARITY_HEX[from] },
               { text: ' область', color: '#ffffff' },
             ] },
           ], this.panelX(cx + 7), this.panelY(rowY - 30));
@@ -1278,8 +1269,8 @@ export class CampScene extends Phaser.Scene {
     MetaStore.spendEssence(cost);
     const output = ESSENCE_EXCHANGE_RATE;
     MetaStore.addEssence(to, output);
-    spawnIconFloater(this, essenceIconKey(from), '-1', x ?? this.panelX(379), y ?? this.panelY(300), TIER_HEX[from]);
-    spawnIconFloater(this, essenceIconKey(to), `+${output}`, x ?? this.panelX(379), y ?? this.panelY(300), TIER_HEX[to]);
+    spawnIconFloater(this, essenceIconKey(from), '-1', x ?? this.panelX(379), y ?? this.panelY(300), RARITY_HEX[from]);
+    spawnIconFloater(this, essenceIconKey(to), `+${output}`, x ?? this.panelX(379), y ?? this.panelY(300), RARITY_HEX[to]);
     this.refreshHUD();
     this.rebuildPanel();
   }
@@ -1314,6 +1305,29 @@ export class CampScene extends Phaser.Scene {
       tierLbl.x = anchorX + numLbl.width + gap + iconSize + gap;
     }
     return [numLbl, icon, tierLbl];
+  }
+
+  /**
+   * Быстрый вынос предмета из ячейки улучшения (Shift-клик): сначала свободный подходящий
+   * слот активной стойки, если такого нет — сундук. Обычный клик по ячейке берёт предмет
+   * в руку, зажатие — тащит (см. buildUpgradePanel).
+   */
+  private takeUpgradeItem(which: 'input' | 'result') {
+    const it = which === 'input' ? this.upgradeInputItem : this.upgradeResultItem;
+    if (!it) return;
+    if (which === 'input') this.upgradeInputItem = null;
+    else this.upgradeResultItem = null;
+
+    const si = this.selectedStandIndex;
+    const stand = MetaStore.getArmorStand(si);
+    const free = (getItemBehavior(it.item_id).slots as SlotId[]).find(s => !stand[s]);
+    if (free) {
+      MetaStore.setArmorStandSlot(si, free, it);
+      EventBus.emit('item_equipped');
+    } else {
+      MetaStore.addToChest(it);
+    }
+    this.rebuildPanel();
   }
 
   // Блок улучшения на вкладке «Экипировка», в нижней трети панели под стойкой брони:
@@ -1431,11 +1445,11 @@ export class CampScene extends Phaser.Scene {
           if (this.dragDrop?.isHolding()) return;
           this.pendingDrag = {
             slotId: 'upgrade_input_slot', downX: ptr.x, downY: ptr.y,
-            fallback: () => { MetaStore.addToChest(this.upgradeInputItem!); this.upgradeInputItem = null; this.rebuildPanel(); },
+            fallback: () => this.takeUpgradeItem('input'),
           };
         });
       } else {
-        s1Bg.on('pointerdown', () => { MetaStore.addToChest(this.upgradeInputItem!); this.upgradeInputItem = null; this.rebuildPanel(); });
+        s1Bg.on('pointerdown', () => this.takeUpgradeItem('input'));
       }
     }
 
@@ -1451,10 +1465,13 @@ export class CampScene extends Phaser.Scene {
       if (this.dragDrop) {
         s3Bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
           if (this.dragDrop?.isHolding()) return;
-          this.pendingDrag = { slotId: 'upgrade_result_slot', downX: ptr.x, downY: ptr.y };
+          this.pendingDrag = {
+            slotId: 'upgrade_result_slot', downX: ptr.x, downY: ptr.y,
+            fallback: () => this.takeUpgradeItem('result'),
+          };
         });
       } else {
-        s3Bg.on('pointerdown', () => { MetaStore.addToChest(this.upgradeResultItem!); this.upgradeResultItem = null; this.rebuildPanel(); });
+        s3Bg.on('pointerdown', () => this.takeUpgradeItem('result'));
       }
     } else if (previewResult) {
       // Только превью следующего шага — без взаимодействия, кроме тултипа.
@@ -1536,13 +1553,19 @@ export class CampScene extends Phaser.Scene {
     const tabs = this.buildStandTabs(cx, 210);
 
     const si = this.selectedStandIndex;
+    // Shift-клик по слоту стойки: сначала в свободный вход улучшения (если предмет вообще
+    // улучшаем), иначе — в сундук. Обратное направление — takeUpgradeItem().
     const onStandSlotClick = (slotId: SlotId) => {
       const item = MetaStore.getArmorStand(si)[slotId];
-      if (item) {
-        MetaStore.setArmorStandSlot(si, slotId, null);
+      if (!item) return;
+      MetaStore.setArmorStandSlot(si, slotId, null);
+      if (!this.upgradeInputItem && craftPreview(item, null).result) {
+        this.upgradeInputItem = item;
+        EventBus.emit('item_placed_smith');
+      } else {
         MetaStore.addToChest(item);
-        this.rebuildPanel();
       }
+      this.rebuildPanel();
     };
 
     // Крест слотов по центру между табами стоек (y=210) и разделительной линией блока улучшения (y=502).
@@ -1648,7 +1671,7 @@ export class CampScene extends Phaser.Scene {
         this.panelContainer.add([bg, icon]);
       }
 
-      const RARITY_FILTER: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+      const RARITY_FILTER = RARITY_ORDER;
 
       for (let i = 0; i < RARITY_FILTER.length; i++) {
         const rarity = RARITY_FILTER[i];

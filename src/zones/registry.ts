@@ -1,5 +1,5 @@
 import type { ZoneConfig } from './types';
-import type { EssenceTier } from '../items/types';
+import type { Rarity } from '../items/types';
 import deadFieldsCfg from './dead-fields/config.json';
 import trampledMeadowsCfg from './trampled-meadows/config.json';
 import armorDumpCfg from './armor-dump/config.json';
@@ -30,6 +30,24 @@ export function getZoneConfig(zoneId: string): ZoneConfig {
   return cfg;
 }
 
+/**
+ * Звёзды сложности выводятся из редкости зоны — отдельного поля `star` больше нет.
+ * `common` в таблице только для полноты типа: зон такой редкости не бывает.
+ */
+const RARITY_STARS: Record<Rarity, number> = {
+  common: 1, uncommon: 1, rare: 2, epic: 3, legendary: 3,
+};
+
+export function zoneStars(cfg: ZoneConfig): number {
+  return RARITY_STARS[cfg.rarity];
+}
+
+/** Строка вида '★★☆' для балансных тулзов. */
+export function zoneStarLabel(cfg: ZoneConfig): string {
+  const n = zoneStars(cfg);
+  return '★'.repeat(n) + '☆'.repeat(3 - n);
+}
+
 /** Уникальные item_id, которые могут выпасть в зоне (mob_loot + boss.loot, без дублей). */
 export function getZoneLootItemIds(zoneId: string): string[] {
   const cfg = getZoneConfig(zoneId);
@@ -51,7 +69,12 @@ export function isZoneFullyLooted(zoneId: string, carriedOut: Record<string, num
  * (рядовые мобы её не дают). По этому списку гейтится обмен у кузнеца, см. craft.ts.
  */
 export function essenceSourceZoneIds(tier: string): string[] {
-  return ALL_ZONE_IDS.filter((id) => !!ZONE_CONFIGS[id]?.boss?.loot?.essence?.[tier as EssenceTier]);
+  return ALL_ZONE_IDS.filter((id) => {
+    const cfg = ZONE_CONFIGS[id];
+    // Редкость зоны и есть тир её эссенции; проверка босса отсекает endless (эссенцию даёт
+    // только финальный бой).
+    return !!cfg?.boss && cfg.rarity === tier;
+  });
 }
 
 export const ALL_ZONE_IDS = [
