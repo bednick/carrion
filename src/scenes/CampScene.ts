@@ -807,8 +807,13 @@ export class CampScene extends Phaser.Scene {
       this.buildMapContent();
     } else {
       // Менеджер живёт между перестроениями панели — иначе «рука» (взятый предмет) терялась бы.
-      if (!this.dragDrop) this.dragDrop = new DragDropManager(this);
-      else this.dragDrop.clearSlots();
+      if (!this.dragDrop) {
+        this.dragDrop = new DragDropManager(this);
+        // Драг мимо подходящего слота — то же сообщение, что и у клика с предметом в руке.
+        this.dragDrop.onDropResult = (res) => { if (res === 'rejected') this.showMessage('Не тот слот'); };
+      } else {
+        this.dragDrop.clearSlots();
+      }
       // Иконка «в руке» живёт в экранных координатах — тянем её за масштабом панели.
       this.dragDrop.setIconScale(this.panelScale);
       this.buildPanelFrame();
@@ -1400,14 +1405,15 @@ export class CampScene extends Phaser.Scene {
           this.time.delayedCall(0, () => this.rebuildPanel());
         },
       });
-      // Слот результата — только забрать drag'ом, положить в него нельзя.
+      // Слот результата — только забрать drag'ом, положить в него нельзя (не placeable).
+      // onAccept срабатывает лишь как возврат вытесненного при обмене предмета — он уходит в сундук.
       if (resultItem) {
         this.dragDrop.registerSlot({
           id: 'upgrade_result_slot',
           rect: this.panelRect(resultX - S / 2, slotY - S / 2, S, S),
           item: resultItem,
           onRemove: () => { const it = this.upgradeResultItem; this.upgradeResultItem = null; return it; },
-          onAccept: () => {},
+          onAccept: (it) => { MetaStore.addToChest(it); this.time.delayedCall(0, () => this.rebuildPanel()); },
         });
       }
     }
@@ -1782,7 +1788,9 @@ export class CampScene extends Phaser.Scene {
               rect: this.panelRect(x - SIZE / 2, yc - SIZE / 2, SIZE, SIZE),
               item: inst,
               onRemove: () => { MetaStore.removeFromChest(idx); return inst; },
-              onAccept: () => {},
+              // Сундук плоский: конкретный индекс роли не играет, вытесненный при обмене
+              // предмет просто возвращается в сумку.
+              onAccept: (it) => { MetaStore.addToChest(it); this.time.delayedCall(0, () => this.rebuildPanel()); },
             });
             slotBg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
               if (this.dragDrop?.isHolding()) return; // клик с предметом в руке обрабатывает pointerup

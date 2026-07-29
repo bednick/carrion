@@ -28,6 +28,11 @@ export interface SlotZone {
   alwaysHighlight?: (item: ItemInstance) => boolean;
   rect: Phaser.Geom.Rectangle;
   item: ItemInstance | null;
+  /**
+   * Принять предмет в слот. Должен уметь принять не только предмет игрока, но и вытесненный
+   * при обмене: при drag&drop в занятый слот вытесненный предмет отправляется в слот-источник,
+   * а им может быть любой зарегистрированный слот (в т.ч. ячейка сундука).
+   */
   onAccept: (item: ItemInstance, fromId: string) => void;
   onRemove: () => ItemInstance | null;
 }
@@ -57,6 +62,9 @@ export class DragDropManager {
   // масштаб увеличенного меню НПС им передаётся снаружи (CampScene.rebuildPanel).
   private iconScale = 1;
 
+  /** Итог завершённого drag&drop — сцена показывает сообщение при отказе. */
+  onDropResult?: (result: PlaceResult) => void;
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     scene.input.on('pointermove', this.onPointerMove, this);
@@ -72,18 +80,23 @@ export class DragDropManager {
 
   registerSlot(zone: SlotZone) {
     this.slots.set(zone.id, zone);
-    if (this.heldItem) this.updateHighlights();
+    if (this.activeItem()) this.updateHighlights();
   }
 
   unregisterSlot(id: string) {
     this.slots.delete(id);
-    if (this.heldItem) this.updateHighlights();
+    if (this.activeItem()) this.updateHighlights();
   }
 
   /** Сбросить реестр слотов, сохранив состояние «руки» (нужно при перестроении панели). */
   clearSlots() {
     this.slots.clear();
-    if (this.heldItem) this.updateHighlights();
+    if (this.activeItem()) this.updateHighlights();
+  }
+
+  /** Предмет «в работе» — в руке или под курсором в драге. Для него считается подсветка. */
+  private activeItem(): ItemInstance | null {
+    return this.heldItem ?? this.draggingItem;
   }
 
   startDrag(fromSlotId: string, pointerX: number, pointerY: number) {
@@ -94,11 +107,14 @@ export class DragDropManager {
     this.draggingFrom = fromSlotId;
     this.draggingItem = slot.item;
 
+    // Глубина как у «руки» (300) — иначе заливка подсветки (250) легла бы поверх иконки.
     this.dragSprite = addItemIcon(this.scene, pointerX, pointerY, {
       itemId: slot.item.item_id,
       rarity: slot.item.rarity,
       size: 48 * this.iconScale,
-    }).setDepth(200).setAlpha(0.85);
+    }).setDepth(300).setAlpha(0.85);
+
+    this.updateHighlights();
   }
 
   private onPointerMove(ptr: Phaser.Input.Pointer) {
@@ -106,22 +122,53 @@ export class DragDropManager {
     this.heldSprite?.setPosition(ptr.x, ptr.y);
   }
 
+  /**
+   * Завершение драга. Правила совпадают с «рукой» (placeAt):
+   * - пустой подходящий слот → положить;
+   * - занятый подходящий слот → обмен, вытесненный предмет уезжает в слот-источник;
+   * - не подходит / мимо всех зон → 'rejected', предмет остаётся в источнике.
+   */
   private onPointerUp(ptr: Phaser.Input.Pointer) {
     if (!this.draggingItem || !this.draggingFrom) return;
+    const item = this.draggingItem;
+    const fromId = this.draggingFrom;
+    this.clearDrag(); // до onAccept: тот планирует перестроение панели
 
-    for (const [id, slot] of this.slots) {
-      if (id === this.draggingFrom) continue;
-      if (!Phaser.Geom.Rectangle.Contains(slot.rect, ptr.x, ptr.y)) continue;
-
-      if (this.canAccept(slot, this.draggingItem)) {
-        const fromSlot = this.slots.get(this.draggingFrom);
-        if (fromSlot) fromSlot.onRemove();
-        slot.onAccept(this.draggingItem, this.draggingFrom);
-      }
-      break;
+    const { target, overSlot } = this.findDropTarget(ptr.x, ptr.y, fromId, item);
+    if (!target) {
+      // Бросок в пустоту — молча оставляем предмет в источнике; сообщение только если
+      // под курсором был слот и он отказал.
+      if (overSlot) this.onDropResult?.('rejected');
+      return;
     }
 
-    this.clearDrag();
+    const source = this.slots.get(fromId);
+    // Порядок важен: сначала освободить цель, потом источник, и только затем класть —
+    // MetaStore.setArmorStandSlot перезаписывает слот вслепую.
+    const displaced = target.item !== null ? target.onRemove() : null;
+    source?.onRemove();
+    target.onAccept(item, fromId);
+    if (displaced) source?.onAccept(displaced, target.id);
+
+    this.onDropResult?.(displaced ? 'swapped' : 'placed');
+  }
+
+  /**
+   * Слот под курсором, готовый принять предмет: сначала целевые (placeable), потом остальные.
+   * Приоритет placeable нужен, чтобы крупный слот-приёмник (панель сундука) не перехватывал
+   * дроп в лежащую внутри него ячейку только из-за более раннего порядка регистрации.
+   */
+  private findDropTarget(
+    x: number, y: number, fromId: string, item: ItemInstance,
+  ): { target?: SlotZone; overSlot: boolean } {
+    const hits: SlotZone[] = [];
+    for (const [id, slot] of this.slots) {
+      if (id === fromId) continue;
+      if (!Phaser.Geom.Rectangle.Contains(slot.rect, x, y)) continue;
+      if (slot.placeable && this.canAccept(slot, item)) return { target: slot, overSlot: true };
+      hits.push(slot);
+    }
+    return { target: hits.find(s => this.canAccept(s, item)), overSlot: hits.length > 0 };
   }
 
   isDragging(): boolean {
@@ -234,25 +281,28 @@ export class DragDropManager {
   }
 
   private canAccept(slot: SlotZone, item: ItemInstance): boolean {
-    if (slot.item !== null && !slot.allowOccupied) return false;
-    if (!slot.slotType) return true;
-    const beh = getItemBehavior(item.item_id);
-    return beh.slots.includes(slot.slotType);
+    // Типизированный слот (экипировка/стойка): решает только совместимость предмета.
+    // Занятый — не отказ, а обмен местами (см. onPointerUp).
+    if (slot.slotType) return getItemBehavior(item.item_id).slots.includes(slot.slotType);
+    // Нетипизированный слот принимает любой предмет; занятый — только если это целевой
+    // слот руки/драга (обмен) или он явно разрешает подмену.
+    return slot.item === null || slot.placeable === true || !!slot.allowOccupied;
   }
 
   // ─── Подсветка подходящих слотов ─────────────────────────────────────
 
-  /** Перерисовать подсветку слотов, в которые подходит взятый в руку предмет. */
+  /** Перерисовать подсветку слотов, в которые подходит взятый в руку (или тащимый) предмет. */
   private updateHighlights() {
     this.clearHighlights();
-    if (!this.heldItem) return;
+    const active = this.activeItem();
+    if (!active) return;
 
-    const beh = getItemBehavior(this.heldItem.item_id);
+    const beh = getItemBehavior(active.item_id);
     for (const slot of this.slots.values()) {
       // «Область использования» = типизированный слот (экипировка/стойка), подходящий предмету,
       // либо слот, принимающий любой предмет (вход улучшения) — тот подсвечивается тусклее.
       const typedMatch = !!slot.slotType && beh.slots.includes(slot.slotType);
-      if (!typedMatch && !slot.alwaysHighlight?.(this.heldItem)) continue;
+      if (!typedMatch && !slot.alwaysHighlight?.(active)) continue;
 
       const fillAlpha = typedMatch ? HIGHLIGHT_FILL_ALPHA : HIGHLIGHT_FILL_ALPHA_DIM;
       const strokeAlpha = typedMatch ? HIGHLIGHT_STROKE_ALPHA : HIGHLIGHT_STROKE_ALPHA_DIM;
@@ -293,6 +343,7 @@ export class DragDropManager {
   }
 
   private clearDrag() {
+    this.clearHighlights();
     this.dragSprite?.destroy();
     this.dragSprite = null;
     this.draggingFrom = null;
