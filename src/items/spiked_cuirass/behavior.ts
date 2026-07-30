@@ -11,11 +11,11 @@ const REDUCTION: Record<Rarity, number> = {
   legendary: 0.43,  //EHP 177
 };
 const THORNS_RATIO: Record<Rarity, number> = {
-  common: 0.25,
-  uncommon: 0.25,
-  rare: 0.25,
-  epic: 0.25,
-  legendary: 0.25
+  common: 0.20,
+  uncommon: 0.20,
+  rare: 0.20,
+  epic: 0.20,
+  legendary: 0.20
 };
 
 const behavior: ItemBehavior = {

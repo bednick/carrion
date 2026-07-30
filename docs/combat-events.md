@@ -260,8 +260,8 @@ const behavior: ItemBehavior = {
 | Щит (`block_chance`)         | на `damage`(target=hero): шанс → `replace:[]` + `spawn:[block]`     |
 | Лечение за убийство (амулет) | на `kill`: `spawn:[heal(target=hero)]`                              |
 | Лайфстил за удар             | на `damage`(source=hero, target=enemy), кроме `splash: true`: `spawn:[heal(target=hero)]` |
-| Контрудар (`buckler`)        | на `damage`(target=hero), независимый ролл: `spawn:[attack(source.slot=hand_right, target=атакующий враг) + counter]` — `attack`, не `damage` напрямую, чтобы поймать крит-хуки вроде `heavy_gloves`; `counter` — чисто презентационный дубль рядом (см. §2, `content.items.hand_left.md`) |
-| Шипы (`spiked_shield`)       | на `damage`(target=hero), кроме `thorns: true`: `spawn:[damage(target=атакующий враг, thorns: true)]` (доля дошедшего урона) |
+| Контрудар (`buckler`)        | на `damage`(target=hero), независимый ролл: `spawn:[attack(source.slot=hand_right, target=атакующий враг) + counter]` — `attack`, не `damage` напрямую, чтобы поймать крит-хуки вроде `heavy_gloves`; `counter` — чисто презентационный дубль рядом (см. §2, `content.items.hand_left.md`). Тот же хук вторым независимым броском катает блок (`replace:[]` + `spawn:[block]`) — один обработчик на слот отдаёт оба исхода сразу |
+| Шипы (`spiked_shield`)       | на `damage`(target=hero), кроме `thorns: true`: `spawn:[damage(target=атакующий враг, thorns: true)]` (доля пришедшего урона). Тот же хук отдельным броском катает блок (`replace:[]` + `spawn:[block]`) — шипы считаются от исходного `amount` и срабатывают даже на заблокированном ударе |
 | Броня врага (`armor`)        | на `damage`(target=enemy): `replace:[damage с меньшим (дробным) amount]` |
 | Уклонение врага              | на `damage`(target=enemy): шанс → `replace:[]` + `spawn:[dodge]`    |
 | Шипы врага                   | на `damage`(target=enemy), кроме `thorns: true`: `spawn:[damage(target=hero, thorns: true)]` |
