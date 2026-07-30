@@ -45,8 +45,12 @@ export function standardWeapon(opts: WeaponOpts): ItemCombatBehavior {
 }
 
 export interface ArmorOpts {
-  /** Доля снижения урона (0..1) на `common`. */
-  pct: number;
+  /**
+   * Доля снижения урона (0..1). Число — значение на `common`, дальше геометрический скейл с `cap`.
+   * Явная таблица по редкости — когда ряд подгоняется руками под круглые проценты; `scale`/`cap`
+   * тогда не применяются (значения в таблице уже финальные).
+   */
+  pct: number | Record<Rarity, number>;
   scale?: number;
   /** Потолок доли на верхней редкости — броня не должна вырастать до гарантированного блока. */
   cap?: number;
@@ -59,7 +63,10 @@ export interface ArmorOpts {
 export function standardArmor(opts: ArmorOpts): ItemCombatBehavior {
   const scale = opts.scale ?? 1.5;
   const cap = opts.cap ?? 0.6;
-  const pct = (rarity: Rarity) => Math.min(cap, scaleByRarity(opts.pct, rarity, scale));
+  const raw = opts.pct;
+  const pct = typeof raw === 'number'
+    ? (rarity: Rarity) => Math.min(cap, scaleByRarity(raw, rarity, scale))
+    : (rarity: Rarity) => raw[rarity];
 
   return {
     on: {

@@ -2,11 +2,15 @@ import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { mitigateDamage } from '../../combat/mitigation';
 
-// Латы отчаяния: защита включается только на грани смерти (HP героя < 30% от макс.) —
-// реактивная форма снижения урона, порог фиксирован и не скейлится редкостью (кандидат,
-// см. docs/content.items.body.md, «Открытые вопросы» №2 — не финализирован).
-const HP_THRESHOLD = 0.3;
-const REDUCTION: Record<Rarity, number> = { common: 0.18, uncommon: 0.27, rare: 0.37, epic: 0.48, legendary: 0.6 };
+// Латы отчаяния: защита включается только на грани смерти
+const HP_THRESHOLD = 0.5;
+const REDUCTION: Record<Rarity, number> = {
+  common: 0.41,  //EHP 135 (50 + 85)
+  uncommon: 0.48,  //EHP 145 (50 + 95)
+  rare: 0.54,  //EHP 159 (50 + 109)
+  epic: 0.60,  //EHP 177 (50 + 127)
+  legendary: 0.67,  //EHP 200 (50 + 150)
+};
 
 const behavior: ItemBehavior = {
   name: 'Латы отчаяния',

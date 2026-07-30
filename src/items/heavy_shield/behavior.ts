@@ -2,9 +2,13 @@ import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 
 // Чистая защита: только block_chance, без риддера — самый высокий голый блок в семье
-// (docs/content.items.hand_left.md, узел «реакция на удар»). Плоский скейл +5пп за редкость —
-// раньше `standardShield` со scale:1.0 давал нулевой рост (см. «Открытые вопросы» №1, решено).
-const BLOCK_CHANCE: Record<Rarity, number> = { common: 0.25, uncommon: 0.30, rare: 0.35, epic: 0.40, legendary: 0.40 };
+const BLOCK_CHANCE: Record<Rarity, number> = {
+  common: 0.26,  //EHP 135
+  uncommon: 0.31,  //EHP 145
+  rare: 0.37,  //EHP 159
+  epic: 0.43,  //EHP 177
+  legendary: 0.50,  //EHP 200
+};
 
 const behavior: ItemBehavior = {
   name: 'Тяжёлый щит',

@@ -2,11 +2,21 @@ import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { mitigateDamage } from '../../combat/mitigation';
 
-// Шипастый нагрудник: броня ниже «чистой» (gleaming_plate), плюс безусловный rider
-// thorns_ratio на долю урона, дошедшего до героя ПОСЛЕ снижения — тот же приём, что у
-// spiked_shield (hand_left), см. docs/content.items.body.md.
-const REDUCTION: Record<Rarity, number> = { common: 0.20, uncommon: 0.20, rare: 0.25, epic: 0.30, legendary: 0.30 };
-const THORNS_RATIO: Record<Rarity, number> = { common: 0.20, uncommon: 0.25, rare: 0.25, epic: 0.30, legendary: 0.30 };
+// Шипастый нагрудник: броня ниже «чистой» (gleaming_plate)
+const REDUCTION: Record<Rarity, number> = {
+  common: 0.21,  //EHP 126
+  uncommon: 0.26,  //EHP 135
+  rare: 0.31,  //EHP 145
+  epic: 0.37,  //EHP 159
+  legendary: 0.43,  //EHP 177
+};
+const THORNS_RATIO: Record<Rarity, number> = {
+  common: 0.25,
+  uncommon: 0.25,
+  rare: 0.25,
+  epic: 0.25,
+  legendary: 0.25
+};
 
 const behavior: ItemBehavior = {
   name: 'Шипастый нагрудник',

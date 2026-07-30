@@ -3,11 +3,20 @@ import type { Rarity, SlotType } from '../types';
 import { mitigateDamage } from '../../combat/mitigation';
 
 // Тяжёлые латы: максимум защиты в семействе body ценой замедления hand_right — кросс-slot
-// weaponTimerMod с intervalMult > 1, тот же примитив, что у light_gloves (там < 1, здесь
-// наоборот). Замыкает R7 (осознанный минус на топ-предмете body), см.
-// docs/content.items.body.md.
-const REDUCTION: Record<Rarity, number> = { common: 0.15, uncommon: 0.24, rare: 0.34, epic: 0.46, legendary: 0.6 };
-const INTERVAL_PENALTY: Record<Rarity, number> = { common: 0.08, uncommon: 0.11, rare: 0.15, epic: 0.20, legendary: 0.20 };
+const REDUCTION: Record<Rarity, number> = {
+  common: 0.31,  //EHP 145
+  uncommon: 0.37,  //EHP 159
+  rare: 0.43,  //EHP 177
+  epic: 0.50,  //EHP 200
+  legendary: 0.57,  //EHP 230
+};
+const INTERVAL_PENALTY: Record<Rarity, number> = {
+  common: 0.30,
+  uncommon: 0.30,
+  rare: 0.30,
+  epic: 0.30,
+  legendary: 0.30
+};
 
 const behavior: ItemBehavior = {
   name: 'Тяжёлые латы',
@@ -26,7 +35,7 @@ const behavior: ItemBehavior = {
   },
   stats: (rarity) => [
     { text: `Защита: ${Math.round(REDUCTION[rarity] * 100)}%`, color: '#44aaff' },
-    { text: `Скорость атаки главного оружия: −${Math.round(INTERVAL_PENALTY[rarity] * 100)}%`, color: '#ff6666' },
+    { text: `Скорость атаки: −${Math.round(INTERVAL_PENALTY[rarity] * 100)}%`, color: '#ff6666' },
   ],
 };
 
