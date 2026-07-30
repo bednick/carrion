@@ -1,0 +1,5 @@
+{
+  "hand_right": { "item_id": "war_pick", "rarity": "uncommon" },
+  "body": { "item_id": "desperate_plate", "rarity": "uncommon" },
+  "amulet": { "item_id": "barrier_amulet", "rarity": "uncommon" }
+}
