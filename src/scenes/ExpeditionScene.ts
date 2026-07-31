@@ -184,6 +184,9 @@ export class ExpeditionScene extends Phaser.Scene {
   // Отдельно от isPaused: не даёт открыть второй диалог поверх первого повторным кликом
   // по "В лагерь", в т.ч. когда игра уже была на паузе кнопкой/SPACE до этого клика.
   private retreatDialogOpen = false;
+  // Награда драфта берётся ровно один раз: scene.start внутри обработчика откладывается до конца
+  // кадра, и повторный pointerdown по карточке успел бы начислить предмет второй раз.
+  private rewardClaimed = false;
   // Отложенный переход (бой→ходьба, победа, смерть). Тикается в update() и завязан только на
   // isPaused — в отличие от this.time.delayedCall, не замораживается при рассинхроне часов.
   private delayed: { remaining: number; fn: () => void } | null = null;
@@ -288,6 +291,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.enemyGraphics = [];
     this.curseText = undefined;
     this.isPaused = false;
+    this.rewardClaimed = false;
     // Часы сцены переживают её рестарт — не оставляем this.time замороженным между прогонами.
     this.time.paused = false;
     this.delayed = null;
@@ -1740,6 +1744,11 @@ export class ExpeditionScene extends Phaser.Scene {
       });
       card.on('pointerout',  () => { card.setFillStyle(0x1a1a2a); this.tooltip.hide(); });
       card.on('pointerdown', () => {
+        if (this.rewardClaimed) return;
+        this.rewardClaimed = true;
+        // Глушим все карточки сразу: до смены сцены они ещё живы и ловят ввод.
+        this.victoryContainer.each((o: Phaser.GameObjects.GameObject) => o.input && o.disableInteractive());
+        this.tooltip.hide();
         this.claimReward(opt);
         this.finishExpedition();
       });

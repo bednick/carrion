@@ -16,9 +16,9 @@
   ],
   "mob_loot": {
     "items": [
-      { "item_id": "heavy_gloves", "chance": 0.10, "rarity": "uncommon" },
-      { "item_id": "heavy_plate", "chance": 0.10, "rarity": "uncommon" },
-      { "item_id": "heavy_shield", "chance": 0.10, "rarity": "uncommon" }
+      { "item_id": "war_pick", "chance": 0.10 },
+      { "item_id": "heavy_plate", "chance": 0.10 },
+      { "item_id": "heavy_shield", "chance": 0.10 }
     ]
   },
   "boss": {
@@ -26,9 +26,9 @@
     "loot": {
       "essence": {"rare":  {"min": 10, "max": 20}},
       "items": [
-        { "item_id": "heavy_gloves", "chance": 0.10, "rarity": "rare" },
-        { "item_id": "heavy_plate", "chance": 0.10, "rarity": "rare" },
-        { "item_id": "heavy_shield", "chance": 0.10, "rarity": "rare" }
+        { "item_id": "war_pick", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "heavy_plate", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "heavy_shield", "chance": 0.10, "rarity": "uncommon" }
       ]
     }
   }

@@ -14,9 +14,9 @@
   ],
   "mob_loot": {
     "items": [
-      { "item_id": "comfortable_gloves", "chance": 0.10, "rarity": "uncommon" },
-      { "item_id": "spiked_cuirass", "chance": 0.10, "rarity": "uncommon" },
-      { "item_id": "buckler", "chance": 0.10, "rarity": "uncommon" }
+      { "item_id": "broadaxe", "chance": 0.10 },
+      { "item_id": "spiked_cuirass", "chance": 0.10 },
+      { "item_id": "buckler", "chance": 0.10 }
     ]
   },
   "boss": {
@@ -24,9 +24,9 @@
     "loot": {
       "essence": {"rare":  {"min": 10, "max": 20}},
       "items": [
-        { "item_id": "comfortable_gloves", "chance": 0.10, "rarity": "rare" },
-        { "item_id": "spiked_cuirass", "chance": 0.10, "rarity": "rare" },
-        { "item_id": "buckler", "chance": 0.10, "rarity": "rare" }
+        { "item_id": "broadaxe", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "spiked_cuirass", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "buckler", "chance": 0.10, "rarity": "uncommon" }
       ]
     }
   }

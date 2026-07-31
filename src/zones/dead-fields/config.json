@@ -11,10 +11,8 @@
   ],
   "mob_loot": {
     "items": [
-      { "item_id": "rapier", "chance": 0.10 },
+      { "item_id": "light_gloves", "chance": 0.10 },
       { "item_id": "short_sword", "chance": 0.10 },
-      { "item_id": "dagger", "chance": 0.10 },
-      { "item_id": "leech_bead", "chance": 0.10 },
       { "item_id": "desperate_plate", "chance": 0.10 }
     ]
   },
@@ -23,10 +21,8 @@
     "loot": {
       "essence": {"uncommon":  {"min": 10, "max": 20}},
       "items": [
-        { "item_id": "rapier", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "light_gloves", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "short_sword", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "dagger", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "leech_bead", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "desperate_plate", "chance": 0.10, "rarity": "uncommon" }
       ]
     }

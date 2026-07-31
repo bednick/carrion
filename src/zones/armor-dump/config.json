@@ -12,8 +12,7 @@
   "mob_loot": {
     "items": [
       { "item_id": "battle_staff", "chance": 0.10 },
-      { "item_id": "war_pick", "chance": 0.10 },
-      { "item_id": "barrier_amulet", "chance": 0.10 }
+      { "item_id": "heavy_gloves", "chance": 0.10 }
     ]
   },
   "boss": {
@@ -22,8 +21,7 @@
       "essence": {"uncommon":  {"min": 10, "max": 20}},
       "items": [
         { "item_id": "battle_staff", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "war_pick", "chance": 0.10, "rarity": "uncommon" },
-        { "item_id": "barrier_amulet", "chance": 0.10, "rarity": "uncommon" }
+        { "item_id": "heavy_gloves", "chance": 0.10, "rarity": "uncommon" }
       ]
     }
   }
