@@ -1,0 +1,5 @@
+{
+  "hand_right": { "item_id": "rapier", "rarity": "uncommon" },
+  "hand_left": { "item_id": "spiked_shield", "rarity": "uncommon" },
+  "body": { "item_id": "gleaming_plate", "rarity": "uncommon" }
+}

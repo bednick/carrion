@@ -1,0 +1,6 @@
+{
+  "hand_right": { "item_id": "broadaxe", "rarity": "uncommon" },
+  "hand_left": { "item_id": "buckler", "rarity": "uncommon" },
+  "body": { "item_id": "spiked_cuirass", "rarity": "uncommon" },
+  "amulet": { "item_id": "thread_charm", "rarity": "uncommon" }
+}
