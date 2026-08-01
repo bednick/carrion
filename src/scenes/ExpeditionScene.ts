@@ -174,7 +174,6 @@ export class ExpeditionScene extends Phaser.Scene {
   private heroInvulnText!: Phaser.GameObjects.Text;
   private heroSprite!: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Sprite;
   private heroAnimPrefix: string | null = null;
-  private heroAtkBars: { fill: Phaser.GameObjects.Rectangle; bg: Phaser.GameObjects.Rectangle }[] = [];
   private progressFill!: Phaser.GameObjects.Rectangle;
   private progressText!: Phaser.GameObjects.Text;
   // Текст «Проклятие: N%» по центру под прогресс-баром — только у endless-зон (см. buildProgressBar).
@@ -204,6 +203,10 @@ export class ExpeditionScene extends Phaser.Scene {
   private enemyGraphics: (EnemyGraphic | null)[] = [];
 
   private equipSlotObjs: { bg: Phaser.GameObjects.Rectangle; icon: ItemIconView }[] = [];
+  // Заливка перезарядки оружия снизу вверх поверх иконки руки. Child внутри ItemIconView —
+  // уничтожается вместе с иконкой в refreshEquipSlots(), поэтому словарь пересобирается
+  // целиком в начале buildEquipSlots().
+  private weaponChargeOverlays: Partial<Record<SlotId, Phaser.GameObjects.Rectangle>> = {};
   // Ячейки сетки рюкзака (левая колонка нижней панели) — пересобираются на каждую находку.
   private backpackCellObjs: Phaser.GameObjects.GameObject[] = [];
   // Иконки занятых ячеек по индексу предмета в рюкзаке — по ним подсвечивается свежая находка.
@@ -287,7 +290,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.backpackIconViews = [];
     this.equipSlotObjs = [];
     this.standTabs = [];
-    this.heroAtkBars = [];
     this.enemyGraphics = [];
     this.curseText = undefined;
     this.isPaused = false;
@@ -730,39 +732,29 @@ export class ExpeditionScene extends Phaser.Scene {
     this.heroInvulnText.setText(hasInvuln ? String(invulnHits) : '');
   }
 
-  private buildHeroAtkBars() {
-    for (const b of this.heroAtkBars) { b.bg.destroy(); b.fill.destroy(); }
-    this.heroAtkBars = [];
-    if (!this.engine) return;
-
-    const hx = heroX();
-    const timers = this.engine.state.hero.weaponTimers;
-    const count = timers.length === 0 ? 1 : timers.length;
-    for (let i = 0; i < count; i++) {
-      const ay = 130 - i * 14;
-      const bg = this.add.rectangle(hx, ay, 80, 8, 0x222222).setOrigin(0.5).setDepth(6);
-      const fill = this.add.rectangle(hx - 40, ay, 0, 8, 0x44aaff).setOrigin(0, 0.5).setDepth(6);
-      this.heroAtkBars.push({ bg, fill });
-    }
+  // Заливка снизу вверх поверх иконки оружия в руке — прогресс до следующей атаки этим
+  // оружием. Независимая для hand_left/hand_right (два кинжала считаются раздельно).
+  private updateWeaponChargeOverlays() {
+    // engine.update() выше по кадру мог синхронно завершить бой (onFightEnd/onHeroDeath →
+    // resetWeaponChargeOverlays), но сам вызов этого метода уже был запланирован в этом же
+    // кадре — без проверки фазы он тут же перезаписал бы свежий сброс старыми weaponTimers.
+    if (this.engine!.state.phase !== 'fighting') return;
+    const { hero } = this.engine!.state;
+    (['hand_left', 'hand_right'] as const).forEach(slot => {
+      const overlay = this.weaponChargeOverlays[slot];
+      if (!overlay) return;
+      const t = hero.weaponTimers.find(w => w.slot === slot);
+      const ratio = t ? Math.min(1, t.elapsed / t.interval) : 0;
+      overlay.setSize(overlay.width, overlay.width * ratio);
+    });
   }
 
-  private updateHeroAtkBars() {
-    if (!this.engine) return;
-    const { hero } = this.engine.state;
-    if (hero.weaponTimers.length === 0) {
-      const bar = this.heroAtkBars[0];
-      if (bar) {
-        const ratio = hero.unarmedTimer / 3000;
-        bar.fill.setSize(80 * Math.min(1, ratio), 8);
-      }
-    } else {
-      for (let i = 0; i < hero.weaponTimers.length; i++) {
-        const bar = this.heroAtkBars[i];
-        if (!bar) continue;
-        const t = hero.weaponTimers[i];
-        const ratio = t.elapsed / t.interval;
-        bar.fill.setSize(80 * Math.min(1, ratio), 8);
-      }
+  // Сброс к 0 сразу по окончании боя (победа/поражение) и повторно в начале следующего —
+  // equipSlotObjs (и оверлеи) не пересобираются между боями, поэтому без явного сброса
+  // заливка застыла бы на последнем значении на время тоста/анимации между боями.
+  private resetWeaponChargeOverlays() {
+    for (const overlay of Object.values(this.weaponChargeOverlays)) {
+      overlay?.setSize(overlay.width, 0);
     }
   }
 
@@ -1186,6 +1178,8 @@ export class ExpeditionScene extends Phaser.Scene {
 
   // Экипировка героя — только просмотр выбранной стойки (без drag, без ячеек рюкзака/крафта).
   private buildEquipSlots() {
+    // Оверлеи — дети старых icon-контейнеров, уничтожаются вместе с ними при пересборке.
+    this.weaponChargeOverlays = {};
     // Крестовая раскладка вокруг портрета (см. docs/art-spec.md): ring/head/amulet сверху,
     // hand_left/body/hand_right в центре, legs снизу.
     const cx = CX;
@@ -1227,6 +1221,15 @@ export class ExpeditionScene extends Phaser.Scene {
         iconAlpha: item ? 1 : 0.35,
       }).setDepth(4);
 
+      // Заливка перезарядки — только у рук, там же живёт оружие ближнего боя.
+      if (slotId === 'hand_left' || slotId === 'hand_right') {
+        const overlay = this.add
+          .rectangle(0, SIZE / 2, SIZE, 0, 0x44aaff, 0.45)
+          .setOrigin(0.5, 1);
+        icon.add(overlay);
+        this.weaponChargeOverlays[slotId] = overlay;
+      }
+
       // Наведение показывает предмет.
       bg.on('pointerover', () => {
         const cur = this.equipment[slotId];
@@ -1250,7 +1253,6 @@ export class ExpeditionScene extends Phaser.Scene {
     const fresh = CombatEngine.buildInitialHero(heroEquip, this.engine.state.hero.damageTakenMult);
     fresh.hp = Math.min(this.engine.state.hero.hp, fresh.maxHp);
     this.engine.state.hero = fresh;
-    this.buildHeroAtkBars();
     this.updateHeroHpBar();
   }
 
@@ -1563,7 +1565,7 @@ export class ExpeditionScene extends Phaser.Scene {
     }, resolveSummonSpec, enginePhases, rngFor(this.runSeed, 'phase', this.currentFightIdx));
 
     this.buildEnemyGraphics(enemies);
-    this.buildHeroAtkBars();
+    this.resetWeaponChargeOverlays();
     this.updateProgressBar();
   }
 
@@ -1612,6 +1614,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.currentFightIdx++;
     this.updateProgressBar();
     this.updateCurseReadout();
+    this.resetWeaponChargeOverlays();
 
     // Находка поход не останавливает: предмет уже в рюкзаке, попап над сеткой гаснет сам.
     this.proceedAfterFight();
@@ -1641,6 +1644,7 @@ export class ExpeditionScene extends Phaser.Scene {
     }
     // Лут гарантирован: рюкзак уходит в сундук — смерть его не отнимает.
     this.dumpBackpackToChest();
+    this.resetWeaponChargeOverlays();
 
     // Endless-зона (docs/content.zones.format.md): цель — рекорд глубины, а не «прохождение».
     // Показываем полноэкранный recap вместо тоста+автоперехода — игроку нужно время прочитать числа.
@@ -1955,7 +1959,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.engine.update(delta);
       this.updateEnemyGraphics();
       this.updateHeroHpBar();
-      this.updateHeroAtkBars();
+      this.updateWeaponChargeOverlays();
     }
   }
 
