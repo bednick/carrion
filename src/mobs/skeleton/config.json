@@ -3,6 +3,7 @@
   "name": "Скелет",
   "tier": "common",
   "health": 25,
+  "position": 1,
   "attacks": [
     { "damage": 2, "interval": 1.25 }
   ]

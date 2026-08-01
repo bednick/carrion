@@ -3,6 +3,7 @@
   "name": "Вооружённый мародёр",
   "tier": "uncommon",
   "health": 40,
+  "position": 1,
   "attacks": [
     {
       "damage": 7,

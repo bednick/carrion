@@ -3,6 +3,7 @@
   "name": "Бригадир",
   "tier": "legendary",
   "health": 50,
+  "position": 1,
   "attacks": [
     {
       "damage": 9,

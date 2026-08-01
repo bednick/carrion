@@ -3,6 +3,7 @@
   "name": "Булавонос",
   "tier": "uncommon",
   "health": 36,
+  "position": 1,
   "attacks": [
     {
       "damage": 5,

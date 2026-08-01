@@ -3,6 +3,7 @@
   "name": "Поросёнок",
   "tier": "rare",
   "health": 12,
+  "position": 1,
   "attacks": [
     {
       "damage": 1,

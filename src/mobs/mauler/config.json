@@ -3,6 +3,7 @@
   "name": "Матёрый хищник",
   "tier": "rare",
   "health": 44,
+  "position": 1,
   "attacks": [
     {
       "damage": 3,

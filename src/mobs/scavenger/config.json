@@ -3,6 +3,7 @@
   "name": "Мусорщик",
   "tier": "common",
   "health": 21,
+  "position": 1,
   "attacks": [
     { "damage": 5, "interval": 1.47 }
   ],

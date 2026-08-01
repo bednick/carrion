@@ -3,6 +3,7 @@
   "name": "Главарь свалки",
   "tier": "legendary",
   "health": 40,
+  "position": 1,
   "attacks": [
     { "damage": 6, "interval": 1.07 }
   ],

@@ -3,6 +3,7 @@
   "name": "Спелёнутый ужас",
   "tier": "legendary",
   "health": 50,
+  "position": 1,
   "attacks": [
     {
       "damage": 12,

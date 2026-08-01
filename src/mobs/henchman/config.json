@@ -3,6 +3,7 @@
   "name": "Подручный",
   "tier": "common",
   "health": 28,
+  "position": 1,
   "attacks": [
     { "damage": 3, "interval": 0.88 }
   ],

@@ -3,6 +3,7 @@
   "name": "Командир лагеря",
   "tier": "legendary",
   "health": 60,
+  "position": 1,
   "attacks": [
     {
       "damage": 9,

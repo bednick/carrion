@@ -3,6 +3,7 @@
   "name": "Неупокоенный",
   "tier": "rare",
   "health": 50,
+  "position": 1,
   "attacks": [
     {
       "damage": 4,

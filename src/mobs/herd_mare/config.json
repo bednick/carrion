@@ -3,10 +3,10 @@
   "name": "Табунная кобыла",
   "tier": "epic",
   "health": 50,
+  "position": 3,
   "attacks": [
     { "damage": 7, "interval": 2.5 }
   ],
-  "position": 3,
   "summons": [
     {
       "mob_id": "wild_horse",

@@ -19,7 +19,7 @@ import type { SlotType, EssenceTier } from '../items/types';
 import type { ZoneConfig, MobConfig, EnemySpec, PhaseOverride, SummonRef } from '../zones/types';
 import { getMobConfig } from '../mobs/registry';
 import { slotSilhouetteKey, zoneDecorKey } from '../ui/silhouettes';
-import { MOB_MECHANIC_DEFS, mobMechanicIconKey, type MechanicId } from '../ui/mobMechanics';
+import { MOB_MECHANIC_DEFS, MOB_MECHANIC_COLOR_NUM, mobMechanicIconKey, type MechanicId } from '../ui/mobMechanics';
 import { addItemIcon, ItemIconView } from '../ui/itemIcon';
 import { essenceTag } from '../ui/priceTag';
 import { newBadge } from '../ui/newBadge';
@@ -41,8 +41,10 @@ function heroX(): number {
 // Та же палитра, что у характеристик предметов в тултипе (src/items/factories.ts,
 // src/items/spiked_cuirass/behavior.ts) — тултип моба должен выглядеть единообразно с ними.
 const DMG_COLOR = '#ffcc44';
-const DEF_COLOR = '#44aaff';
-const THORNS_COLOR = '#ff8844';
+// Броня/уклон/шипы — тот же цвет, что и у одноимённых гнёзд механик правой колонки
+// (единственный источник — MOB_MECHANIC_DEFS, см. src/ui/mobMechanics), чтобы палитра не разъезжалась.
+const DEF_COLOR = MOB_MECHANIC_DEFS.find(d => d.id === 'armor')!.color;
+const THORNS_COLOR = MOB_MECHANIC_DEFS.find(d => d.id === 'thorns')!.color;
 
 /** Нормализует моба (или его форму-override) в EnemySpec для движка. */
 function resolveSpec(ref: PhaseOverride, isBoss: boolean): EnemySpec {
@@ -128,7 +130,10 @@ function nearestFreeSlotFrom(from: number, occupied: Set<number>): number | null
  * `thorns`) берётся из уже разрешённого `EnemyState.defense` (тот же источник, что у тултипа моба
  * выше), призыв/фаза — статически из конфига по `id`, т.к. `EnemyState.summonPlans` не хранит
  * `start`-триггеры (их уже развернула сцена при сборке доски) и не хранит `phases` вовсе.
- * Возвращает в каноническом порядке `MOB_MECHANIC_DEFS`.
+ *
+ * Призыв только с `trigger.type: 'start'` в счёт не идёт: такие враги уже стоят на доске в начале
+ * боя — с точки зрения игрока это просто «бой начался с несколькими мобами», а не механика призыва
+ * посреди боя. Иконка загорается, только если есть хотя бы один интервальный/по HP/посмертный призыв.
  */
 function getMobMechanics(e: EnemyState): MechanicId[] {
   const cfg = getMobConfig(e.id);
@@ -136,7 +141,7 @@ function getMobMechanics(e: EnemyState): MechanicId[] {
   if (e.defense?.dodge) present.add('evade');
   if (e.defense?.armor) present.add('armor');
   if (e.defense?.thorns) present.add('thorns');
-  if (cfg.summons?.length) present.add('summon');
+  if (cfg.summons?.some(s => s.trigger.type !== 'start')) present.add('summon');
   if (cfg.phases?.length) present.add('phase');
   return MOB_MECHANIC_DEFS.map(d => d.id).filter(id => present.has(id));
 }
@@ -221,10 +226,10 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private enemyGraphics: (EnemyGraphic | null)[] = [];
 
-  // Гнёзда механик боя (правая колонка нижней панели, docs/ui.md «Механики»): заполняются по
-  // порядку обнаружения за текущий бой, сбрасываются в onFightEnd/onHeroDeath.
+  // Гнёзда механик боя (правая колонка нижней панели, docs/ui.md «Механики»): у каждой механики —
+  // своё постоянное место (индекс = позиция в MOB_MECHANIC_DEFS), сбрасываются в onFightEnd/onHeroDeath.
   private mechanicSlots: { bg: Phaser.GameObjects.Rectangle; icon: Phaser.GameObjects.Image }[] = [];
-  private discoveredMechanics: MechanicId[] = [];
+  private discoveredMechanics: Set<MechanicId> = new Set();
 
   private equipSlotObjs: { bg: Phaser.GameObjects.Rectangle; icon: ItemIconView }[] = [];
   // Заливка перезарядки оружия снизу вверх поверх иконки руки. Child внутри ItemIconView —
@@ -1022,10 +1027,9 @@ export class ExpeditionScene extends Phaser.Scene {
   // ─── Механики (верхняя треть правой колонки нижней панели) ───────────
 
   /**
-   * 5 гнёзд под иконки механик мобов, встреченных в текущем бою (docs/ui.md). Гнёзда сами по себе
-   * фиксированы — какая механика лежит в гнезде `i`, решает `discoveredMechanics[i]` (порядок
-   * обнаружения), поэтому обработчики читают текущее содержимое на момент наведения, а не
-   * замыкают его при постройке.
+   * 5 гнёзд под иконки механик мобов, встреченных в текущем бою (docs/ui.md). Место гнезда
+   * фиксировано за механикой — позиция `i` всегда `MOB_MECHANIC_DEFS[i]` (уворот/защита/шипы/
+   * призыв/фаза), а не порядок обнаружения: пусто, пока эта конкретная механика не встретилась.
    */
   private buildMechanicNests() {
     const col = this.panelColumn(2);
@@ -1038,37 +1042,39 @@ export class ExpeditionScene extends Phaser.Scene {
     const startX = col.cx - totalW / 2 + SIZE / 2;
     const y = ExpeditionScene.PANEL_HEADER_Y + 46;
 
-    this.mechanicSlots = MOB_MECHANIC_DEFS.map((_, i) => {
+    this.mechanicSlots = MOB_MECHANIC_DEFS.map((def, i) => {
       const x = startX + i * (SIZE + GAP);
       const bg = this.add.rectangle(x, y, SIZE, SIZE, 0x2a2a3a).setStrokeStyle(1, 0x444455);
       // 0.78 — та же доля иконки от размера ячейки, что у предметных плашек (DEFAULT_ICON_RATIO, src/ui/itemIcon.ts).
       const iconSize = Math.round(SIZE * 0.78);
-      const icon = this.add.image(x, y, mobMechanicIconKey(MOB_MECHANIC_DEFS[0].id))
+      const icon = this.add.image(x, y, mobMechanicIconKey(def.id))
         .setDisplaySize(iconSize, iconSize).setVisible(false);
       bg.setInteractive({ useHandCursor: false });
       bg.on('pointerover', () => {
-        const id = this.discoveredMechanics[i];
-        if (!id) return;
-        const def = MOB_MECHANIC_DEFS.find(d => d.id === id)!;
+        if (!this.discoveredMechanics.has(def.id)) return;
         this.tooltip.showLines([
-          { text: def.title, color: '#ddddaa' },
+          { text: def.title, color: def.color },
           { text: def.description, color: '#aaaaaa' },
         ], x + SIZE, y, bg);
       });
       bg.on('pointerout', () => this.tooltip.hideFor(bg));
       return { bg, icon };
     });
-    this.discoveredMechanics = [];
+    this.discoveredMechanics = new Set();
+    this.refreshMechanicNests();
   }
 
-  /** Проставляет текстуру/видимость каждого гнезда по текущему `discoveredMechanics`. */
+  /** Проставляет видимость и цвет фона каждого гнезда по текущему `discoveredMechanics`. */
   private refreshMechanicNests() {
     this.mechanicSlots.forEach((slot, i) => {
-      const id = this.discoveredMechanics[i];
-      if (id) {
-        slot.icon.setTexture(mobMechanicIconKey(id)).setVisible(true);
+      const def = MOB_MECHANIC_DEFS[i];
+      if (this.discoveredMechanics.has(def.id)) {
+        slot.icon.setVisible(true);
+        const colorNum = MOB_MECHANIC_COLOR_NUM[def.id];
+        slot.bg.setFillStyle(colorNum, 0.18).setStrokeStyle(1, colorNum, 0.8);
       } else {
         slot.icon.setVisible(false);
+        slot.bg.setFillStyle(0x2a2a3a).setStrokeStyle(1, 0x444455);
         // Гнездо опустело (сброс между боями) — если на нём висел тултип, курсор pointerout
         // не позовёт (мышь может так и стоять на месте), гасим адресно.
         this.tooltip.hideFor(slot.bg);
@@ -1076,17 +1082,18 @@ export class ExpeditionScene extends Phaser.Scene {
     });
   }
 
-  /** Добавляет ещё не встречавшиеся в этом бою механики моба `e` в конец списка гнёзд. */
+  /** Открывает механики моба `e` на их постоянных местах (см. `MOB_MECHANIC_DEFS`). */
   private registerMobMechanics(e: EnemyState) {
-    const fresh = getMobMechanics(e).filter(id => !this.discoveredMechanics.includes(id));
+    const found = getMobMechanics(e);
+    const fresh = found.filter(id => !this.discoveredMechanics.has(id));
     if (fresh.length === 0) return;
-    this.discoveredMechanics.push(...fresh);
+    fresh.forEach(id => this.discoveredMechanics.add(id));
     this.refreshMechanicNests();
   }
 
   /** Очищает гнёзда механик — вызывается на конец боя (не похода), см. `onFightEnd`/`onHeroDeath`. */
   private resetMechanicNests() {
-    this.discoveredMechanics = [];
+    this.discoveredMechanics = new Set();
     this.refreshMechanicNests();
   }
 

@@ -3,6 +3,7 @@
   "name": "Панцирник",
   "tier": "epic",
   "health": 30,
+  "position": 1,
   "attacks": [
     {
       "damage": 10,

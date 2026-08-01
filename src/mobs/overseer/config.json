@@ -3,6 +3,7 @@
   "name": "Надсмотрщик",
   "tier": "epic",
   "health": 40,
+  "position": 1,
   "attacks": [
     {
       "damage": 8,

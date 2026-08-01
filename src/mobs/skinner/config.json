@@ -3,6 +3,7 @@
   "name": "Свежеватель",
   "tier": "rare",
   "health": 40,
+  "position": 1,
   "attacks": [
     {
       "damage": 6,

@@ -3,6 +3,7 @@
   "name": "Жеребёнок",
   "tier": "uncommon",
   "health": 22,
+  "position": 1,
   "attacks": [
     {
       "damage": 1,

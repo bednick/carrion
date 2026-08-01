@@ -3,6 +3,7 @@
   "name": "Командир налегке",
   "tier": "legendary",
   "health": 30,
+  "position": 1,
   "attacks": [
     {
       "damage": 6,

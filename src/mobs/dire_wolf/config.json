@@ -3,6 +3,7 @@
   "name": "Лютоволк",
   "tier": "uncommon",
   "health": 35,
+  "position": 1,
   "attacks": [
     {
       "damage": 3,

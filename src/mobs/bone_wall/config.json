@@ -3,6 +3,7 @@
   "name": "Костяная стена",
   "tier": "rare",
   "health": 40,
+  "position": 1,
   "attacks": [],
   "ui": { "scale": 1.2 }
 }

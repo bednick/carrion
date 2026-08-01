@@ -3,6 +3,7 @@
   "name": "Огромная крыса",
   "tier": "common",
   "health": 24,
+  "position": 1,
   "attacks": [
     { "damage": 16, "interval": 4.1 }
   ],

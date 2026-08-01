@@ -3,6 +3,7 @@
   "name": "Рыскун",
   "tier": "rare",
   "health": 38,
+  "position": 1,
   "attacks": [
     {
       "damage": 3,

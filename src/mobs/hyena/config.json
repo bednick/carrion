@@ -3,6 +3,7 @@
   "name": "Гиена",
   "tier": "uncommon",
   "health": 20,
+  "position": 1,
   "attacks": [
     {
       "damage": 1,

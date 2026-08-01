@@ -3,6 +3,7 @@
   "name": "Рунная гончая",
   "tier": "uncommon",
   "health": 15,
+  "position": 1,
   "attacks": [
     {
       "damage": 1,

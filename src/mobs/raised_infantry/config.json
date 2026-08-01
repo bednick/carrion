@@ -3,6 +3,7 @@
   "name": "Поднятый пехотинец",
   "tier": "common",
   "health": 13,
+  "position": 1,
   "attacks": [
     { "damage": 2, "interval": 1.5 }
   ]

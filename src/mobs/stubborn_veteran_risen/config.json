@@ -3,6 +3,7 @@
   "name": "Упрямец (поднялся)",
   "tier": "uncommon",
   "health": 18,
+  "position": 1,
   "attacks": [
     { "damage": 2, "interval": 0.9 }
   ]

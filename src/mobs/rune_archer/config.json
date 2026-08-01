@@ -3,13 +3,13 @@
   "name": "Рунный лучник",
   "tier": "rare",
   "health": 10,
+  "position": 3,
   "attacks": [
     {
       "damage": 4,
       "interval": 1.8
     }
   ],
-  "position": 3,
   "summons": [
     {
       "mob_id": "bone_wall",

@@ -3,6 +3,7 @@
   "name": "Кабан-секач",
   "tier": "rare",
   "health": 75,
+  "position": 1,
   "summon_placement": "back",
   "attacks": [
     {

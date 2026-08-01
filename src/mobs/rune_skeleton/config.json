@@ -3,6 +3,7 @@
   "name": "Рунный скелет",
   "tier": "uncommon",
   "health": 25,
+  "position": 1,
   "attacks": [
     {
       "damage": 6,

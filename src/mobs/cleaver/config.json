@@ -3,6 +3,7 @@
   "name": "Секач",
   "tier": "uncommon",
   "health": 40,
+  "position": 1,
   "attacks": [
     {
       "damage": 5,

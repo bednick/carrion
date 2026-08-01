@@ -3,6 +3,7 @@
   "name": "Костяной боевой маг",
   "tier": "epic",
   "health": 30,
+  "position": 1,
   "attacks": [
     {
       "damage": 2,

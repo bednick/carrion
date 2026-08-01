@@ -3,13 +3,13 @@
   "name": "Костяной конструкт",
   "tier": "rare",
   "health": 30,
+  "position": 1,
   "attacks": [
     {
       "damage": 10,
       "interval": 4.55
     }
   ],
-  "position": 1,
   "ui": {
     "scale": 1.3
   }

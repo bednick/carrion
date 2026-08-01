@@ -3,6 +3,7 @@
   "name": "Колючий латник",
   "tier": "rare",
   "health": 36,
+  "position": 1,
   "attacks": [
     {
       "damage": 3,

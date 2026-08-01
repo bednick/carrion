@@ -3,13 +3,13 @@
   "name": "Волчица-мать",
   "tier": "rare",
   "health": 70,
+  "position": 2,
   "attacks": [
     {
       "damage": 3,
       "interval": 6.6
     }
   ],
-  "position": 2,
   "summons": [
     {
       "mob_id": "dire_wolf",

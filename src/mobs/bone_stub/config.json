@@ -3,6 +3,7 @@
   "name": "Костяной обрубок",
   "tier": "rare",
   "health": 10,
+  "position": 1,
   "attacks": [
     {
       "damage": 4,

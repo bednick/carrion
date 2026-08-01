@@ -3,6 +3,7 @@
   "name": "Вожак табуна",
   "tier": "legendary",
   "health": 60,
+  "position": 1,
   "summon_placement": "front",
   "attacks": [
     {
@@ -10,7 +11,6 @@
       "interval": 3.3
     }
   ],
-  "position": 1,
   "summons": [
     {
       "mob_id": "wild_horse",

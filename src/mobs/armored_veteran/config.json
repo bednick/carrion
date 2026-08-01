@@ -3,6 +3,7 @@
   "name": "Латник",
   "tier": "rare",
   "health": 36,
+  "position": 1,
   "attacks": [
     {
       "damage": 3,
