@@ -305,7 +305,7 @@ export class CampScene extends Phaser.Scene {
     // Слоистая фоновая атмосфера лагеря: костёр (тихо) + флейта (громкость — у флейтиста).
     SoundManager.playMusicLayers([
       { key: 'amb_campfire', volume: 0.1 },
-      { key: 'amb_flute', volume: SoundManager.getLayerVolume('amb_flute', 0.5) },
+      { key: 'amb_flute', volume: SoundManager.getLayerVolume('amb_flute', 0.25) },
     ]);
 
     const resetBtn = this.add.rectangle(rightX(52), 785, 90, 22, 0x1a0000)
@@ -693,7 +693,7 @@ export class CampScene extends Phaser.Scene {
     if (this.fluteSlider) return; // уже открыт; повторный клик ловит оверлей и закрывает
     this.fluteSlider = new SliderPopup(this, x, y, {
       label: 'Флейта',
-      value: SoundManager.getLayerVolume('amb_flute', 0.5),
+      value: SoundManager.getLayerVolume('amb_flute', 0.25),
       onChange: (v) => SoundManager.setLayerVolume('amb_flute', v),
       onClose: () => { this.fluteSlider = null; },
     });
