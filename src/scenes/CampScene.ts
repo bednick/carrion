@@ -1056,16 +1056,16 @@ export class CampScene extends Phaser.Scene {
 
     // Расстояние между строками = зазор между ячейками сундука (SIZE=52, GAP=6 в buildSharedChestPane).
     const ROW_H = 40, ROW_GAP = 6, ROW_SPACING = ROW_H + ROW_GAP;
-    // Разделитель блока улучшения (buildUpgradePanel, y=502) ниже в этом методе — строки обмена
-    // центрируем в пространстве над ним (диапазон 140-502).
-    const CONTENT_TOP = 140, BOTTOM_DIVIDER_Y = 502;
+    // Верхние две трети (140-502, до разделителя блока улучшения — buildUpgradePanel, y=502)
+    // делятся ещё одной такой же линией пополам: обмен эссенции сверху, слияние — в центре.
+    const CONTENT_TOP = 140, MID_DIVIDER_Y = 321;
 
     const exchangePairs = ESSENCE_TIERS
       .map((from): [EssenceTier, EssenceTier | null] => [from, ESSENCE_EXCHANGE_TARGET[from]])
       .filter((p): p is [EssenceTier, EssenceTier] => p[1] !== null);
 
-    const contentMidY = (CONTENT_TOP + BOTTOM_DIVIDER_Y) / 2;
-    const exchangeYStart = contentMidY - ((exchangePairs.length - 1) * ROW_SPACING) / 2;
+    const topMidY = (CONTENT_TOP + MID_DIVIDER_Y) / 2;
+    const exchangeYStart = topMidY - ((exchangePairs.length - 1) * ROW_SPACING) / 2;
 
     // Строки обмена дорогой эссенции на дешёвую (rare→uncommon, epic→rare).
     // Курс специально невыгодный (ESSENCE_EXCHANGE_RATE), без золота.
@@ -1131,6 +1131,9 @@ export class CampScene extends Phaser.Scene {
       }
     });
 
+    // Разделитель между обменом и слиянием — та же линия, что и у блока улучшения ниже (y=502).
+    toAdd.push(this.add.rectangle(cx, MID_DIVIDER_Y, 340, 1, 0x333344));
+
     this.buildFuseContent(cx);
     // Тот же виджет и те же координаты, что у buildChestStandContent на вкладке «Экипировка» —
     // рисует свой разделитель на y=502 сам.
@@ -1144,11 +1147,12 @@ export class CampScene extends Phaser.Scene {
    * (в отличие от buildUpgradePanel) — единственный путь скрафтить legendary. Тип результата
    * случаен среди трёх вложенных (см. fuseItems в items/craft.ts), поэтому в ячейку результата
    * до подтверждения кладём только вопросительный знак с рамкой целевой редкости, а не иконку.
-   * Живёт в пустующем месте между строками обмена эссенции и блоком улучшения ниже.
+   * Центрируется в средней трети панели (между разделителями обмена и улучшения, 321-502).
    */
   private buildFuseContent(cx: number) {
     const S = 40;
-    const slotY = 414;
+    const labelY = 358;
+    const slotY = 394;
     const inputXs = [cx - 98, cx - 52, cx - 6];
     const arrowX = cx + 46;
     const resultX = cx + 98;
@@ -1157,7 +1161,7 @@ export class CampScene extends Phaser.Scene {
     const canFuse = preview.nextRarity !== null && !this.fuseResultItem;
     const toAdd: Phaser.GameObjects.GameObject[] = [];
 
-    toAdd.push(this.add.text(cx, 378, `Слияние: ${FUSE_COUNT} предмета одной редкости → 1 следующей`, {
+    toAdd.push(this.add.text(cx, labelY, `Слияние: ${FUSE_COUNT} предмета одной редкости → 1 следующей`, {
       fontSize: '11px', fontFamily: FONT_FAMILY, color: '#888888', align: 'center', wordWrap: { width: 320 },
     }).setOrigin(0.5));
 
@@ -1273,7 +1277,7 @@ export class CampScene extends Phaser.Scene {
       }
     }
 
-    const btnY = 454;
+    const btnY = 434;
     const BTN_W = 150, BTN_H = 28;
     const btn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, canFuse ? 0x335533 : 0x222233);
     if (canFuse) btn.setInteractive({ useHandCursor: true });
