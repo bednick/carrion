@@ -441,10 +441,18 @@ export class ExpeditionScene extends Phaser.Scene {
       this.progressText.setText(`Бой ${this.currentFightIdx} из ???`);
       return;
     }
-    const progress = this.currentFightIdx / this.totalFights;
     const maxW = 864;
+    // Босс не входит в счётчик рядовых боёв: полоска заполняется целиком, текст меняется.
+    const isBossFight = this.fightPlan[this.currentFightIdx] !== 'mob';
+    if (isBossFight) {
+      this.progressFill.setSize(maxW, 14);
+      this.progressText.setText('Босс локации!');
+      return;
+    }
+    const mobTotal = this.totalFights - 1;
+    const progress = this.currentFightIdx / mobTotal;
     this.progressFill.setSize(Math.max(4, progress * maxW), 14);
-    this.progressText.setText(`Бой ${this.currentFightIdx} / ${this.totalFights}`);
+    this.progressText.setText(`Бой ${this.currentFightIdx} / ${mobTotal}`);
   }
 
   private buildBattleArea() {

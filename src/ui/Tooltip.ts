@@ -102,7 +102,6 @@ export class Tooltip {
     this.owner = owner ?? null;
     this.currentItem = null;
     const identity: Line[] = [{ text: data.name, color: data.nameColor }];
-    if (data.isBoss) identity.push({ text: 'БОСС', color: RARITY_HEX.legendary });
     this.render([identity, data.stats], x, y);
   }
 
