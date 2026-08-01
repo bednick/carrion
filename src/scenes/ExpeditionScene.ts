@@ -19,6 +19,7 @@ import type { SlotType, EssenceTier } from '../items/types';
 import type { ZoneConfig, MobConfig, EnemySpec, PhaseOverride, SummonRef } from '../zones/types';
 import { getMobConfig } from '../mobs/registry';
 import { slotSilhouetteKey, zoneDecorKey } from '../ui/silhouettes';
+import { MOB_MECHANIC_DEFS, mobMechanicIconKey, type MechanicId } from '../ui/mobMechanics';
 import { addItemIcon, ItemIconView } from '../ui/itemIcon';
 import { essenceTag } from '../ui/priceTag';
 import { newBadge } from '../ui/newBadge';
@@ -122,6 +123,24 @@ function nearestFreeSlotFrom(from: number, occupied: Set<number>): number | null
 }
 
 
+/**
+ * Механики этого моба для гнёзд правой колонки (docs/ui.md «Механики»): защита (`dodge`/`armor`/
+ * `thorns`) берётся из уже разрешённого `EnemyState.defense` (тот же источник, что у тултипа моба
+ * выше), призыв/фаза — статически из конфига по `id`, т.к. `EnemyState.summonPlans` не хранит
+ * `start`-триггеры (их уже развернула сцена при сборке доски) и не хранит `phases` вовсе.
+ * Возвращает в каноническом порядке `MOB_MECHANIC_DEFS`.
+ */
+function getMobMechanics(e: EnemyState): MechanicId[] {
+  const cfg = getMobConfig(e.id);
+  const present = new Set<MechanicId>();
+  if (e.defense?.dodge) present.add('evade');
+  if (e.defense?.armor) present.add('armor');
+  if (e.defense?.thorns) present.add('thorns');
+  if (cfg.summons?.length) present.add('summon');
+  if (cfg.phases?.length) present.add('phase');
+  return MOB_MECHANIC_DEFS.map(d => d.id).filter(id => present.has(id));
+}
+
 const EQUIP_SLOTS: SlotId[] = ['head', 'body', 'legs', 'hand_left', 'hand_right', 'ring', 'amulet'];
 
 type EnemyGraphic = {
@@ -201,6 +220,11 @@ export class ExpeditionScene extends Phaser.Scene {
   private foreMaskRT: Phaser.GameObjects.RenderTexture | null = null;
 
   private enemyGraphics: (EnemyGraphic | null)[] = [];
+
+  // Гнёзда механик боя (правая колонка нижней панели, docs/ui.md «Механики»): заполняются по
+  // порядку обнаружения за текущий бой, сбрасываются в onFightEnd/onHeroDeath.
+  private mechanicSlots: { bg: Phaser.GameObjects.Rectangle; icon: Phaser.GameObjects.Image }[] = [];
+  private discoveredMechanics: MechanicId[] = [];
 
   private equipSlotObjs: { bg: Phaser.GameObjects.Rectangle; icon: ItemIconView }[] = [];
   // Заливка перезарядки оружия снизу вверх поверх иконки руки. Child внутри ItemIconView —
@@ -814,6 +838,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private addEnemyGraphic(e: EnemyState, idx: number) {
     {
       MetaStore.recordMobEncountered(e.id);
+      this.registerMobMechanics(e);
       const x = this.slotX(e.slot);
       const color = e.isBoss ? 0xaa4422 : 0x884422;
 
@@ -972,7 +997,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     header(this.panelColumn(0).cx, 'Рюкзак');
     header(CX, 'Экипировка');
-    // Правая колонка зарезервирована — содержимого пока нет.
+    header(this.panelColumn(2).cx, 'Механики');
 
     this.add.image(this.panelColumn(0).cx, 600, zoneDecorKey('backpack')).setTint(0xa06030).setAlpha(0.16);
     this.add.image(CX, 600, zoneDecorKey('warrior')).setTint(0xa06030).setAlpha(0.16);
@@ -980,6 +1005,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.buildStandTabs(CX, 434);
     this.buildEquipSlots();
     this.buildBackpackGrid();
+    this.buildMechanicNests();
 
     // Якорь попапов находок — над сеткой рюкзака. Функция, а не числа: геометрия колонки
     // выводится из живых GAME_W/GAME_H и протухает после ресайза (см. backpackGridGeom).
@@ -991,6 +1017,77 @@ export class ExpeditionScene extends Phaser.Scene {
         width: col.right - col.left - 24,
       };
     });
+  }
+
+  // ─── Механики (верхняя треть правой колонки нижней панели) ───────────
+
+  /**
+   * 5 гнёзд под иконки механик мобов, встреченных в текущем бою (docs/ui.md). Гнёзда сами по себе
+   * фиксированы — какая механика лежит в гнезде `i`, решает `discoveredMechanics[i]` (порядок
+   * обнаружения), поэтому обработчики читают текущее содержимое на момент наведения, а не
+   * замыкают его при постройке.
+   */
+  private buildMechanicNests() {
+    const col = this.panelColumn(2);
+    // Тот же размер ячейки, что у предметов в соседних колонках (рюкзак/экипировка) — см.
+    // BACKPACK_CELL/BACKPACK_GAP, оба уже учитывают panelScale().
+    const SIZE = this.BACKPACK_CELL;
+    const GAP = this.BACKPACK_GAP;
+    const count = MOB_MECHANIC_DEFS.length;
+    const totalW = count * SIZE + (count - 1) * GAP;
+    const startX = col.cx - totalW / 2 + SIZE / 2;
+    const y = ExpeditionScene.PANEL_HEADER_Y + 46;
+
+    this.mechanicSlots = MOB_MECHANIC_DEFS.map((_, i) => {
+      const x = startX + i * (SIZE + GAP);
+      const bg = this.add.rectangle(x, y, SIZE, SIZE, 0x2a2a3a).setStrokeStyle(1, 0x444455);
+      // 0.78 — та же доля иконки от размера ячейки, что у предметных плашек (DEFAULT_ICON_RATIO, src/ui/itemIcon.ts).
+      const iconSize = Math.round(SIZE * 0.78);
+      const icon = this.add.image(x, y, mobMechanicIconKey(MOB_MECHANIC_DEFS[0].id))
+        .setDisplaySize(iconSize, iconSize).setVisible(false);
+      bg.setInteractive({ useHandCursor: false });
+      bg.on('pointerover', () => {
+        const id = this.discoveredMechanics[i];
+        if (!id) return;
+        const def = MOB_MECHANIC_DEFS.find(d => d.id === id)!;
+        this.tooltip.showLines([
+          { text: def.title, color: '#ddddaa' },
+          { text: def.description, color: '#aaaaaa' },
+        ], x + SIZE, y, bg);
+      });
+      bg.on('pointerout', () => this.tooltip.hideFor(bg));
+      return { bg, icon };
+    });
+    this.discoveredMechanics = [];
+  }
+
+  /** Проставляет текстуру/видимость каждого гнезда по текущему `discoveredMechanics`. */
+  private refreshMechanicNests() {
+    this.mechanicSlots.forEach((slot, i) => {
+      const id = this.discoveredMechanics[i];
+      if (id) {
+        slot.icon.setTexture(mobMechanicIconKey(id)).setVisible(true);
+      } else {
+        slot.icon.setVisible(false);
+        // Гнездо опустело (сброс между боями) — если на нём висел тултип, курсор pointerout
+        // не позовёт (мышь может так и стоять на месте), гасим адресно.
+        this.tooltip.hideFor(slot.bg);
+      }
+    });
+  }
+
+  /** Добавляет ещё не встречавшиеся в этом бою механики моба `e` в конец списка гнёзд. */
+  private registerMobMechanics(e: EnemyState) {
+    const fresh = getMobMechanics(e).filter(id => !this.discoveredMechanics.includes(id));
+    if (fresh.length === 0) return;
+    this.discoveredMechanics.push(...fresh);
+    this.refreshMechanicNests();
+  }
+
+  /** Очищает гнёзда механик — вызывается на конец боя (не похода), см. `onFightEnd`/`onHeroDeath`. */
+  private resetMechanicNests() {
+    this.discoveredMechanics = [];
+    this.refreshMechanicNests();
   }
 
   // ─── Рюкзак (левая колонка нижней панели) ────────────────────────────
@@ -1615,6 +1712,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateProgressBar();
     this.updateCurseReadout();
     this.resetWeaponChargeOverlays();
+    this.resetMechanicNests();
 
     // Находка поход не останавливает: предмет уже в рюкзаке, попап над сеткой гаснет сам.
     this.proceedAfterFight();
@@ -1645,6 +1743,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // Лут гарантирован: рюкзак уходит в сундук — смерть его не отнимает.
     this.dumpBackpackToChest();
     this.resetWeaponChargeOverlays();
+    this.resetMechanicNests();
 
     // Endless-зона (docs/content.zones.format.md): цель — рекорд глубины, а не «прохождение».
     // Показываем полноэкранный recap вместо тоста+автоперехода — игроку нужно время прочитать числа.

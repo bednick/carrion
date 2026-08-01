@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { ITEM_ICON_URLS, itemIconKey } from '../items/icons';
 import { SLOT_SILHOUETTE_URLS, slotSilhouetteKey, ZONE_DECOR_URLS, zoneDecorKey, UPGRADE_ICON_URLS, upgradeIconKey } from '../ui/silhouettes';
 import { REWARD_ICON_URLS, rewardIconKey } from '../ui/rewards';
+import { MOB_MECHANIC_ICON_URLS, mobMechanicIconKey, type MechanicId } from '../ui/mobMechanics';
 import { ensureItemPlates } from '../ui/itemIcon';
 import { ZONE_BG_VARIANTS, zoneBgKey, type BgLayer, ZONE_BG_OBJECTS, zoneObjKey, type ScatterLayer } from '../zones/registry';
 import { ALL_MOB_IDS } from '../mobs/registry';
@@ -33,6 +34,9 @@ export class PreloadScene extends Phaser.Scene {
     }
     for (const [id, url] of Object.entries(REWARD_ICON_URLS)) {
       this.load.svg(rewardIconKey(id), url, { width: 72, height: 72 });
+    }
+    for (const [id, url] of Object.entries(MOB_MECHANIC_ICON_URLS)) {
+      this.load.svg(mobMechanicIconKey(id as MechanicId), url, { width: 40, height: 40 });
     }
     this.load.svg(zoneDecorKey('warrior'), ZONE_DECOR_URLS.warrior, { width: 362, height: 400 });
     this.load.svg(zoneDecorKey('backpack'), ZONE_DECOR_URLS.backpack, { width: 292, height: 400 });
@@ -100,6 +104,7 @@ export class PreloadScene extends Phaser.Scene {
       ...Object.keys(SLOT_SILHOUETTE_URLS).map(slotSilhouetteKey),
       ...Object.keys(REWARD_ICON_URLS).map(rewardIconKey),
       ...Object.keys(UPGRADE_ICON_URLS).map(id => upgradeIconKey(id as 'plus' | 'question_mark')),
+      ...Object.keys(MOB_MECHANIC_ICON_URLS).map(id => mobMechanicIconKey(id as MechanicId)),
       zoneDecorKey('warrior'), zoneDecorKey('backpack'), zoneDecorKey('anvil'), zoneDecorKey('belt'),
       'hammer',
     ];
