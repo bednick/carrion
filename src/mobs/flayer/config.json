@@ -2,15 +2,15 @@
   "id": "flayer",
   "name": "Живодёр",
   "tier": "rare",
-  "health": 50,
+  "health": 40,
   "attacks": [
     {
-      "damage": 5,
-      "interval": 2.5
+      "damage": 3,
+      "interval": 1.66
     }
   ],
   "defense": {
     "armor": 1,
-    "thorns": 2
+    "thorns": 4
   }
 }

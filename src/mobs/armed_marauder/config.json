@@ -2,15 +2,15 @@
   "id": "armed_marauder",
   "name": "Вооружённый мародёр",
   "tier": "uncommon",
-  "health": 50,
+  "health": 40,
   "attacks": [
     {
-      "damage": 5,
-      "interval": 3
+      "damage": 7,
+      "interval": 1.94
     }
   ],
   "defense": {
     "armor": 2,
-    "thorns": 0
+    "thorns": 1
   }
 }

@@ -2,12 +2,15 @@
   "id": "overseer",
   "name": "Надсмотрщик",
   "tier": "epic",
-  "health": 75,
+  "health": 40,
   "attacks": [
     {
       "damage": 8,
-      "interval": 2.85
+      "interval": 2.22
     }
   ],
-  "defense": {}
+  "defense": {
+    "armor": 2,
+    "thorns": 2
+  }
 }

@@ -5,12 +5,12 @@
   "health": 50,
   "attacks": [
     {
-      "damage": 8,
-      "interval": 2.68
+      "damage": 9,
+      "interval": 1.9
     }
   ],
   "defense": {
-    "thorns": 4
+    "armor": 2
   },
   "phases": [
     {

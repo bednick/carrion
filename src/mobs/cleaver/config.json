@@ -2,16 +2,16 @@
   "id": "cleaver",
   "name": "Секач",
   "tier": "uncommon",
-  "health": 50,
+  "health": 40,
   "attacks": [
     {
       "damage": 5,
-      "interval": 2.5
+      "interval": 2.8
     }
   ],
   "defense": {
-    "armor": 1,
-    "thorns": 1
+    "armor": 2,
+    "thorns": 2
   },
   "phases": [
     {
