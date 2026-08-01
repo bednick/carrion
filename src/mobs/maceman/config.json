@@ -2,11 +2,11 @@
   "id": "maceman",
   "name": "Булавонос",
   "tier": "uncommon",
-  "health": 50,
+  "health": 36,
   "attacks": [
     {
       "damage": 5,
-      "interval": 4.34
+      "interval": 2.27
     }
   ],
   "defense": {

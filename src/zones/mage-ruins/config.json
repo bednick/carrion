@@ -10,8 +10,8 @@
     { "mob_id": "rune_hound", "weight": 100 },
     { "mob_id": "rune_archer", "weight": 50 },
     { "mob_id": "bone_construct", "weight": 50 },
-    { "mob_id": "bone_centipede", "weight": 50 },
-    { "mob_id": "bone_battlemage", "weight": 40 }
+    { "mob_id": "bone_centipede", "weight": 30 },
+    { "mob_id": "bone_battlemage", "weight": 50 }
   ],
   "mob_loot": {
     "items": [

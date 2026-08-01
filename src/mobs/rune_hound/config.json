@@ -2,15 +2,15 @@
   "id": "rune_hound",
   "name": "Рунная гончая",
   "tier": "uncommon",
-  "health": 35,
+  "health": 15,
   "attacks": [
     {
       "damage": 1,
-      "interval": 1.5
+      "interval": 0.68
     },
     {
-      "damage": 2,
-      "interval": 2.1
+      "damage": 1,
+      "interval": 0.9
     }
   ],
   "summons": [

@@ -2,11 +2,11 @@
   "id": "bone_centipede",
   "name": "Костяная многоножка",
   "tier": "rare",
-  "health": 40,
+  "health": 20,
   "attacks": [
     {
-      "damage": 2,
-      "interval": 4
+      "damage": 5,
+      "interval": 2.27
     }
   ],
   "summons": [

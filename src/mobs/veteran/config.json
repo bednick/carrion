@@ -2,11 +2,11 @@
   "id": "veteran",
   "name": "Ветеран",
   "tier": "uncommon",
-  "health": 50,
+  "health": 36,
   "attacks": [
     {
-      "damage": 3,
-      "interval": 3.79
+      "damage": 4,
+      "interval": 1.82
     }
   ],
   "defense": {

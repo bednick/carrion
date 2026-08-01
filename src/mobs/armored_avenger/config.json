@@ -2,11 +2,11 @@
   "id": "armored_avenger",
   "name": "Броненосец-мститель",
   "tier": "rare",
-  "health": 75,
+  "health": 36,
   "attacks": [
     {
-      "damage": 4,
-      "interval": 4.4
+      "damage": 6,
+      "interval": 2.73
     }
   ],
   "defense": {

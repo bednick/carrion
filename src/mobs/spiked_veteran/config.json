@@ -2,11 +2,11 @@
   "id": "spiked_veteran",
   "name": "Колючий латник",
   "tier": "rare",
-  "health": 50,
+  "health": 36,
   "attacks": [
     {
       "damage": 3,
-      "interval": 3.8
+      "interval": 1.36
     }
   ],
   "defense": {
