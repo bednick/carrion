@@ -1,44 +1,30 @@
 import Phaser from 'phaser';
 import { FONT_FAMILY } from './theme';
 import { getItemBehavior } from '../items/registry';
-import { salvageEssence, ESSENCE_TIERS } from '../items/craft';
 import { RARITY_HEX } from '../items/rarity';
-import { essenceIconKey } from './rewards';
 import { NEUTRAL_PLATE_KEY } from './itemIcon';
-import type { ItemInstance, EssenceTier } from '../items/types';
+import type { ItemInstance } from '../items/types';
 
 // Метрики тултипа (x1.6 от исходных — читаемость).
 const FONT_SIZE = 21;
 const PAD = 13;          // внутренний отступ бокса и стартовый x/y строк
 const LINE_GAP = 3;      // вертикальный зазор между строками
 const SECTION_GAP = 13;  // место под разделитель между секциями
-const ICON = 24;         // иконка ресурса перед строкой / в segments
+const ICON = 24;         // иконка ресурса перед строкой
 const ICON_GAP = 6;
 const ROW_ICON = 32;     // иконка предмета в iconRow
 const ROW_GAP = 8;
 const ROW_FRAME_PAD = 6; // рамка вокруг иконки iconRow
-const SEG_GAP = 19;
 
 interface Line {
   text: string;
   color: string;
   icon?: string; // ключ текстуры иконки ресурса перед текстом (золото/эссенция)
-  // Ряд из пар «иконка+число» в одну строку (все тиры эссенции, включая нули).
-  segments?: { icon: string; text: string; color: string }[];
   // Ряд иконок предметов зоны: найденные — обычная иконка, не найденные — затемнённая + «?».
   iconRow?: { texture: string; discovered: boolean }[];
   // Строка из разноцветных/полужирных фрагментов подряд (без пробелов между ними —
   // пробелы уже часть текста фрагментов), напр. подсветка слова внутри описания.
   parts?: { text: string; color: string; bold?: boolean }[];
-}
-
-/**
- * Контекст показа предмета. `defaultCost` задаёт, показывать ли цену разбора в кратком виде
- * (кузнец → 'essence', иначе → 'none'). Полный вид (зажат Ctrl) всегда показывает слоты и
- * цену разбора независимо от контекста.
- */
-export interface ItemTooltipCtx {
-  defaultCost?: 'essence' | 'none';
 }
 
 export class Tooltip {
@@ -56,7 +42,6 @@ export class Tooltip {
 
   // Текущий показываемый предмет — нужен для живой перерисовки при нажатии/отпускании Ctrl.
   private currentItem: ItemInstance | null = null;
-  private currentCtx: ItemTooltipCtx = {};
   private currentX = 0;
   private currentY = 0;
 
@@ -74,13 +59,12 @@ export class Tooltip {
     this.ctrlKey?.on('up', this.refreshIfVisible, this);
   }
 
-  showItem(item: ItemInstance, x: number, y: number, ctx: ItemTooltipCtx = {}, owner?: unknown) {
+  showItem(item: ItemInstance, x: number, y: number, owner?: unknown) {
     this.owner = owner ?? null;
     this.currentItem = item;
-    this.currentCtx = ctx;
     this.currentX = x;
     this.currentY = y;
-    this.render(this.buildItemSections(item, ctx), x, y);
+    this.render(this.buildItemSections(item), x, y);
   }
 
   showText(lines: string[], x: number, y: number, owner?: unknown) {
@@ -105,8 +89,8 @@ export class Tooltip {
     this.render([identity, data.stats], x, y);
   }
 
-  /** Секции: [идентичность, характеристики, цены]. Пустые секции отбрасываются при рендере. */
-  private buildItemSections(item: ItemInstance, ctx: ItemTooltipCtx): Line[][] {
+  /** Секции: [идентичность, характеристики]. Пустые секции отбрасываются при рендере. */
+  private buildItemSections(item: ItemInstance): Line[][] {
     const beh = getItemBehavior(item.item_id);
     const full = !!this.ctrlKey?.isDown;
 
@@ -117,23 +101,12 @@ export class Tooltip {
     // Боевые статы — единый источник правды в behavior.ts (docs/combat-events.md §5).
     const stats: Line[] = beh.stats ? beh.stats(item.rarity) : [];
 
-    // Разбор даёт пул эссенции: все тиры в одну строку (иконка тира + количество, включая 0).
-    const pool = salvageEssence(item);
-    const essenceLines: Line[] = [{
-      text: '', color: '#cbe6ff',
-      segments: ESSENCE_TIERS.map((tier) => ({
-        icon: essenceIconKey(tier as EssenceTier), text: `${pool[tier as EssenceTier] ?? 0}`, color: '#cbe6ff',
-      })),
-    }];
-    const prices: Line[] = [];
-    if (full || ctx.defaultCost === 'essence') prices.push(...essenceLines);
-
-    return [identity, stats, prices];
+    return [identity, stats];
   }
 
   private refreshIfVisible() {
     if (!this.container.visible || !this.currentItem) return;
-    this.render(this.buildItemSections(this.currentItem, this.currentCtx), this.currentX, this.currentY);
+    this.render(this.buildItemSections(this.currentItem), this.currentX, this.currentY);
   }
 
   /** Рендерит секции сверху вниз, разделяя их тонкой горизонтальной линией. */
@@ -177,26 +150,6 @@ export class Tooltip {
           }
           maxW = Math.max(maxW, sx - ROW_GAP - PAD);
           totalH += ROW_ICON + ROW_FRAME_PAD + LINE_GAP;
-          continue;
-        }
-
-        // Ряд «иконка+число … иконка+число» в одну строку.
-        if (line.segments) {
-          let sx = PAD;
-          let lineH = 0;
-          for (const seg of line.segments) {
-            const t = this.scene.add.text(sx + ICON + ICON_GAP, PAD + totalH, seg.text, {
-              fontSize: `${FONT_SIZE}px`, fontFamily: FONT_FAMILY, color: seg.color,
-            });
-            this.texts.push(t);
-            const img = this.scene.add.image(sx, PAD + totalH + t.height / 2, seg.icon)
-              .setDisplaySize(ICON, ICON).setOrigin(0, 0.5);
-            this.icons.push(img);
-            lineH = Math.max(lineH, t.height);
-            sx += ICON + ICON_GAP + t.width + SEG_GAP;
-          }
-          maxW = Math.max(maxW, sx - SEG_GAP - PAD);
-          totalH += lineH + LINE_GAP;
           continue;
         }
 

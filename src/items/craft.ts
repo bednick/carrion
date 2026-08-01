@@ -2,9 +2,12 @@ import type { ItemInstance, Rarity, EssenceTier, EssencePool } from './types';
 import { NEXT_RARITY, rarityIndex } from './rarity';
 import { essenceSourceZoneIds } from '../zones/registry';
 
-// Единый источник правды о крафте — обе сцены (лагерь/экспедиция) считают результат,
-// стоимость (эссенция) и разбор через этот модуль, чтобы правила не расходились.
-// Крафт = только улучшение редкости + разбор. Рецептов больше нет (см. docs/mechanics.md).
+// Единый источник правды о крафте — обе сцены (лагерь/экспедиция) считают результат
+// и стоимость (эссенция) через этот модуль, чтобы правила не расходились.
+// Крафт = улучшение редкости (1 предмет + эссенция, потолок — эпик) и слияние (3 предмета одной
+// редкости → 1 следующей, без эссенции и без потолка — единственный путь до legendary).
+// Разбора предметов на эссенцию больше нет. Рецептов (два разных предмета → третий новый
+// тип) тоже нет — см. docs/mechanics.md.
 
 // Эссенция — ингредиент повышения редкости. Тиров три: обычного (упразднён) и
 // легендарного (снаряжение только находится) нет.
@@ -14,76 +17,11 @@ export const ESSENCE_NAMES: Record<EssenceTier, string> = {
   uncommon: 'необычная', rare: 'редкая', epic: 'эпическая',
 };
 
-const ESSENCE_SHORT: Record<EssenceTier, string> = {
-  uncommon: 'нб', rare: 'рд', epic: 'эп',
-};
-
-/** Потолок крафта: улучшить или скрафтить выше эпика нельзя — легендарное только находится. */
+/** Потолок обычного улучшения (craftPreview): выше эпика не поднимает — до legendary доводит только слияние (fuseItems). */
 export const CRAFT_RARITY_CAP: Rarity = 'epic';
 
 export function emptyEssence(): EssencePool {
   return { uncommon: 0, rare: 0, epic: 0 };
-}
-
-// Сколько эссенции даёт разбор: 4 своего тира + 1 на тир выше (см. docs/meta-progression.md).
-const SALVAGE_SELF = 4;
-const SALVAGE_HIGHER = 1;
-
-/**
- * Разбор предмета → эссенция (пул). Правила экономики (docs/meta-progression.md):
- * - common → 1 uncommon (обычной эссенции нет, минимальный возврат);
- * - uncommon/rare → 4 своего тира + 1 на тир выше;
- * - epic/legendary → 5 эпической (тира выше epic нет — «+1» упирается в потолок).
- */
-export function salvageEssence(item: ItemInstance): EssencePool {
-  const pool = emptyEssence();
-  if (item.rarity === 'common') {
-    pool.uncommon = 1;
-    return pool;
-  }
-  const selfIdx = item.rarity === 'legendary' ? ESSENCE_TIERS.length - 1 : ESSENCE_TIERS.indexOf(item.rarity as EssenceTier);
-  pool[ESSENCE_TIERS[selfIdx]] += SALVAGE_SELF;
-  const higherIdx = Math.min(selfIdx + 1, ESSENCE_TIERS.length - 1);
-  pool[ESSENCE_TIERS[higherIdx]] += SALVAGE_HIGHER;
-  return pool;
-}
-
-/** Суммарный пул за разбор набора предметов. */
-export function sumSalvageEssence(items: ItemInstance[]): EssencePool {
-  const total = emptyEssence();
-  for (const item of items) {
-    const pool = salvageEssence(item);
-    for (const tier of ESSENCE_TIERS) total[tier] += pool[tier];
-  }
-  return total;
-}
-
-/**
- * Индексы предметов сундука, которые лишние: для каждого item_id оставляем один экземпляр
- * максимальной редкости среди сундука и надетого. Надетое само по себе не разбирается,
- * но занимает место «оставленного» — тогда все копии этого item_id из сундука уходят в разбор.
- */
-export function findDuplicateChestIndices(chest: ItemInstance[], equipped: ItemInstance[]): number[] {
-  // Максимальная редкость по всем предметам игрока — и в сундуке, и на стойках.
-  const best = new Map<string, number>();
-  for (const item of [...chest, ...equipped]) {
-    const idx = rarityIndex(item.rarity);
-    if (idx > (best.get(item.item_id) ?? -1)) best.set(item.item_id, idx);
-  }
-
-  // Надетый экземпляр максимальной редкости уже «занимает» право остаться за свой item_id.
-  const kept = new Set<string>();
-  for (const item of equipped) {
-    if (rarityIndex(item.rarity) === best.get(item.item_id)) kept.add(item.item_id);
-  }
-
-  const dupes: number[] = [];
-  chest.forEach((item, i) => {
-    if (rarityIndex(item.rarity) < (best.get(item.item_id) ?? -1)) { dupes.push(i); return; }
-    if (kept.has(item.item_id)) { dupes.push(i); return; }
-    kept.add(item.item_id); // первый встреченный максимум остаётся в сундуке
-  });
-  return dupes;
 }
 
 // Обмен дорогой эссенции на дешёвую — специально невыгодный курс, нужен только чтобы
@@ -113,16 +51,6 @@ export function upgradeEssenceCost(target: Rarity): EssencePool {
   const idx = ESSENCE_TIERS.indexOf(target as EssenceTier);
   if (idx >= 0) pool[ESSENCE_TIERS[idx]] = UPGRADE_ESSENCE_AMOUNT;
   return pool;
-}
-
-/** Компактная запись стоимости эссенции: «1рд 2нб 2об» (ненулевые тиры, по убыванию). */
-export function formatEssence(pool: EssencePool): string {
-  const parts: string[] = [];
-  for (let i = ESSENCE_TIERS.length - 1; i >= 0; i--) {
-    const tier = ESSENCE_TIERS[i];
-    if (pool[tier] > 0) parts.push(`${pool[tier]}${ESSENCE_SHORT[tier]}`);
-  }
-  return parts.join(' ');
 }
 
 export type CraftKind = 'upgrade';
@@ -165,4 +93,38 @@ export function craftPreview(
     result, kind: 'upgrade',
     essenceCost: upgradeEssenceCost(up), error: null,
   };
+}
+
+/** Сколько предметов нужно для слияния. */
+export const FUSE_COUNT = 3;
+
+export interface FusePreview {
+  /** Целевая редкость, если слияние возможно прямо сейчас; иначе null. */
+  nextRarity: Rarity | null;
+  error: string | null;
+}
+
+/**
+ * Проверка готовности слияния: 3 предмета одной редкости → следующая редкость.
+ * В отличие от craftPreview — без эссенции и без CRAFT_RARITY_CAP (единственный путь
+ * скрафтить legendary). Сам предмет-результат здесь не выбирается — это делает fuseItems()
+ * в момент подтверждения, а не превью, потому что результат случаен.
+ */
+export function fusePreview(items: (ItemInstance | null)[]): FusePreview {
+  const filled = items.filter((i): i is ItemInstance => !!i);
+  if (filled.length < FUSE_COUNT) return { nextRarity: null, error: `Нужно ${FUSE_COUNT} предмета` };
+  const rarity = filled[0].rarity;
+  if (filled.some((i) => i.rarity !== rarity)) return { nextRarity: null, error: 'Редкость должна совпадать' };
+  const up = NEXT_RARITY[rarity];
+  if (!up) return { nextRarity: null, error: 'Уже легендарный — выше некуда' };
+  return { nextRarity: up, error: null };
+}
+
+/**
+ * Итог слияния: тип предмета — случайно один из трёх вложенных, редкость — на ступень выше.
+ * Поэтому 3 одинаковых предмета гарантируют улучшение именно этого предмета.
+ */
+export function fuseItems(items: ItemInstance[]): ItemInstance {
+  const picked = items[Math.floor(Math.random() * items.length)];
+  return { item_id: picked.item_id, rarity: NEXT_RARITY[picked.rarity]! };
 }

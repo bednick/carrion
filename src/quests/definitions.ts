@@ -54,13 +54,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     target: 1,
     rewards: [],
   },
-  tutorial_disassemble: {
-    id: 'tutorial_disassemble',
-    title: 'Разборка',
-    description: 'Разберите предмет у кузнеца',
-    target: 1,
-    rewards: [],
-  },
 
   // ── Зональные квесты: по одному на каждую из 9 областей ──────────────
   // Цель боевого квеста (<zone>_clear) — добить босса локации. Условие завязано

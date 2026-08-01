@@ -14,7 +14,6 @@ export const SOUND_FILES = {
 
   // UI / глобальные (проигрываются из EventBus-подписок SoundManager)
   loot_pickup:  'audio/loot_pickup.ogg',    // предмет ушёл в рюкзак
-  disassemble:  'audio/disassemble.ogg',    // предмет разобран в металл
   craft:        'audio/craft.ogg',          // успешный крафт
   equip:        'audio/equip.mp3',          // предмет надет на слот персонажа/стойки
   anvil:        'audio/anvil.mp3',          // предмет положен на стол кузнеца

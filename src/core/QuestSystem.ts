@@ -123,10 +123,6 @@ export function initQuestSystem() {
     tryComplete('tutorial_equip');
   });
 
-  EventBus.on('item_disassembled', () => {
-    tryComplete('tutorial_disassemble');
-  });
-
   // Зональные квесты (<zone>_clear) засчитываются через stat-условие
   // zones_returned в evaluateQuests (растёт при добивании босса зоны).
   // Квесты сбора (collect_<zone>_items) — через zone_items-условие там же.

@@ -1069,7 +1069,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.backpackIconViews[i] = view;
       // Единственное взаимодействие — наведение: в походе предмет применить нельзя.
       bg.setInteractive({ useHandCursor: false });
-      bg.on('pointerover', () => { view.setHover(true); this.tooltip.showItem(item, x + SIZE, y - 40, {}, bg); });
+      bg.on('pointerover', () => { view.setHover(true); this.tooltip.showItem(item, x + SIZE, y - 40, bg); });
       bg.on('pointerout', () => { view.setHover(false); this.tooltip.hideFor(bg); });
     }
   }
@@ -1232,7 +1232,7 @@ export class ExpeditionScene extends Phaser.Scene {
         const cur = this.equipment[slotId];
         if (!cur) return;
         icon.setHover(true);
-        this.tooltip.showItem(cur, x + SIZE, y - 40, {}, bg);
+        this.tooltip.showItem(cur, x + SIZE, y - 40, bg);
       });
       bg.on('pointerout', () => { icon.setHover(false); this.tooltip.hideFor(bg); });
 
