@@ -10,7 +10,7 @@
     }
   ],
   "defense": {
-    "armor": 0.25,
+    "armor": 1,
     "thorns": 2
   }
 }

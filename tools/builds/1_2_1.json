@@ -1,5 +1,6 @@
 {
   "hand_right": { "item_id": "short_spear", "rarity": "uncommon" },
   "hand_left": { "item_id": "comfortable_gloves", "rarity": "uncommon" },
+  "body": { "item_id": "desperate_plate", "rarity": "uncommon" },
   "amulet": { "item_id": "thread_charm", "rarity": "uncommon" }
 }

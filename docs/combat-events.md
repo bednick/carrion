@@ -57,7 +57,7 @@ type GameEvent = EventMeta & (
     | { type: 'attack_ready'; source: Side; target: Side }                 // часы: поток стамины заполнен, слот готов
     | { type: 'attack'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean }  // взмах, авторённый предметом (урон уже посчитан)
     | { type: 'damage'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; thorns?: boolean }  // экземпляр урона «в полёте»
-    | { type: 'block'; source: Side; target: Side; prevented: number }    // урон полностью отклонён (щит героя / флэт-броня врага в ноль)
+    | { type: 'block'; source: Side; target: Side; prevented: number }    // урон полностью отклонён (щит героя / числовая броня врага в ноль)
     | { type: 'dodge'; source: Side; target: Side }                       // враг уклонился — входящий урон погашен
     | { type: 'counter'; source: Side; target: Side }                     // чисто презентационное: «это был контрудар», HP не трогает
     | { type: 'heal'; source: Side; target: Side; amount: number }       // лечение
@@ -256,13 +256,13 @@ const behavior: ItemBehavior = {
 
 | Эффект                       | Подписка → результат                                                |
 |------------------------------|---------------------------------------------------------------------|
-| Броня (`damage_reduction`)   | на `damage`(target=hero): `replace:[damage с меньшим (дробным) amount]` |
+| Броня героя (`damage_reduction`) | на `damage`(target=hero): `replace:[damage с меньшим (дробным) amount]` — процент |
 | Щит (`block_chance`)         | на `damage`(target=hero): шанс → `replace:[]` + `spawn:[block]`     |
 | Лечение за убийство (амулет) | на `kill`: `spawn:[heal(target=hero)]`                              |
 | Лайфстил за удар             | на `damage`(source=hero, target=enemy), кроме `splash: true`: `spawn:[heal(target=hero)]` |
 | Контрудар (`buckler`)        | на `damage`(target=hero), независимый ролл: `spawn:[attack(source.slot=hand_right, target=атакующий враг) + counter]` — `attack`, не `damage` напрямую, чтобы поймать крит-хуки вроде `heavy_gloves`; `counter` — чисто презентационный дубль рядом (см. §2, `content.items.hand_left.md`). Тот же хук вторым независимым броском катает блок (`replace:[]` + `spawn:[block]`) — один обработчик на слот отдаёт оба исхода сразу |
 | Шипы (`spiked_shield`)       | на `damage`(target=hero), кроме `thorns: true`: `spawn:[damage(target=атакующий враг, thorns: true)]` (доля пришедшего урона). Тот же хук отдельным броском катает блок (`replace:[]` + `spawn:[block]`) — шипы считаются от исходного `amount` и срабатывают даже на заблокированном ударе |
-| Броня врага (`armor`)        | на `damage`(target=enemy): `replace:[damage с меньшим (дробным) amount]` |
+| Броня врага (`armor`)        | на `damage`(target=enemy): `replace:[damage с меньшим (дробным) amount]` — плоский вычет очков |
 | Уклонение врага              | на `damage`(target=enemy): шанс → `replace:[]` + `spawn:[dodge]`    |
 | Шипы врага                   | на `damage`(target=enemy), кроме `thorns: true`: `spawn:[damage(target=hero, thorns: true)]` |
 
@@ -275,10 +275,11 @@ const behavior: ItemBehavior = {
 урон. Порядок внутри хука: **dodge → armor → thorns** (уклонился — броня/шипы не применяются). Спавны штампуются
 `origin: { from: 'enemy', id }`. Ничего отдельно не скейлится — значения берутся как есть.
 
-Броня (`armor`) — процентная и мультипликативная (0..1, с 2026-07, см. `docs/mechanics.md` §«Броня vs щит»,
-`src/combat/mitigation.ts`): умножает `amount` на `1-armor` и **не округляет** — дробь доезжает до
-`applyDamage`. `armorPierce` удара (напр. крит `war_pick`, см. `content.items.hand_right.md`) снижает
-эффективную броню для конкретного удара.
+Броня (`armor`) — **числовая, плоский вычет очков** (с 2026-07-31, см. `docs/mechanics.md` §«Броня vs щит»,
+`mitigateFlat` в `src/combat/mitigation.ts`): `amount = max(0, amount - armor)`, **не округляет** — дробь
+доезжает до `applyDamage`. Процентная (`mitigateDamage`) модель осталась только у брони героя — это разные
+модели намеренно. `armorPierce` удара (напр. крит `war_pick`, см. `content.items.hand_right.md`) снимает
+столько же **очков** брони для конкретного удара: `effectiveArmor = max(0, armor - armorPierce)`.
 
 ### Округление урона (`applyDamage`)
 

@@ -43,7 +43,7 @@ export type GameEvent = EventMeta &
     | { type: 'fight_start'; enemies: string[] }
     | { type: 'fight_end'; outcome: 'win' }
     | { type: 'attack_ready'; source: Side; target: Side } // часы: поток стамины заполнен
-    // armorPierce (0..1) — доля брони цели, игнорируемая этим ударом (напр. крит `war_pick`); движок
+    // armorPierce — сколько ОЧКОВ брони цели снимает этот удар (напр. крит `war_pick`); движок
     // переносит поле с `attack` на выведенный `damage` (см. `CombatEngine.apply`), `enemyDefend` его читает.
     // splash — true у побочных (не основной цели) тиков урона (напр. cleave `broadaxe`); движок переносит поле
     // так же, как armorPierce. Он-хит эффекты героя (лайфстил и т.п.) должны игнорировать splash: true.

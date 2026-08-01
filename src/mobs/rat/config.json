@@ -2,9 +2,9 @@
   "id": "rat",
   "name": "Крыса",
   "tier": "common",
-  "health": 8,
+  "health": 20,
   "attacks": [
-    { "damage": 1, "interval": 1.75 }
+    { "damage": 2, "interval": 3 }
   ],
   "summons": [
     { "mob_id": "rat", "count": 2, "trigger": { "type": "start" } }

@@ -4,6 +4,7 @@
   "tier": "common",
   "health": 25,
   "attacks": [
-    { "damage": 1, "interval": 1.25 }
-  ]
+    { "damage": 2, "interval": 1.25 }
+  ],
+  "defense": { "armor": 1 }
 }

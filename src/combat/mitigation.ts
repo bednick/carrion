@@ -1,5 +1,6 @@
 /**
- * Мультипликативное снижение урона на долю `pct` (0..1). Несколько источников стакаются
+ * Мультипликативное снижение урона на долю `pct` (0..1) — модель **брони героя** (`standardArmor` и
+ * инлайн-хуки нагрудников). Несколько источников стакаются
  * последовательным умножением (каждый хук вызывает эту функцию над `amount`, уже уменьшенным
  * предыдущим источником) — см. `docs/combat-events.md` §5, `docs/mechanics.md` §«Броня vs щит».
  *
@@ -10,6 +11,20 @@
 export function mitigateDamage(before: number, pct: number): number {
   if (before <= 0) return before;
   return before * (1 - pct);
+}
+
+/**
+ * Плоский вычет `flat` очков — модель **брони мобов** (`defense.armor`, `CombatEngine.enemyDefend`).
+ * В отличие от процентной брони героя (`mitigateDamage`) зависит от размера удара: мелкий чип гасит
+ * в ноль, тяжёлому пробою почти не мешает. Модели сознательно разные — см. `docs/mechanics.md`
+ * §«Броня vs щит».
+ *
+ * Пола нет: удар, полностью съеденный бронёй, движок показывает как «Блок» (см. `applyDamage`).
+ * Как и `mitigateDamage`, НЕ округляет — единственное округление ждёт в `applyDamage`.
+ */
+export function mitigateFlat(before: number, flat: number): number {
+  if (before <= 0) return before;
+  return Math.max(0, before - flat);
 }
 
 /**

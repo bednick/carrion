@@ -898,7 +898,9 @@ export class ExpeditionScene extends Phaser.Scene {
           stats.push({ text: `Урон${suf}: ${t.damage}`, color: DMG_COLOR });
           stats.push({ text: `Перезарядка${suf}: ${(t.interval / 1000).toFixed(1)}s`, color: DMG_COLOR });
         });
-        if (def?.armor) stats.push({ text: `Защита: ${Math.round(def.armor * 100)}%`, color: DEF_COLOR });
+        // «Броня: N» (очки), а не «Защита: N%» — броня мобов числовая, в отличие от процентной брони
+        // героя в статах нагрудников (`src/items/factories.ts`), чтобы тултипы не путались.
+        if (def?.armor) stats.push({ text: `Броня: ${def.armor}`, color: DEF_COLOR });
         if (def?.dodge) stats.push({ text: `Уклон: ${Math.round(def.dodge * 100)}%`, color: DEF_COLOR });
         if (def?.thorns) stats.push({ text: `Шипы: ${def.thorns}`, color: THORNS_COLOR });
 

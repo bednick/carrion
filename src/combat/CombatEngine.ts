@@ -7,7 +7,7 @@ import type { GameEvent, Side, Origin, EventResult } from './events';
 import { UNARMED_DAMAGE } from './events';
 import { getItemBehavior } from '../items/registry';
 import { HANDLER_ORDER, MAX_CASCADE, runPass, stampOrigin } from './dispatcher';
-import { mitigateDamage, stochasticRound } from './mitigation';
+import { mitigateFlat, stochasticRound } from './mitigation';
 import { unseededRng, type Rng } from '../core/rng';
 
 const UNARMED_INTERVAL = 1500;
@@ -330,16 +330,17 @@ export class CombatEngine {
       };
     }
 
-    // armor — мультипликативный срез входящего урона (доля 0..1). Результат остаётся ДРОБНЫМ и едет
-    // дальше по цепочке: единственное (стохастическое) округление ждёт в applyDamage. На малом уроне
-    // это значит, что броня может свести удар в 0 — движок покажет его как `block`.
-    // armorPierce удара (напр. крит `war_pick`) снижает эффективную броню для ЭТОГО удара — переносится
-    // с `attack` на `damage` в `apply()`, здесь не скейлится и не стакается (одно значение на удар).
+    // armor — плоский вычет очков из входящего урона (НЕ процент: процентная модель осталась только
+    // у брони героя, см. `mitigation.ts`). Результат остаётся ДРОБНЫМ и едет дальше по цепочке:
+    // единственное (стохастическое) округление ждёт в applyDamage. Мелкий урон (сплеш, шипы, прошив)
+    // броня сводит в 0 целиком — движок покажет его как `block`.
+    // armorPierce удара (напр. крит `war_pick`) снимает столько же ОЧКОВ брони на ЭТОТ удар —
+    // переносится с `attack` на `damage` в `apply()`, не стакается (одно значение на удар).
     const before = e.amount;
     let amount = before;
     if (def.armor) {
-      const effectiveArmor = def.armor * (1 - (e.armorPierce ?? 0));
-      amount = mitigateDamage(amount, effectiveArmor);
+      const effectiveArmor = Math.max(0, def.armor - (e.armorPierce ?? 0));
+      amount = mitigateFlat(amount, effectiveArmor);
     }
 
     const spawn: GameEvent[] = [];

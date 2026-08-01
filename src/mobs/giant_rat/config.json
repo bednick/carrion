@@ -1,10 +1,10 @@
-{
+ {
   "id": "giant_rat",
   "name": "Огромная крыса",
   "tier": "common",
-  "health": 25,
+  "health": 24,
   "attacks": [
-    { "damage": 2, "interval": 2.5 }
+    { "damage": 16, "interval": 4.1 }
   ],
   "ui": { "scale": 0.7 }
 }
