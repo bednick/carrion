@@ -70,7 +70,7 @@ export class QuestTracker {
 
     if (pending.length > 0) {
       rows.push({
-        text: `★ Заберите награду у Скупщика (${pending.length})`,
+        text: `★ Заберите награду у Информатора (${pending.length})`,
         color: '#ffdd44',
         bold: true,
       });

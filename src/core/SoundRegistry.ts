@@ -18,6 +18,7 @@ export const SOUND_FILES = {
   equip:        'audio/equip.mp3',          // предмет надет на слот персонажа/стойки
   anvil:        'audio/anvil.mp3',          // предмет положен на стол кузнеца
   chest_add:    'audio/chest_add.mp3',      // предмет попал в сундук
+  quest_reward: 'audio/quest_reward.mp3',   // забрана награда за квест
 } as const;
 
 export type SoundKey = keyof typeof SOUND_FILES;

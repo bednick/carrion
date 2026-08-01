@@ -576,13 +576,13 @@ export class CampScene extends Phaser.Scene {
     this.dealerBlinkHint = this.addNPCWithSprite(
       1090 + DX, 604, 80, 120, 'npc-dealer',
       1125 + DX, 540, 250, 240,
-      'Скупщик', () => this.openDealerPanel(),
+      'Информатор', () => this.openDealerPanel(),
       true,
     ) ?? null;
     this.buildDealerAlert(1090 + DX, 604 - 120 / 2 - 18);
   }
 
-  // Восклицательный знак над Скупщиком — привлекает внимание, когда есть готовый
+  // Восклицательный знак над Информатором — привлекает внимание, когда есть готовый
   // к сдаче квест. Покачивается вверх-вниз и пульсирует; видимость — refreshDealerAlert.
   private buildDealerAlert(x: number, y: number) {
     const glow = this.add.circle(0, -1, 16.5, 0xffcc33, 0.25).setBlendMode(Phaser.BlendModes.ADD);
@@ -835,17 +835,9 @@ export class CampScene extends Phaser.Scene {
     this.rebuildPanel();
   }
 
-  /** Родительный падеж ж.р. тира эссенции — согласуется с «эссенции» (ESSENCE_NAMES в items/craft — им. падеж). */
-  private static readonly ESSENCE_GENITIVE: Record<EssenceTier, string> = {
-    uncommon: 'необычной', rare: 'редкой', epic: 'эпической',
-  };
-
-  /** Текст награды готового к сдаче квеста — unlock_area не показываем, она видна по карте. */
-  private describeRewards(rewards: QuestReward[]): string {
-    const parts = rewards
-      .filter((r): r is Extract<QuestReward, { type: 'essence' }> => r.type === 'essence')
-      .map((r) => `+${r.amount} ${CampScene.ESSENCE_GENITIVE[r.tier]} эссенции`);
-    return parts.length > 0 ? parts.join(', ') : 'Выполнено';
+  /** Эссенции из наград готового к сдаче квеста — unlock_area не показываем, она видна по карте. */
+  private essenceRewards(rewards: QuestReward[]): Extract<QuestReward, { type: 'essence' }>[] {
+    return rewards.filter((r): r is Extract<QuestReward, { type: 'essence' }> => r.type === 'essence');
   }
 
   private buildQuestList(container: Phaser.GameObjects.Container) {
@@ -864,9 +856,29 @@ export class CampScene extends Phaser.Scene {
         const def = QUEST_DEFS[questId];
         if (!def) continue;
 
-        const rowBg = this.add.rectangle(379, y + 18, 320, 36, 0x2a2a10).setStrokeStyle(1, 0x887722);
-        const titleT = this.add.text(225, y + 8, def.title, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddaa' });
-        const rewardT = this.add.text(225, y + 24, this.describeRewards(def.rewards), { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44' });
+        const rowBg = this.add.rectangle(379, y + 19, 320, 38, 0x2a2a10).setStrokeStyle(1, 0x887722);
+        const titleT = this.add.text(225, y + 7, def.title, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddaa' });
+        const rowItems: Phaser.GameObjects.GameObject[] = [rowBg, titleT];
+
+        const rewardIcon = 16;
+        const rewardY = y + 29;
+        let rewardX = 225;
+        const rewards = this.essenceRewards(def.rewards);
+        if (rewards.length > 0) {
+          for (const r of rewards) {
+            const icon = this.add.image(rewardX, rewardY, essenceIconKey(r.tier))
+              .setOrigin(0, 0.5).setDisplaySize(rewardIcon, rewardIcon);
+            const amountT = this.add.text(rewardX + rewardIcon + 3, rewardY, `${r.amount}`, {
+              fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44',
+            }).setOrigin(0, 0.5);
+            rowItems.push(icon, amountT);
+            rewardX += rewardIcon + 3 + amountT.width + 10;
+          }
+        } else {
+          rowItems.push(this.add.text(rewardX, rewardY, 'Выполнено', {
+            fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44',
+          }).setOrigin(0, 0.5));
+        }
 
         const claimBtn = this.add.rectangle(500, y + 18, 58, 26, 0x224422)
           .setStrokeStyle(1, 0x44aa44)
@@ -876,13 +888,21 @@ export class CampScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         const qid = questId;
+        const questRewards = rewards;
         claimBtn.on('pointerdown', () => {
           claimQuestReward(qid);
+          SoundManager.play('quest_reward');
+          const fx = this.panelX(500);
+          const fy = this.panelY(y + 18);
+          questRewards.forEach((r, i) => {
+            spawnIconFloater(this, essenceIconKey(r.tier), `+${r.amount}`, fx, fy - i * 24, RARITY_HEX[r.tier]);
+          });
           this.refreshHUD();
           this.rebuildPanel();
         });
 
-        container.add([rowBg, titleT, rewardT, claimBtn, claimLbl]);
+        rowItems.push(claimBtn, claimLbl);
+        container.add(rowItems);
         y += 44;
         if (y > 460) break;
       }
@@ -999,14 +1019,14 @@ export class CampScene extends Phaser.Scene {
     this.panelContainer.add([bg, divider]);
   }
 
-  // Вертикальные вкладки слева от панели: Кузнец / Скупщик / Экипировка.
+  // Вертикальные вкладки слева от панели: Кузнец / Информатор / Экипировка.
   // Единое меню — переключение вкладки не закрывает панель и сохраняет «руку»,
   // поэтому предмет можно перенести с одной вкладки на другую (стойка → стол кузнеца).
   private buildPanelTabs() {
     const tabs: { state: 'smith' | 'dealer' | 'chest'; label: string }[] = [
       { state: 'chest',  label: 'Экипировка' },
       { state: 'smith',  label: 'Кузнец' },
-      { state: 'dealer', label: 'Скупщик' },
+      { state: 'dealer', label: 'Информатор' },
     ];
     const TAB_W = 96, TAB_H = 78, GAP = 10;
     const x = 148; // правый край вкладки (196) заходит за левую грань панели (190) — «пришитый» вид
@@ -2086,16 +2106,16 @@ export class CampScene extends Phaser.Scene {
       const questId = AREA_UNLOCK_QUEST[entry.id];
       const def = questId ? QUEST_DEFS[questId] : undefined;
       const quests = MetaStore.get().quests;
-      // Награда выдаётся только по клику «Забрать» у Скупщика (см. QuestSystem.claimQuestReward),
+      // Награда выдаётся только по клику «Забрать» у Информатора (см. QuestSystem.claimQuestReward),
       // поэтому квест сбора может быть уже выполнен (в pending_reward, не в active) — тогда
-      // прогресс = target, а не 0/target, и сообщение зовёт к Скупщику, а не «собери предметы».
+      // прогресс = target, а не 0/target, и сообщение зовёт к Информатору, а не «собери предметы».
       const isPendingClaim = questId ? quests.pending_reward.includes(questId) : false;
       const record = quests.active.find((q) => q.id === questId);
       const progress = isPendingClaim ? (def?.target ?? 0) : (record?.progress ?? 0);
       const target = def?.target ?? 0;
       const prevLabel = zoneLabel(ZONE_PREREQ[entry.id]);
 
-      const lockLabel = isPendingClaim ? '🔒 забери награду у Скупщика' : `🔒 собери предметы ${progress}/${target}`;
+      const lockLabel = isPendingClaim ? '🔒 забери награду у Информатора' : `🔒 собери предметы ${progress}/${target}`;
       this.panelContainer.add(this.add.text(entry.x, entry.y + 20, lockLabel, {
         fontSize: '14px', fontFamily: FONT_FAMILY, color: '#886666', align: 'center', wordWrap: { width: 160 },
       }).setOrigin(0.5));
@@ -2107,7 +2127,7 @@ export class CampScene extends Phaser.Scene {
           node.setFillStyle(0x332233);
           this.tooltip.showText(isPendingClaim ? [
             'Заблокировано',
-            'Награда уже готова — забери её у Скупщика',
+            'Награда уже готова — забери её у Информатора',
           ] : [
             'Заблокировано',
             `Собери в «${prevLabel}» все предметы (${progress}/${target})`,
@@ -2165,7 +2185,7 @@ export class CampScene extends Phaser.Scene {
 
   private onQuestCompleted(questId: string) {
     const def = QUEST_DEFS[questId];
-    if (def) this.showMessage(`Задание выполнено: ${def.title}! Заберите награду у Скупщика`);
+    if (def) this.showMessage(`Задание выполнено: ${def.title}! Заберите награду у Информатора`);
     this.questTracker.rebuild();
     this.refreshDealerAlert();
   }

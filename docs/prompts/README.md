@@ -19,7 +19,7 @@
 | Файл                                                         | Объект          | Размер спрайта     | Анимации                 |
 |--------------------------------------------------------------|-----------------|--------------------|--------------------------|
 | [`camp-objects/smith.md`](camp-objects/smith.md)             | Кузнец          | 64×96 px / кадр    | idle (6), interest (3–4) |
-| [`camp-objects/dealer.md`](camp-objects/dealer.md)           | Скупщик         | 64×96 px / кадр    | idle (6), interest (3–4) |
+| [`camp-objects/dealer.md`](camp-objects/dealer.md)           | Информатор         | 64×96 px / кадр    | idle (6), interest (3–4) |
 | [`camp-objects/chest-stand.md`](camp-objects/chest-stand.md) | Сундук + Стойка | 128×80 px (вместе) | hover (2–3)              |
 
 ---

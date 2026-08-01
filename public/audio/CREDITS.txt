@@ -7,3 +7,4 @@
 equip.mp3 — freesound.org, community sample (item-equip-6904).
 anvil.mp3 — freesound.org, community sample (metal-impact-247482).
 chest_add.mp3 — freesound.org, community sample (colision-pie-con-armadura-79907).
+quest_reward.mp3 — freesound.org, community sample (money-pickup-2-89563).
