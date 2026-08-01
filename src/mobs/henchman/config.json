@@ -2,9 +2,9 @@
   "id": "henchman",
   "name": "Подручный",
   "tier": "common",
-  "health": 20,
+  "health": 28,
   "attacks": [
-    { "damage": 1, "interval": 1.0 }
+    { "damage": 3, "interval": 0.88 }
   ],
-  "defense": { "armor": 1 }
+  "defense": { "armor": 2 }
 }

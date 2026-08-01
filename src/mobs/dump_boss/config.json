@@ -2,9 +2,9 @@
   "id": "dump_boss",
   "name": "Главарь свалки",
   "tier": "legendary",
-  "health": 100,
+  "health": 40,
   "attacks": [
-    { "damage": 2, "interval": 1.5 }
+    { "damage": 6, "interval": 1.07 }
   ],
   "defense": { "armor": 2 }
 }

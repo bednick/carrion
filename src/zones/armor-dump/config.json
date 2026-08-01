@@ -6,8 +6,8 @@
   "rarity": "uncommon",
   "fights": { "min": 4, "max": 6 },
   "mob_pool": [
-    { "mob_id": "scavenger", "weight": 60 },
-    { "mob_id": "henchman", "weight": 40 }
+    { "mob_id": "scavenger", "weight": 80 },
+    { "mob_id": "henchman", "weight": 30 }
   ],
   "mob_loot": {
     "items": [

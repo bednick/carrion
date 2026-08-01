@@ -5,8 +5,14 @@ import type { Rarity } from '../types';
 // даже без своего крита (сами дают крит-шанс с нуля). Обычный `replace` на amount, тот же приём,
 // что у брони (только повышает, не снижает). С war_pick — второй независимый бросок поверх
 // первого, легитимный стак (см. docs/content.items.hand_left.md).
-const CRIT_CHANCE: Record<Rarity, number> = { common: 0.05, uncommon: 0.10, rare: 0.15, epic: 0.20, legendary: 0.20 };
-const CRIT_MULT = 1.5;
+const CRIT_CHANCE: Record<Rarity, number> = {
+  common: 0.05,
+  uncommon: 0.10,
+  rare: 0.15,
+  epic: 0.20,
+  legendary: 0.25
+};
+const CRIT_MULT = 2;
 
 const behavior: ItemBehavior = {
   name: 'Тяжёлые перчатки',

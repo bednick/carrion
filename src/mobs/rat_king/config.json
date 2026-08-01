@@ -2,14 +2,15 @@
   "id": "rat_king",
   "name": "Крысиный король",
   "tier": "legendary",
-  "health": 50,
+  "health": 40,
+  "position": 2,
   "attacks": [
-    { "damage": 1, "interval": 1.6 },
-    { "damage": 2, "interval": 2.1 },
-    { "damage": 2, "interval": 3.1 }
+    { "damage": 1, "interval": 1 },
+    { "damage": 2, "interval": 1.1 },
+    { "damage": 4, "interval": 2.1 }
   ],
   "summons": [
     { "mob_id": "rat", "count": 1, "trigger": { "type": "start" } },
-    { "mob_id": "rat", "count": 1, "trigger": { "type": "interval", "every": 10 } }
+    { "mob_id": "rat", "count": 1, "trigger": { "type": "interval", "every": 6 } }
   ]
 }

@@ -2,9 +2,9 @@
   "id": "scavenger",
   "name": "Мусорщик",
   "tier": "common",
-  "health": 25,
+  "health": 21,
   "attacks": [
-    { "damage": 2, "interval": 1.25 }
+    { "damage": 5, "interval": 1.47 }
   ],
   "defense": { "armor": 1 }
 }
