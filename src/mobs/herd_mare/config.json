@@ -2,9 +2,9 @@
   "id": "herd_mare",
   "name": "Табунная кобыла",
   "tier": "epic",
-  "health": 75,
+  "health": 50,
   "attacks": [
-    { "damage": 5, "interval": 5.3 }
+    { "damage": 7, "interval": 2.5 }
   ],
   "position": 3,
   "summons": [

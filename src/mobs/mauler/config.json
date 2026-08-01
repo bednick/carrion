@@ -2,15 +2,15 @@
   "id": "mauler",
   "name": "Матёрый хищник",
   "tier": "rare",
-  "health": 45,
+  "health": 44,
   "attacks": [
     {
-      "damage": 5,
-      "interval": 2.2
+      "damage": 3,
+      "interval": 1.1
     },
     {
-      "damage": 6,
-      "interval": 2.6
+      "damage": 1,
+      "interval": 0.9
     }
   ],
   "summons": [
