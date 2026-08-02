@@ -43,8 +43,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.svg(zoneDecorKey('anvil'), ZONE_DECOR_URLS.anvil, { width: 432, height: 360 });
     this.load.svg(zoneDecorKey('belt'), ZONE_DECOR_URLS.belt, { width: 360, height: 104 });
     this.load.svg('hammer', 'hammer.svg', { width: 32, height: 32 });
-    this.load.image('map-texture', 'backgrounds/map-texture.png');
-    this.load.image('bg-camp', 'backgrounds/camp.png');
+    this.load.image('map-texture', 'backgrounds/map-texture.webp');
+    this.load.image('bg-camp', 'backgrounds/camp.webp');
     this.load.image('camp-fire', 'sprites/camp/campfire.2.png');
     this.load.image('npc-smith', 'sprites/npc/smith.png');
     this.load.image('npc-dealer', 'sprites/npc/dealer.png');
@@ -67,7 +67,7 @@ export class PreloadScene extends Phaser.Scene {
     for (const [folder, layers] of Object.entries(ZONE_BG_VARIANTS)) {
       for (const [layer, count] of Object.entries(layers)) {
         for (let n = 1; n <= (count ?? 0); n++) {
-          this.load.image(zoneBgKey(folder, layer as BgLayer, n), `backgrounds/zones/${folder}/${layer}.${n}.png`);
+          this.load.image(zoneBgKey(folder, layer as BgLayer, n), `backgrounds/zones/${folder}/${layer}.${n}.webp`);
         }
       }
     }
@@ -81,7 +81,7 @@ export class PreloadScene extends Phaser.Scene {
           const key = zoneObjKey(layer as ScatterLayer, slug);
           if (loadedObjKeys.has(key)) continue;
           loadedObjKeys.add(key);
-          this.load.image(key, `backgrounds/objects/${layer}/${slug}.png`);
+          this.load.image(key, `backgrounds/objects/${layer}/${slug}.webp`);
         }
       }
     }

@@ -95,7 +95,7 @@ export const BG_LAYERS: BgLayer[] = ['far', 'mid', 'near', 'fore'];
 
 /**
  * Сколько вариантов каждого слоя есть у папки `public/backgrounds/zones/<id>/`.
- * Файлы: `<layer>.<n>.png`, n = 1..count. Ключ = id зоны. Слой можно не указывать (его нет).
+ * Файлы: `<layer>.<n>.webp`, n = 1..count. Ключ = id зоны. Слой можно не указывать (его нет).
  * При старте экспедиции для каждого слоя выбирается случайный вариант.
  * ВАЖНО: добавил файлы — обнови счётчик здесь (public нельзя перечислить автоматически).
  */
@@ -121,7 +121,7 @@ export function zoneBgKey(folder: string, layer: BgLayer, variant: number): stri
 export type ScatterLayer = 'mid' | 'fore';
 
 /**
- * Общий плоский пул объектов на mid/fore: `public/backgrounds/objects/<layer>/<slug>.png`.
+ * Общий плоский пул объектов на mid/fore: `public/backgrounds/objects/<layer>/<slug>.webp`.
  * Один и тот же slug может использоваться в списках нескольких зон (шарится физически один файл).
  * На старте экспедиции для каждого (зона, слой) движок тасует список и раскладывает объекты со
  * случайным размером/расстоянием (см. ExpeditionScene.buildScatterLayer).
