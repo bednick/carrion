@@ -14,5 +14,10 @@
     {
       "id": "unquiet_risen"
     }
-  ]
+  ],
+  "ui": {
+    "move": {
+      "left": 0.11
+    }
+  }
 }

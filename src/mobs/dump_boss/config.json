@@ -5,7 +5,17 @@
   "health": 40,
   "position": 1,
   "attacks": [
-    { "damage": 6, "interval": 1.07 }
+    {
+      "damage": 6,
+      "interval": 1.07
+    }
   ],
-  "defense": { "armor": 2 }
+  "defense": {
+    "armor": 2
+  },
+  "ui": {
+    "move": {
+      "right": 0.14
+    }
+  }
 }

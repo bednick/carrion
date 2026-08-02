@@ -18,5 +18,11 @@
     {
       "id": "cleaver_enraged"
     }
-  ]
+  ],
+  "ui": {
+    "move": {
+      "down": 0.01,
+      "left": 0.12
+    }
+  }
 }

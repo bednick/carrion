@@ -101,6 +101,9 @@ export interface MobUi {
   alpha?: number;
   /** Множитель к итоговому размеру спрайта после вписывания в бокс (по умолчанию 1). */
   scale?: number;
+  /** Сдвиг спрайта относительно его размера после scale (доля 0..1, 0.1 = 10%). Пиксели считаются
+   *  от фактических ширины/высоты спрайта — после вписывания в бокс и умножения на ui.scale. */
+  move?: { up?: number; down?: number; left?: number; right?: number };
 }
 
 export interface MobConfig {

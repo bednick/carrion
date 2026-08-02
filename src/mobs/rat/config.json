@@ -5,10 +5,24 @@
   "health": 20,
   "position": 1,
   "attacks": [
-    { "damage": 2, "interval": 3 }
+    {
+      "damage": 2,
+      "interval": 3
+    }
   ],
   "summons": [
-    { "mob_id": "rat", "count": 2, "trigger": { "type": "start" } }
+    {
+      "mob_id": "rat",
+      "count": 2,
+      "trigger": {
+        "type": "start"
+      }
+    }
   ],
-  "ui": { "scale": 0.6 }
+  "ui": {
+    "scale": 0.6,
+    "move": {
+      "down": 0.25
+    }
+  }
 }

@@ -10,12 +10,17 @@
       "interval": 1.36
     }
   ],
-   "defense": {
+  "defense": {
     "armor": 2
   },
   "phases": [
     {
       "id": "stubborn_veteran_risen"
     }
-  ]
+  ],
+  "ui": {
+    "move": {
+      "left": 0.13
+    }
+  }
 }

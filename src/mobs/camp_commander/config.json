@@ -17,5 +17,10 @@
     {
       "id": "camp_commander_light"
     }
-  ]
+  ],
+  "ui": {
+    "move": {
+      "left": 0.08
+    }
+  }
 }

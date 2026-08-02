@@ -17,5 +17,10 @@
     {
       "id": "brigadier_light"
     }
-  ]
+  ],
+  "ui": {
+    "move": {
+      "right": 0.03
+    }
+  }
 }

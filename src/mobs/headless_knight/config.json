@@ -5,6 +5,14 @@
   "health": 50,
   "position": 1,
   "attacks": [
-    { "damage": 4, "interval": 1.75 }
-  ]
+    {
+      "damage": 4,
+      "interval": 1.75
+    }
+  ],
+  "ui": {
+    "move": {
+      "left": 0.05
+    }
+  }
 }

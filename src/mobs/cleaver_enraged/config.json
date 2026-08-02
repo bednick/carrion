@@ -10,5 +10,11 @@
       "interval": 2.8
     }
   ],
-  "defense": {}
+  "defense": {},
+  "ui": {
+    "scale": 1.05,
+    "move": {
+      "left": 0.08
+    }
+  }
 }

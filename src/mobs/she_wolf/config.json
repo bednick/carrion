@@ -21,8 +21,13 @@
       "mob_id": "dire_wolf",
       "trigger": {
         "type": "interval",
-        "every": 6.0
+        "every": 6
       }
     }
-  ]
+  ],
+  "ui": {
+    "move": {
+      "down": 0.02
+    }
+  }
 }

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Carrion — подбор ui моба</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        background: #1a1a2e; color: #cccccc; font-family: 'Consolas', 'Menlo', monospace;
+        font-size: 19.5px; min-height: 100%;
+      }
+      body { padding: 36px; max-width: 1350px; margin: 0 auto; }
+      h1 { color: #ffcc44; font-size: 27px; margin-bottom: 6px; }
+      .hint { color: #8899aa; font-size: 18px; margin-bottom: 30px; }
+      .panel {
+        background: #201f33; border: 1px solid #333355; border-radius: 9px;
+        padding: 24px; margin-bottom: 24px;
+      }
+      .panel h2 { color: #aaccff; font-size: 19.5px; margin-bottom: 18px; text-transform: uppercase; letter-spacing: 0.05em; }
+      .row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; }
+      .row label { width: 165px; color: #8899aa; flex-shrink: 0; }
+      .row input[type=range] { flex: 1; }
+      .row input[type=number] { width: 96px; }
+      .row .num { width: 84px; color: #eeeeee; text-align: right; font-variant-numeric: tabular-nums; }
+      select, input[type=number] {
+        background: #14141f; color: #eeeeee; border: 1px solid #444466; border-radius: 6px;
+        padding: 7.5px 12px; font-family: inherit; font-size: 18px;
+      }
+      #mobSelect { flex: 1; min-width: 300px; }
+      .picker { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+      .picker label { color: #8899aa; }
+      button {
+        background: #2244aa; color: #eeeeff; border: none; border-radius: 6px;
+        padding: 12px 24px; font-family: inherit; font-size: 18px; cursor: pointer;
+      }
+      button:hover { background: #2a55cc; }
+      button.nav { padding: 9px 15px; }
+      button.secondary { background: #333344; }
+      button.secondary:hover { background: #3d3d55; }
+      .checkbox-row { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+      .checkbox-row label { color: #8899aa; cursor: pointer; }
+      .pagenav { margin-bottom: 24px; }
+      .pagenav a { color: #77aaff; text-decoration: none; font-size: 18px; }
+      .pagenav a:hover { text-decoration: underline; }
+      #stageWrap { width: 100%; height: 390px; overflow: hidden; background: #4a4a58; border-radius: 6px; position: relative; }
+      #stage { position: absolute; width: 1280px; height: 400px; transform-origin: top left; }
+      .sprite { position: absolute; image-rendering: pixelated; }
+      .shadow { position: absolute; border-radius: 50%; background: #000; transform: translate(-50%, -50%); }
+      .actions { display: flex; align-items: center; gap: 15px; margin-top: 21px; }
+      #saveStatus { color: #77aa77; font-size: 18px; }
+      #saveStatus.error { color: #cc6666; }
+    </style>
+  </head>
+  <body>
+    <h1>Подбор ui моба (scale / move / alpha)</h1>
+    <div class="pagenav"><a href="./balance.html">Баланс экспедиций →</a></div>
+    <div class="hint">
+      Живое превью боевой сцены (тот же расчёт бокса/тени/сдвига, что и в бою). «Сохранить» пишет
+      подобранные значения прямо в <code>src/mobs/{id}/config.json</code>.
+    </div>
+
+    <div class="panel">
+      <div class="picker">
+        <button id="prevBtn" class="nav secondary">◀</button>
+        <label for="mobSelect">Моб</label>
+        <select id="mobSelect"></select>
+        <button id="nextBtn" class="nav secondary">▶</button>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="bossToggle" />
+        <label for="bossToggle">Показать как босса (бокс 210×165 вместо 150×130)</label>
+      </div>
+      <div id="stageWrap"><div id="stage"></div></div>
+    </div>
+
+    <div class="panel">
+      <h2>ui</h2>
+      <div class="row">
+        <label for="scale">scale</label>
+        <input type="range" id="scale" min="0.3" max="2" step="0.05" value="1" />
+        <span class="num" id="scaleNum">1.00</span>
+      </div>
+      <div class="row">
+        <label for="alpha">alpha</label>
+        <input type="range" id="alpha" min="0" max="1" step="0.05" value="1" />
+        <span class="num" id="alphaNum">1.00</span>
+      </div>
+      <div class="row">
+        <label for="moveUp">move.up</label>
+        <input type="range" id="moveUp" min="0" max="0.5" step="0.01" value="0" />
+        <span class="num" id="moveUpNum">0.00</span>
+      </div>
+      <div class="row">
+        <label for="moveDown">move.down</label>
+        <input type="range" id="moveDown" min="0" max="0.5" step="0.01" value="0" />
+        <span class="num" id="moveDownNum">0.00</span>
+      </div>
+      <div class="row">
+        <label for="moveLeft">move.left</label>
+        <input type="range" id="moveLeft" min="0" max="0.5" step="0.01" value="0" />
+        <span class="num" id="moveLeftNum">0.00</span>
+      </div>
+      <div class="row">
+        <label for="moveRight">move.right</label>
+        <input type="range" id="moveRight" min="0" max="0.5" step="0.01" value="0" />
+        <span class="num" id="moveRightNum">0.00</span>
+      </div>
+      <div class="actions">
+        <button id="saveBtn">Сохранить</button>
+        <button id="resetBtn" class="secondary">Сбросить к дефолтам</button>
+        <span id="saveStatus"></span>
+      </div>
+    </div>
+
+    <script type="module" src="/src/mobUiTuner.ts"></script>
+  </body>
+</html>

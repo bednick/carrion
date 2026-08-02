@@ -12,5 +12,10 @@
   ],
   "defense": {
     "armor": 2
+  },
+  "ui": {
+    "move": {
+      "left": 0.05
+    }
   }
 }

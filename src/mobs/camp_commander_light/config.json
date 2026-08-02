@@ -9,5 +9,10 @@
       "damage": 6,
       "interval": 2.1
     }
-  ]
+  ],
+  "ui": {
+    "move": {
+      "left": 0.05
+    }
+  }
 }

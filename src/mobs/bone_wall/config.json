@@ -5,5 +5,10 @@
   "health": 40,
   "position": 1,
   "attacks": [],
-  "ui": { "scale": 1.2 }
+  "ui": {
+    "scale": 1.2,
+    "move": {
+      "down": 0.05
+    }
+  }
 }

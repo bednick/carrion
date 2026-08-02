@@ -10,7 +10,10 @@
       "interval": 0.9
     }
   ],
-   "ui": {
-    "scale": 0.6
+  "ui": {
+    "scale": 0.6,
+    "move": {
+      "down": 0.05
+    }
   }
 }

@@ -858,9 +858,15 @@ export class ExpeditionScene extends Phaser.Scene {
         const maxW = e.isBoss ? 210 : 150;
         const maxH = e.isBoss ? 165 : 130;
         const sc = Math.min(maxW / img.width, maxH / img.height) * (getMobConfig(e.id).ui?.scale ?? 1);
+        const dispW = img.width * sc;
         dispH = img.height * sc;
-        sprite = this.add.sprite(x, 287, spriteKey).setOrigin(0.5, 1).setDisplaySize(img.width * sc, dispH).setDepth(5);
-        halfW = (img.width * sc) / 2;
+        // Точечная подгонка позиции конкретной модели (доля от её же размера после scale) —
+        // не двигает тень/hp-бар/подпись, они остаются на slotX/линии тени 287.
+        const move = getMobConfig(e.id).ui?.move;
+        const moveX = move ? ((move.right ?? 0) - (move.left ?? 0)) * dispW : 0;
+        const moveY = move ? ((move.down ?? 0) - (move.up ?? 0)) * dispH : 0;
+        sprite = this.add.sprite(x + moveX, 287 + moveY, spriteKey).setOrigin(0.5, 1).setDisplaySize(dispW, dispH).setDepth(5);
+        halfW = dispW / 2;
       } else {
         dispH = 90;
         sprite = this.add.rectangle(x, 287, 70, dispH, color).setOrigin(0.5, 1).setDepth(5);

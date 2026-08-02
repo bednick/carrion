@@ -18,5 +18,10 @@
     {
       "id": "swaddled_horror"
     }
-  ]
+  ],
+  "ui": {
+    "move": {
+      "left": 0.07
+    }
+  }
 }

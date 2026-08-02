@@ -5,7 +5,10 @@
   "health": 50,
   "position": 3,
   "attacks": [
-    { "damage": 7, "interval": 2.5 }
+    {
+      "damage": 7,
+      "interval": 2.5
+    }
   ],
   "summons": [
     {
@@ -19,11 +22,15 @@
       "count": 2,
       "trigger": {
         "type": "interval",
-        "every": 8.0
+        "every": 8
       }
     }
   ],
-   "ui": {
-    "scale": 1.3
+  "ui": {
+    "scale": 1.25,
+    "move": {
+      "down": 0.03,
+      "left": 0.05
+    }
   }
 }
