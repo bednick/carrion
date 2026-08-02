@@ -55,12 +55,12 @@ public/
     objects/<layer>/<slug>.webp   # mid/fore — общий плоский пул одиночных объектов (layer = mid|fore)
   sprites/
     characters/<char>/            # char ∈ strongman | vagabond | apprentice
-      camp.png                    # стоп-кадр для CampScene (300×600)
-      idle.png walk.png attack.png hit.png block.png death.png   # боевые спрайт-листы
-    mobs/<mob-id>/                # idle.png attack.png hit.png death.png
+      camp.webp                   # стоп-кадр для CampScene (300×600)
+      idle.webp walk.webp attack.webp hit.webp block.webp death.webp   # боевые спрайт-листы
+    mobs/<mob-id>/                # idle.webp attack.webp hit.webp death.webp
     bosses/<boss-id>/             # как мобы, + фазы при необходимости
     equipment/<slot>/<item-id>/   # оверлеи (общие для всех персонажей), листы по анимациям
-    npc/                          # smith.png dealer.png chest-stand.png
+    npc/                          # smith.webp dealer.webp chest-stand.webp
 ```
 
 **Правила нейминга:**
@@ -75,12 +75,12 @@ public/
 | Фон зоны (far/near)         | `backgrounds/zones/<f>/<layer>.<n>.webp`   | `zonebg-<f>-<layer>-<n>` (`zoneBgKey`)  |
 | Объект mid/fore (общий пул) | `backgrounds/objects/<layer>/<slug>.webp`  | `zoneobj-<layer>-<slug>` (`zoneObjKey`) |
 | Лагерь/карта                | `backgrounds/camp.webp`, `map-texture.webp`| `bg-camp`, `map-texture`                |
-| Стоп-кадр персонажа         | `sprites/characters/<c>/camp.png`          | `char-<c>`                              |
-| Боевая анимация             | `sprites/characters/<c>/<anim>.png`        | `char-<c>-<anim>`                       |
-| Моб                         | `sprites/mobs/<id>/<anim>.png`             | `mob-<id>-<anim>`                       |
-| Босс                        | `sprites/bosses/<id>/<anim>.png`           | `boss-<id>-<anim>`                      |
-| Оверлей экипировки          | `sprites/equipment/<slot>/<id>/<anim>.png` | `equip-<slot>-<id>-<anim>`              |
-| NPC                         | `sprites/npc/<name>.png`                   | `npc-<name>` (искл.: `chest-stand`)     |
+| Стоп-кадр персонажа         | `sprites/characters/<c>/camp.webp`         | `char-<c>`                              |
+| Боевая анимация             | `sprites/characters/<c>/<anim>.webp`       | `char-<c>-<anim>`                       |
+| Моб                         | `sprites/mobs/<id>/<anim>.webp`            | `mob-<id>-<anim>`                       |
+| Босс                        | `sprites/bosses/<id>/<anim>.webp`          | `boss-<id>-<anim>`                      |
+| Оверлей экипировки          | `sprites/equipment/<slot>/<id>/<anim>.webp`| `equip-<slot>-<id>-<anim>`              |
+| NPC                         | `sprites/npc/<name>.webp`                  | `npc-<name>` (искл.: `chest-stand`)     |
 | Иконка предмета (инвентарь) | `src/items/<id>/icon.svg` (НЕ в public)    | `item_icon_<id>`                        |
 
 > Боевые листы грузятся как обычные `image` и нарезаются в сцене **по числу кадров** (frameWidth = width / count) —
@@ -148,10 +148,12 @@ public/
   `zones/registry.ts` — `.webp`. Это заменило `.png` в конвенции путей выше — новые фоны кладутся сразу как
   `.webp`, отдельный PNG-оригинал в `public/` не оставлять (хранить его вне репозитория, если нужен для повторной
   доработки).
-- **Спрайты персонажей/мобов/NPC (`sprites/`)** — остаются **PNG**, lossy WebP не применять: движок грузит их с
-  `pixelArt: true` (NEAREST-фильтр), и lossy-сжатие даёт видимый дизеринг на резких пиксельных краях. Если нужно
-  ужать — только lossless-оптимизация (`cwebp -lossless` или `pngquant`, если появится в тулчейне), и то не в
-  приоритете: спрайты и так на порядок легче фонов.
+- **Спрайты персонажей/мобов/NPC (`sprites/`)** — конвертировать PNG → **lossless WebP** перед коммитом:
+  `cwebp -lossless -z 9 in.png -o out.webp`, расширение и путь в `PreloadScene` — `.webp`. Lossy WebP тут не
+  применять: движок грузит спрайты с `pixelArt: true` (NEAREST-фильтр), и lossy-сжатие даёт видимый дизеринг на
+  резких пиксельных краях — а lossless по определению попиксельно идентичен исходнику, дизеринга не даёт. Проверено
+  на всём наборе (`idle`/`walk`/`attack`/NPC/мобы): экономия в среднем ~24%, на части файлов до 60%+, без потери
+  качества. Отдельный PNG-оригинал в `public/` не оставлять (как и для фонов).
 - Перед пакетной конвертацией новой партии — прогнать 2–3 образца и свериться визуально (Read-инструмент умеет
   показывать картинки) прежде чем гнать всё пачкой; при заметной деградации поднять `-q`.
 - **Аудио** (`public/audio/`, регистрируется в `src/core/SoundRegistry.ts`) — та же логика: не класть эмбиенты/музыку
