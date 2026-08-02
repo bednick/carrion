@@ -8,6 +8,8 @@ import { ZONE_BG_VARIANTS, zoneBgKey, type BgLayer, ZONE_BG_OBJECTS, zoneObjKey,
 import { ALL_MOB_IDS } from '../mobs/registry';
 import { SOUND_FILES, MUSIC_FILES, soundVariants, soundAssetKey, musicVariants, musicAssetKey, type SoundKey, type MusicKey } from '../core/SoundRegistry';
 import { SoundManager } from '../core/SoundManager';
+import { CX, GAME_H } from '../ui/layout';
+import { FONT_FAMILY } from '../ui/theme';
 
 function isSvgUrl(url: string): boolean {
   return url.split('?')[0].endsWith('.svg');
@@ -18,7 +20,50 @@ export class PreloadScene extends Phaser.Scene {
     super({ key: 'PreloadScene' });
   }
 
+  /**
+   * Экран без этого индикатора выглядит зависшим на медленном канале — это первая загрузка
+   * (иконки/фоны/звуки, ассеты ещё не в кэше браузера), может занимать заметное время.
+   */
+  private buildLoadingBar() {
+    const barW = 400;
+    const barH = 18;
+    const x = CX - barW / 2;
+    const y = GAME_H / 2 - barH / 2;
+
+    const label = this.add.text(CX, y - 34, 'Загрузка...', {
+      fontFamily: FONT_FAMILY,
+      fontSize: '20px',
+      color: '#e8d9b0',
+    }).setOrigin(0.5);
+
+    const track = this.add.rectangle(CX, y + barH / 2, barW, barH, 0x1a1a2a, 0.9)
+      .setStrokeStyle(2, 0x554422);
+
+    const fill = this.add.rectangle(x + 2, y + barH / 2, 0, barH - 4, 0xffcc33, 1)
+      .setOrigin(0, 0.5);
+
+    const percent = this.add.text(CX, y + barH + 22, '0%', {
+      fontFamily: FONT_FAMILY,
+      fontSize: '16px',
+      color: '#999999',
+    }).setOrigin(0.5);
+
+    this.load.on('progress', (value: number) => {
+      fill.width = (barW - 4) * value;
+      percent.setText(`${Math.round(value * 100)}%`);
+    });
+
+    this.load.on('complete', () => {
+      label.destroy();
+      track.destroy();
+      fill.destroy();
+      percent.destroy();
+    });
+  }
+
   preload() {
+    this.buildLoadingBar();
+
     // Иконки предметов постепенно переезжают с SVG на растровый пиксель-арт (icon.png) —
     // грузим по расширению URL. assetsInlineLimit:0 в vite.config.ts гарантирует, что оба
     // формата приходят настоящим путём с расширением, а не data-URI.
