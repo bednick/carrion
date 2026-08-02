@@ -507,13 +507,27 @@ export class CampScene extends Phaser.Scene {
     core.anims.setProgress(0.5);
 
     // --- искры: мелкие угольки летят вверх и гаснут ---
+    // Два потока: высокий (летит до полной высоты) и низкий (гаснет вдвое раньше) —
+    // общая скорость одна и та же, разница только в lifespan.
     this.ensureFireSparkTexture();
     const sparkEmitter = this.add.particles(FX, FY - 10, 'fire-spark', {
       blendMode: Phaser.BlendModes.ADD,
       x: { min: -16, max: 16 },
+      lifespan: { min: 1800, max: 3600 },
+      speedY: { min: -110, max: -200 },
+      speedX: { min: -11, max: 11 },
+      scale: { start: 1, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      frequency: 260,
+      quantity: 1,
+      tint: [0xffcf6b, 0xff9a3c],
+    });
+    const sparkEmitterLow = this.add.particles(FX, FY - 10, 'fire-spark', {
+      blendMode: Phaser.BlendModes.ADD,
+      x: { min: -16, max: 16 },
       lifespan: { min: 900, max: 1800 },
-      speedY: { min: -220, max: -400 },
-      speedX: { min: -22, max: 22 },
+      speedY: { min: -110, max: -200 },
+      speedX: { min: -11, max: 11 },
       scale: { start: 1, end: 0 },
       alpha: { start: 0.9, end: 0 },
       frequency: 260,
@@ -534,6 +548,7 @@ export class CampScene extends Phaser.Scene {
       // (он уже стоит в FX/FY-10), явный x/y прибавился бы поверх этого смещения
       // и унёс бы все частицы далеко в сторону от видимого костра.
       sparkEmitter.emitParticleAt(undefined, undefined, Phaser.Math.Between(5, 15));
+      sparkEmitterLow.emitParticleAt(undefined, undefined, Phaser.Math.Between(5, 15));
     });
   }
 
