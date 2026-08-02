@@ -41,9 +41,9 @@ export function soundAssetKey(key: SoundKey, index: number): string {
 // случайный (см. SoundManager.playMusicLayers). Громкость/мьют ключуются логическим
 // ключом, поэтому вариант на выбор громкости не влияет.
 export const MUSIC_FILES = {
-  amb_campfire: ['audio/music/amb_campfire.1.ogg', 'audio/music/amb_campfire.2.ogg'],
+  amb_campfire: ['audio/music/amb_campfire.1.mp3', 'audio/music/amb_campfire.2.mp3'],
   amb_flute:    'audio/music/amb_flute.mp3',
-  amb_draft:    'audio/music/amb_draft.ogg', // фоновый эмбиент похода (все зоны)
+  amb_draft:    'audio/music/amb_draft.mp3', // фоновый эмбиент похода (все зоны)
 } as const;
 
 export type MusicKey = keyof typeof MUSIC_FILES;
