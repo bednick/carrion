@@ -503,11 +503,11 @@ export class CampScene extends Phaser.Scene {
 
     // --- искры: мелкие угольки летят вверх и гаснут ---
     this.ensureFireSparkTexture();
-    this.add.particles(FX, FY - 10, 'fire-spark', {
+    const sparkEmitter = this.add.particles(FX, FY - 10, 'fire-spark', {
       blendMode: Phaser.BlendModes.ADD,
       x: { min: -16, max: 16 },
       lifespan: { min: 900, max: 1800 },
-      speedY: { min: -110, max: -200 },
+      speedY: { min: -220, max: -400 },
       speedX: { min: -22, max: 22 },
       scale: { start: 1, end: 0 },
       alpha: { start: 0.9, end: 0 },
@@ -517,6 +517,19 @@ export class CampScene extends Phaser.Scene {
     }).setDepth(2);
 
     this.buildFireLightOnStrongman(FX, FY);
+
+    // Клик по костру: звук огня + разовый всплеск искр. Без hover-подписи — только курсор-рука.
+    const clickZone = this.add.ellipse(FX, FY - H * 0.4, W * 1.2, H * 1.3, 0x000000, 0)
+      .setDepth(5).setInteractive();
+    clickZone.on('pointerdown', () => {
+      SoundManager.play('fire_click');
+      // emitParticleAt (не explode!) — explode переводит эмиттер в режим взрыва
+      // (frequency = -1) и НАВСЕГДА останавливает обычный поток искр.
+      // x/y — НЕ передаём: координаты частиц локальные относительно самого эмиттера
+      // (он уже стоит в FX/FY-10), явный x/y прибавился бы поверх этого смещения
+      // и унёс бы все частицы далеко в сторону от видимого костра.
+      sparkEmitter.emitParticleAt(undefined, undefined, Phaser.Math.Between(5, 15));
+    });
   }
 
   // Отсвет костра на силаче: он стоит ПОЗАДИ костра, без подсветки выглядит «вырезанным».
