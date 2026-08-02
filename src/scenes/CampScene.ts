@@ -477,28 +477,33 @@ export class CampScene extends Phaser.Scene {
 
     // --- свечение: радиальный градиент с ADD, медленно пульсирует ---
     this.ensureFireGlowTexture();
+    // Глубина всех декоративных/кликабельных слоёв костра — дефолтная (0). buildFire()
+    // вызывается раньше buildCampfire()/buildNPCs() в create(), так что при равном depth
+    // порядок вставки сам ставит костёр НИЖЕ силача и нпс — и по рендеру, и по приоритету
+    // кликов (Phaser при topOnly-хит-тесте среди объектов с равным depth выбирает того,
+    // кто отрисован позже/сверху). Это развлекательное взаимодействие с самым низким
+    // приоритетом — не должно перекрывать клик по силачу («В поход») или нпс.
     const glow = this.add.image(FX, FY - H * 0.4, 'fire-glow')
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDisplaySize(W * 2.6, W * 2.6)
-      .setAlpha(0.5)
-      .setDepth(0);
+      .setAlpha(0.5);
     this.tweens.add({ targets: glow, alpha: 0.3, scale: glow.scale * 0.88, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
     // --- задний слой: крупнее, тусклее, медленнее (внутренняя глубина) ---
     this.add.sprite(FX, FY, 'camp-fire')
       .setOrigin(0.5, 1).setDisplaySize(W * 1.22, H * 1.18)
-      .setAlpha(0.5).setDepth(1).play('camp-fire-slow');
+      .setAlpha(0.5).play('camp-fire-slow');
 
     // --- передний слой ---
     const front = this.add.sprite(FX, FY, 'camp-fire')
-      .setOrigin(0.5, 1).setDisplaySize(W, H).setDepth(2).play('camp-fire');
+      .setOrigin(0.5, 1).setDisplaySize(W, H).play('camp-fire');
     // лёгкий процедурный флик — петля перестаёт читаться как перелистывание
     this.tweens.add({ targets: front, scaleX: front.scaleX * 1.05, duration: 260, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
     // --- ядро: ADD, светится, сдвинутая фаза анимации ---
     const core = this.add.sprite(FX, FY, 'camp-fire')
       .setOrigin(0.5, 1).setDisplaySize(W * 0.68, H * 0.78)
-      .setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.6).setDepth(3).play('camp-fire');
+      .setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.6).play('camp-fire');
     core.anims.setProgress(0.5);
 
     // --- искры: мелкие угольки летят вверх и гаснут ---
@@ -514,13 +519,13 @@ export class CampScene extends Phaser.Scene {
       frequency: 260,
       quantity: 1,
       tint: [0xffcf6b, 0xff9a3c],
-    }).setDepth(2);
+    });
 
     this.buildFireLightOnStrongman(FX, FY);
 
     // Клик по костру: звук огня + разовый всплеск искр. Без hover-подписи — только курсор-рука.
     const clickZone = this.add.ellipse(FX, FY - H * 0.4, W * 1.2, H * 1.3, 0x000000, 0)
-      .setDepth(5).setInteractive();
+      .setInteractive();
     clickZone.on('pointerdown', () => {
       SoundManager.play('fire_click');
       // emitParticleAt (не explode!) — explode переводит эмиттер в режим взрыва
