@@ -21,7 +21,7 @@ const behavior: ItemBehavior = {
       if (ctx.rng() >= BLOCK_CHANCE[ctx.rarity]) return {};
       return {
         replace: [],
-        spawn: [{ type: 'block', source: e.source, target: e.target, prevented: e.amount, origin: e.origin }],
+        spawn: [{ type: 'block', source: e.source, target: e.target, prevented: e.amount, thorns: e.thorns, origin: e.origin }],
       };
     },
   },

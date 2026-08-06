@@ -376,7 +376,7 @@ export class CombatEngine {
         return [];
 
       case 'attack':
-        return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, armorPierce: e.armorPierce, splash: e.splash, crit: e.crit, origin: e.origin }];
+        return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, raw: e.amount, armorPierce: e.armorPierce, splash: e.splash, crit: e.crit, origin: e.origin }];
 
       case 'damage':
         return this.applyDamage(e.source, e.target, e.amount, rng, e.crit, e.thorns || e.splash);

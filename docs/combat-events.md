@@ -56,8 +56,8 @@ type GameEvent = EventMeta & (
     // --- боевые действия ---
     | { type: 'attack_ready'; source: Side; target: Side }                 // часы: поток стамины заполнен, слот готов
     | { type: 'attack'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean }  // взмах, авторённый предметом (урон уже посчитан)
-    | { type: 'damage'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; thorns?: boolean }  // экземпляр урона «в полёте»
-    | { type: 'block'; source: Side; target: Side; prevented: number }    // урон полностью отклонён (щит героя / числовая броня врага в ноль)
+    | { type: 'damage'; source: Side; target: Side; amount: number; raw?: number; armorPierce?: number; splash?: boolean; thorns?: boolean }  // экземпляр урона «в полёте»; raw — урон ДО любых снижений, проставляется один раз при рождении из attack
+    | { type: 'block'; source: Side; target: Side; prevented: number; thorns?: boolean }  // урон полностью отклонён (щит героя / числовая броня врага в ноль); thorns унаследован с погашенного damage — для антициклического гарда даунстрим-хуков
     | { type: 'dodge'; source: Side; target: Side }                       // враг уклонился — входящий урон погашен
     | { type: 'counter'; source: Side; target: Side }                     // чисто презентационное: «это был контрудар», HP не трогает
     | { type: 'heal'; source: Side; target: Side; amount: number }       // лечение
@@ -261,7 +261,8 @@ const behavior: ItemBehavior = {
 | Лечение за убийство (амулет) | на `kill`: `spawn:[heal(target=hero)]`                              |
 | Лайфстил за удар             | на `damage`(source=hero, target=enemy), кроме `splash: true`: `spawn:[heal(target=hero)]` |
 | Контрудар (`buckler`)        | на `damage`(target=hero), независимый ролл: `spawn:[attack(source.slot=hand_right, target=атакующий враг) + counter]` — `attack`, не `damage` напрямую, чтобы поймать крит-хуки вроде `heavy_gloves`; `counter` — чисто презентационный дубль рядом (см. §2, `content.items.hand_left.md`). Тот же хук вторым независимым броском катает блок (`replace:[]` + `spawn:[block]`) — один обработчик на слот отдаёт оба исхода сразу |
-| Шипы (`spiked_shield`)       | на `damage`(target=hero), кроме `thorns: true`: `spawn:[damage(target=атакующий враг, thorns: true)]` (доля пришедшего урона). Тот же хук отдельным броском катает блок (`replace:[]` + `spawn:[block]`) — шипы считаются от исходного `amount` и срабатывают даже на заблокированном ударе |
+| Шипы (`spiked_shield`)       | на `damage`(target=hero), кроме `thorns: true`: `spawn:[damage(target=атакующий враг, thorns: true)]` (доля `e.raw` — сырого урона удара). Тот же хук отдельным броском катает блок (`replace:[]` + `spawn:[block]`) — шипы считаются от `raw`, до собственного блока предмета, и срабатывают даже на заблокированном ударе |
+| Шипы (`spiked_cuirass`)      | на `damage`(target=hero), кроме `thorns: true`: `spawn:[damage(target=атакующий враг, thorns: true)]` (доля `e.raw`, а не уже сниженного своей же бронёй значения). Плюс отдельный `on.block`(target=hero), кроме `thorns: true`: та же доля от `e.prevented` — ловит случай, когда удар заблокировал **чужой** щит в `hand_left` (тот идёт раньше `body` в `HANDLER_ORDER` и гасит `damage` до этого слота, см. §3 «дыра порядка») |
 | Броня врага (`armor`)        | на `damage`(target=enemy): `replace:[damage с меньшим (дробным) amount]` — плоский вычет очков |
 | Уклонение врага              | на `damage`(target=enemy): шанс → `replace:[]` + `spawn:[dodge]`    |
 | Шипы врага                   | на `damage`(target=enemy), кроме `thorns: true`: `spawn:[damage(target=hero, thorns: true)]` |
@@ -316,6 +317,16 @@ follow-up `block`(target=та же сторона) вместо изменени
 `MAX_CASCADE` (§3), что на практике выглядит как долгая серия хитов по 1. Процентные шипы героя свою долю
 **не округляют** (дробь доезжает до `applyDamage`); шипы моба (`defense.thorns`) — флэт-число, округлять
 нечего. Оба флага (`thorns`, `splash`) дополнительно означают «rider» — см. §«Округление урона» выше.
+
+Тот же гард нужен и на `block`: если удар с `thorns: true` (шип моба) заблокирован щитом героя, спавненный
+`block` наследует `thorns: true` от погашенного `damage` — иначе `spiked_cuirass`, слушающий `on.block`
+(см. §6), отразил бы урон на уже отражённый урон.
+
+`raw` (number, только на `damage`) — урон удара **до** любых снижений (брони/блока), проставляется один раз
+в момент рождения `damage` из `attack` (`CombatEngine.apply`, `case 'attack'`) и едет по цепочке хуков
+нетронутым (мутирующие хуки меняют только `amount` через `{ ...e, amount: X }`, спред сохраняет `raw`).
+Нужен процентным шипам героя — доля должна считаться от исходного удара, а не от того, что от него осталось
+после чужой брони/блока (см. §6, `spiked_cuirass`/`spiked_shield`).
 
 ### Неуязвимость и аварийный хил героя (не хуки предметов)
 

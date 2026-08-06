@@ -102,6 +102,7 @@ export function standardShield(opts: ShieldOpts): ItemCombatBehavior {
             source: e.source,
             target: e.target,
             prevented: e.amount,
+            thorns: e.thorns,
             origin: e.origin,
           }],
         };

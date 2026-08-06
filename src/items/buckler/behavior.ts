@@ -41,7 +41,7 @@ const behavior: ItemBehavior = {
 
       const spawn: GameEvent[] = [];
       if (blocked) {
-        spawn.push({ type: 'block', source: e.source, target: e.target, prevented: e.amount, origin: e.origin });
+        spawn.push({ type: 'block', source: e.source, target: e.target, prevented: e.amount, thorns: e.thorns, origin: e.origin });
       }
       if (counters) {
         const dmg = ctx.view.mainWeaponBaseDamage ?? UNARMED_DAMAGE;

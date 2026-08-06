@@ -54,8 +54,15 @@ export type GameEvent = EventMeta &
     // домножен автором), нужна только для отрисовки: движок переносит поле с `attack` на выведенный `damage`
     // так же, как armorPierce/splash, и отдаёт его в onDamageDealt для крит-флоатера.
     | { type: 'attack'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; crit?: boolean } // взмах, авторённый предметом
-    | { type: 'damage'; source: Side; target: Side; amount: number; armorPierce?: number; splash?: boolean; thorns?: boolean; crit?: boolean } // экземпляр урона «в полёте»
-    | { type: 'block'; source: Side; target: Side; prevented: number } // урон полностью отклонён (щит либо броня, срезавшая удар в 0)
+    // raw — урон удара ДО любых снижений (брони/блока), проставляется один раз при рождении из `attack`
+    // (CombatEngine.apply) и едет по цепочке хуков нетронутым. Нужен процентным шипам героя
+    // (spiked_cuirass/spiked_shield), чтобы доля считалась от исходного удара, а не от того, что от
+    // него осталось после чужой брони/блока.
+    | { type: 'damage'; source: Side; target: Side; amount: number; raw?: number; armorPierce?: number; splash?: boolean; thorns?: boolean; crit?: boolean } // экземпляр урона «в полёте»
+    // thorns — унаследована с погашенного шипами-флагом damage (см. ниже): нужна даунстрим on.block
+    // хукам (spiked_cuirass), чтобы не отражать заблокированный урон от ЧУЖИХ шипов (тот же
+    // антициклический гард, что и на `damage`).
+    | { type: 'block'; source: Side; target: Side; prevented: number; thorns?: boolean } // урон полностью отклонён (щит либо броня, срезавшая удар в 0)
     | { type: 'dodge'; source: Side; target: Side } // враг уклонился — входящий урон погашен
     | { type: 'counter'; source: Side; target: Side } // чисто презентационное: «это был контрудар», HP не трогает
     | { type: 'heal'; source: Side; target: Side; amount: number }

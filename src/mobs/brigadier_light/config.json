@@ -9,5 +9,8 @@
       "damage": 9,
       "interval": 1.9
     }
-  ]
+  ],
+  "defense": {
+    "thorns": 2
+  }
 }

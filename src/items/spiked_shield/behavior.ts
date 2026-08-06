@@ -34,15 +34,18 @@ const behavior: ItemBehavior = {
 
       // e.thorns: урон уже порождён чужими шипами (моба) — не отражаем его снова, иначе шипы
       // моба и героя отражают друг друга по кругу до предохранителя каскада.
+      // Доля — от e.raw (сырой урон удара до снижений); на этом слоте (первый, кто трогает входящий
+      // по герою урон) e.raw === e.amount всегда, но явное имя не зависит от порядка слотов.
       // Дробь не округляем: спавненный `damage` округлится один раз в applyDamage (стохастически),
       // иначе шипы 10% от удара в 1 всегда давали бы 0.
-      const reflected = e.amount > 0 && !e.thorns ? e.amount * THORNS_RATIO[ctx.rarity] : 0;
+      const raw = e.raw ?? e.amount;
+      const reflected = raw > 0 && !e.thorns ? raw * THORNS_RATIO[ctx.rarity] : 0;
 
       if (!blocked && reflected <= 0) return {};
 
       const spawn: GameEvent[] = [];
       if (blocked) {
-        spawn.push({ type: 'block', source: e.source, target: e.target, prevented: e.amount, origin: e.origin });
+        spawn.push({ type: 'block', source: e.source, target: e.target, prevented: e.amount, thorns: e.thorns, origin: e.origin });
       }
       if (reflected > 0) {
         spawn.push({
