@@ -1,7 +1,7 @@
 {
   "id": "pack_leader",
   "name": "Вожак стаи",
-  "tier": "legendary",
+  "tier": "epic",
   "health": 35,
   "position": 3,
   "summon_placement": "front",

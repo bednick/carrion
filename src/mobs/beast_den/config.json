@@ -1,7 +1,7 @@
 {
   "id": "beast_den",
   "name": "Звериная нора",
-  "tier": "epic",
+  "tier": "legendary",
   "health": 20,
   "position": 3,
   "summon_placement": "front",

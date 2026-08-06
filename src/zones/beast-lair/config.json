@@ -10,7 +10,7 @@
     { "mob_id": "hyena", "weight": 100 },
     { "mob_id": "boar", "weight": 50 },
     { "mob_id": "she_wolf", "weight": 50 },
-    { "mob_id": "beast_den", "weight": 40 }
+    { "mob_id": "pack_leader", "weight": 40 }
   ],
   "mob_loot": {
     "items": [
@@ -20,7 +20,7 @@
     ]
   },
   "boss": {
-    "mob_id": "pack_leader",
+    "mob_id": "beast_den",
     "loot": {
       "essence": {"rare":  {"min": 10, "max": 20}},
       "items": [
