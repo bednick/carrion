@@ -10,6 +10,9 @@
       "interval": 2.1
     }
   ],
+   "defense": {
+    "thorns": 2
+  },
   "ui": {
     "move": {
       "left": 0.05

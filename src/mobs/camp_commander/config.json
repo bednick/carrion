@@ -11,7 +11,8 @@
     }
   ],
   "defense": {
-    "armor": 3
+    "armor": 3,
+    "thorns": 2
   },
   "phases": [
     {
