@@ -1,6 +1,6 @@
 import type { ItemInstance, Rarity, EssenceTier, EssencePool } from './types';
 import { NEXT_RARITY, rarityIndex } from './rarity';
-import { essenceSourceZoneIds } from '../zones/registry';
+import { essenceSourceZoneIds, FACTION_ROUTES } from '../zones/registry';
 
 // Единый источник правды о крафте — обе сцены (лагерь/экспедиция) считают результат
 // и стоимость (эссенция) через этот модуль, чтобы правила не расходились.
@@ -40,6 +40,15 @@ export const ESSENCE_EXCHANGE_TARGET: Record<EssenceTier, EssenceTier | null> = 
  */
 export function isEssenceExchangeUnlocked(from: EssenceTier, completedAreas: string[]): boolean {
   return essenceSourceZoneIds(from).some((z) => completedAreas.includes(z));
+}
+
+/**
+ * Слияние (fuseItems) открыто, только когда пройдены все три стартовые зоны — по одной от
+ * каждой фракции (первый элемент каждого маршрута FACTION_ROUTES). До этого — под замком у
+ * кузнеца: единственный путь до legendary иначе доступен раньше, чем игрок прошёл хоть одну зону.
+ */
+export function isFuseUnlocked(completedAreas: string[]): boolean {
+  return Object.values(FACTION_ROUTES).every((route) => completedAreas.includes(route[0]));
 }
 
 // Сколько эссенции целевого тира стоит улучшение (см. docs/meta-progression.md).

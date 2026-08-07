@@ -70,16 +70,5 @@ export type GameEvent = EventMeta &
     | { type: 'summon'; source: Side; spec: EnemySpec; position?: number } // призыв врага в свободную ячейку доски
   );
 
-/** Событие конкретного типа (для точной типизации хуков). */
+/** Событие конкретного типа (для точной типизации триггеров). */
 export type EventOf<T extends EventType> = Extract<GameEvent, { type: T }>;
-
-/**
- * Результат хука-трансформера.
- * - `replace` — чем стало ТЕКУЩЕЕ событие; продолжает путь со СЛЕДУЮЩЕГО обработчика.
- *   Отсутствие `replace` ≡ событие проходит без изменений; `replace: []` — событие заглушено.
- * - `spawn` — НОВЫЕ события; уходят на свежий полный проход с начала.
- */
-export interface EventResult {
-  replace?: GameEvent[];
-  spawn?: GameEvent[];
-}

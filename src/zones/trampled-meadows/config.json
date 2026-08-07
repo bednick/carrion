@@ -7,7 +7,7 @@
   "fights": { "min": 4, "max": 6 },
   "mob_pool": [
     { "mob_id": "rat", "weight": 80 },
-    { "mob_id": "giant_rat", "weight": 20 }
+    { "mob_id": "giant_rat", "weight": 40 }
   ],
   "mob_loot": {
     "items": [

@@ -136,7 +136,8 @@
 
 **Броня мобов** (`defense.armor` в конфиге, `docs/content.mobs.format.md`) — **числовая**, не процентная:
 из каждого входящего удара вычитается фиксированное число очков (`mitigateFlat`, `src/combat/mitigation.ts`),
-`amount = max(0, урон − броня)`. Применяется в `CombatEngine.enemyDefend` в порядке `dodge → armor → thorns`.
+`amount = max(0, урон − броня)`. Применяется в едином резолвере урона (`resolveDefense`, `src/combat/resolution.ts`,
+см. `docs/combat-events.md`) в порядке `dodge → block → armor`, тот же код, что резолвит урон и по герою.
 
 | Броня моба | Атака | Урон |
 |------------|-------|------|

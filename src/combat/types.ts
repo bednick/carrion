@@ -1,5 +1,7 @@
 import type { ItemInstance, SlotType } from '../items/types';
 import type { EnemySpec, SummonTrigger, SummonPlacement, MobDefense } from '../zones/types';
+import type { ChannelSet } from './channels';
+import type { TriggerStateBag } from './triggers';
 
 /** Число ячеек доски боя (один ряд). Это и есть жёсткий потолок числа врагов. */
 export const BOARD_SLOTS = 4;
@@ -37,8 +39,15 @@ export interface EnemyState {
   summonPlans: SummonPlan[];
   /** Стратегия расстановки призывов этого моба (см. `MobConfig.summon_placement`). */
   summonPlacement: SummonPlacement;
-  /** Защита моба (флэт-броня/уклонение/шипы) — хук на входящий `damage`. */
+  /** Защита моба (флэт-броня/уклонение/шипы) — данные конфига, читается тултипом напрямую. */
   defense?: MobDefense;
+  /** Каналы моба, построенные один раз из `defense` (см. `buildEnemyChannels` в CombatEngine) —
+   *  тот же резолвер урона (`resolution.ts`), что и у героя, параметризованный «чьими каналами». */
+  channels: ChannelSet;
+  /** Пустой у всех текущих мобов (ни один не декларирует триггеров) — заведён как задел под
+   *  будущие способности моба без повторного рефакторинга (см. docs/combat-events.md). Не
+   *  слот-ключирован, как у героя (`TriggerStateBag`) — у моба нет экипировки по слотам. */
+  triggerState: Record<string, unknown>;
   isBoss?: boolean;
   phaseIndex?: number;
 }
@@ -56,23 +65,20 @@ export interface HeroState {
   hp: number;
   equipment: Partial<Record<SlotType, ItemInstance>>;
   // Потоки стамины: по одному на надетое оружие (slot + интервал в мс). Урон тут не хранится —
-  // его авторит хук предмета при срабатывании (docs/combat-events.md §5).
+  // его авторит общая стадия движка (см. resolution.ts:authorAttack, docs/combat-events.md §5).
   weaponTimers: { slot: SlotType; interval: number; elapsed: number }[];
   unarmedTimer: number;
-  // Неуязвимость (полное гашение урона на N ударов, docs/content.items.amulet.md): выдаётся заново
-  // на каждый бой (buildInitialHero), тратится по одному заряду на поглощённый удар в applyDamage,
-  // не переносится в следующий бой. invulnHitsMax — для UI (счётчик текущий/максимум).
-  invulnHits: number;
-  invulnHitsMax: number;
-  // Аварийный хил (docs/content.items.amulet.md): конфиг читается один раз при сборке героя из
-  // ItemBehavior.emergencyHeal; emergencyHealUsed — флаг «уже сработал в этом бою», сбрасывается
-  // на каждый buildInitialHero (новый бой), не на смену фазы одного боя.
-  emergencyHeal?: EmergencyHealConfig;
-  emergencyHealUsed: boolean;
+  // Каналы героя, построенные один раз из экипировки (см. CombatEngine.buildInitialHero) —
+  // единственный источник правды по числовым статам (крит/блок/броня/шипы/лайфстил/...).
+  channels: ChannelSet;
+  // Per-fight стейт-бэг триггеров (docs/content.items.amulet.md): заряды неуязвимости, флаг
+  // «аварийный хил уже сработал», состояние любых будущих stateful-триггеров. Свежий на каждый
+  // buildInitialHero — тот же контракт сброса, что был у старых invulnHits/emergencyHealUsed,
+  // но теперь общий для ЛЮБОГО нового stateful-предмета, не только этих двух.
+  triggerState: TriggerStateBag;
   // Множитель входящего по герою урона («проклятие» endless-зон, docs/content.zones.format.md):
-  // 1 = без штрафа. В отличие от invulnHits/emergencyHeal НЕ сбрасывается каждый buildInitialHero —
-  // растёт с числом пройденных боёв, вызывающая сторона (ExpeditionScene) сама переносит его между
-  // боями одной экспедиции.
+  // 1 = без штрафа. В отличие от triggerState НЕ сбрасывается каждый buildInitialHero — растёт с
+  // числом пройденных боёв, вызывающая сторона (ExpeditionScene) сама переносит его между боями.
   damageTakenMult: number;
 }
 

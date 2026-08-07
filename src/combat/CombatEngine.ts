@@ -1,13 +1,16 @@
 import type { CombatState, EnemyState, HeroState, SummonPlan } from './types';
 import { BOARD_SLOTS, placementAnchor } from './types';
-import type { EnemySpec, SummonRef } from '../zones/types';
+import type { EnemySpec, SummonRef, MobDefense } from '../zones/types';
 import type { SlotType, ItemInstance } from '../items/types';
 import type { CombatView } from '../items/behavior';
-import type { GameEvent, Side, Origin, EventResult } from './events';
+import type { GameEvent, Side } from './events';
 import { UNARMED_DAMAGE } from './events';
 import { getItemBehavior } from '../items/registry';
-import { HANDLER_ORDER, MAX_CASCADE, runPass, stampOrigin } from './dispatcher';
-import { mitigateFlat, stochasticRound } from './mitigation';
+import type { ChannelContribution } from './channels';
+import { aggregateChannels, type ChannelSet } from './channels';
+import { authorAttack, resolveDefense } from './resolution';
+import { buildTriggerState, runTriggers, type InvulnState, type EmergencyHealState } from './triggers';
+import { stochasticRound } from './mitigation';
 import { unseededRng, type Rng } from '../core/rng';
 
 const UNARMED_INTERVAL = 1500;
@@ -17,6 +20,15 @@ const UNARMED_INTERVAL = 1500;
 // Подбирается под спрайт-лист атаки (где в нём кадр контакта). Капается долей интервала,
 // чтобы у быстрого оружия замах не начинался раньше предыдущего удара.
 const ATTACK_WINDUP_MS = 160;
+
+// Предохранитель от каскада/петель на одно исходное событие (напр. шипы моба и героя,
+// отражающие друг друга — гасится флагом `thorns`, но предохранитель остаётся на всякий случай).
+const MAX_CASCADE = 64;
+
+// Канонический порядок слотов для детерминированной сборки таймеров/каналов/стейт-бэга.
+// Каналы сами по себе порядок-независимы (сумма/произведение коммутативны) — порядок тут только
+// ради стабильности вывода (порядок weaponTimers[] и т.п.), не влияет на исход боя.
+const SLOT_ORDER: SlotType[] = ['hand_right', 'hand_left', 'head', 'body', 'legs', 'ring', 'amulet'];
 
 export interface CombatCallbacks {
   onDamageDealt: (target: 'hero' | 'enemy', amount: number, enemyIdx: number, crit?: boolean) => void;
@@ -46,56 +58,49 @@ export interface CombatCallbacks {
 /** Разрешает ссылку призыва (`mob_id` + override) в готовый EnemySpec. Движок не лезет в конфиги. */
 export type SummonResolver = (ref: SummonRef) => EnemySpec;
 
-/**
- * Потоки стамины героя: по одному на надетое оружие (предмет с `attackInterval`). Прочая экипировка
- * может кросс-slot модифицировать таймер оружия через `weaponTimerMod` (перчатки `hand_left` → интервал/
- * первый тик `hand_right`, см. `docs/content.items.hand_left.md`).
- */
-function buildWeaponTimers(equipment: Partial<Record<SlotType, ItemInstance>>) {
-  const timers: HeroState['weaponTimers'] = [];
-  for (const slot of HANDLER_ORDER) {
+/** Каналы героя, построенные один раз из экипировки — единственный источник правды по числовым
+ *  статам (крит/блок/броня/шипы/лайфстил/cross-slot модификаторы таймера). */
+function buildHeroChannels(equipment: Partial<Record<SlotType, ItemInstance>>): ChannelSet {
+  const contributions: ChannelContribution[] = [];
+  for (const slot of SLOT_ORDER) {
     const inst = equipment[slot];
     if (!inst) continue;
-    const beh = getItemBehavior(inst.item_id);
-    if (!beh.attackInterval) continue;
-
-    let interval = beh.attackInterval(inst.rarity) * 1000;
-    let firstTickRatio = 0;
-
-    for (const otherSlot of HANDLER_ORDER) {
-      if (otherSlot === slot) continue;
-      const otherInst = equipment[otherSlot];
-      if (!otherInst) continue;
-      const mod = getItemBehavior(otherInst.item_id).weaponTimerMod?.(otherInst.rarity, slot);
-      if (!mod) continue;
-      if (mod.intervalMult) interval *= mod.intervalMult;
-      if (mod.firstTickRatio) firstTickRatio = Math.max(firstTickRatio, mod.firstTickRatio);
-    }
-
-    timers.push({ slot, interval, elapsed: interval * firstTickRatio });
+    contributions.push(...(getItemBehavior(inst.item_id).channels?.(inst.rarity, slot) ?? []));
   }
-  return timers;
+  return aggregateChannels(contributions);
+}
+
+/** Каналы моба, построенные один раз из `MobDefense` (config.json) — тот же резолвер урона
+ *  (`resolution.ts:resolveDefense`), что и у героя, параметризованный «чьими каналами». */
+function buildEnemyChannels(defense?: MobDefense): ChannelSet {
+  const contributions: ChannelContribution[] = [];
+  if (defense?.armor) contributions.push({ channel: 'armor_flat', tier: 'flat', value: defense.armor });
+  if (defense?.dodge) contributions.push({ channel: 'dodge_chance', tier: 'flat', value: defense.dodge });
+  if (defense?.thorns) contributions.push({ channel: 'thorns_flat', tier: 'flat', value: defense.thorns });
+  return aggregateChannels(contributions);
 }
 
 /**
- * Неуязвимость и аварийный хил героя (docs/content.items.amulet.md): оба читаются один раз при сборке
- * героя из деклараций экипировки (`ItemBehavior.invulnHitsGrant`/`emergencyHeal`, тот же приём, что
- * у `buildWeaponTimers`), а не через `on`-хуки — сама механика (гашение урона, разовый порог) живёт
- * в `CombatEngine.applyDamage`, потому что ей нужно мутируемое per-fight состояние, которого у
- * стейтлес-хуков нет. Суммируются по всей экипировке (на практике — один амулет), не привязаны
- * жёстко к слоту `amulet`.
+ * Потоки стамины героя: по одному на надетое оружие (предмет с `weapon()`). `weapon_interval_mult`/
+ * `weapon_first_tick_ratio` — cross-slot каналы (напр. перчатки `hand_left` → `hand_right`,
+ * см. `docs/content.items.hand_left.md`), читаются из уже собранных каналов героя.
  */
-function buildHeroResources(equipment: Partial<Record<SlotType, ItemInstance>>) {
-  let invulnHitsMax = 0;
-  let emergencyHeal: HeroState['emergencyHeal'];
-  for (const slot of HANDLER_ORDER) {
+function buildWeaponTimers(equipment: Partial<Record<SlotType, ItemInstance>>, channels: ChannelSet): HeroState['weaponTimers'] {
+  // Ни один текущий cross-slot модификатор таймера не зависит от HP/врагов — бутстрап-вью
+  // достаточно (см. ChannelContribution.value, динамические вклады сюда пока не заводились).
+  const view: CombatView = { heroHp: 100, heroMaxHp: 100, enemies: [], equipment };
+  const timers: HeroState['weaponTimers'] = [];
+  for (const slot of SLOT_ORDER) {
     const inst = equipment[slot];
     if (!inst) continue;
-    const beh = getItemBehavior(inst.item_id);
-    if (beh.invulnHitsGrant) invulnHitsMax += beh.invulnHitsGrant(inst.rarity);
-    if (beh.emergencyHeal) emergencyHeal = beh.emergencyHeal(inst.rarity);
+    const weapon = getItemBehavior(inst.item_id).weapon?.(inst.rarity);
+    if (!weapon) continue;
+    const intervalMult = channels.query('weapon_interval_mult', view, slot);
+    const firstTickRatio = channels.query('weapon_first_tick_ratio', view, slot);
+    const interval = weapon.interval * 1000 * intervalMult;
+    timers.push({ slot, interval, elapsed: interval * firstTickRatio });
   }
-  return { invulnHitsMax, emergencyHeal };
+  return timers;
 }
 
 export class CombatEngine {
@@ -111,9 +116,9 @@ export class CombatEngine {
     callbacks: CombatCallbacks,
     resolveSummon: SummonResolver,
     phases?: EnemySpec[],
-    // Единственный рандом внутри движка — шанс перехода в следующую фазу (см. applyKill). Сцена
-    // передаёт сюда сид похода, чтобы рестарт не рероллил переход; симулятору баланса детерминизм
-    // не нужен, поэтому дефолт — Math.random.
+    // Единственный сиженный рандом внутри движка — шанс перехода в следующую фазу (см. applyKill).
+    // Сцена передаёт сюда сид похода, чтобы рестарт не рероллил переход; симулятору баланса
+    // детерминизм не нужен, поэтому дефолт — Math.random.
     rng: Rng = unseededRng,
   ) {
     this.state = state;
@@ -278,7 +283,7 @@ export class CombatEngine {
     const { hero, enemies } = this.state;
     const mainWeapon = hero.equipment.hand_right;
     const mainWeaponBaseDamage = mainWeapon
-      ? getItemBehavior(mainWeapon.item_id).baseDamage?.(mainWeapon.rarity)
+      ? getItemBehavior(mainWeapon.item_id).weapon?.(mainWeapon.rarity)?.baseDamage
       : undefined;
     return {
       heroHp: hero.hp,
@@ -289,11 +294,13 @@ export class CombatEngine {
     };
   }
 
-  /** Прогоняет событие и весь его каскад: runPass → apply(терминал) → follow-up в очередь. */
+  /** Прогоняет событие и весь его каскад: apply(терминал) → follow-up обратно в очередь.
+   *  `view` строится один раз на весь каскад одного корневого события (как и раньше) —
+   *  хуки/каналы видят снимок HP на МОМЕНТ старта каскада, не обновлённый по ходу. */
   private dispatch(initial: GameEvent) {
-    const equipment = this.state.hero.equipment;
-    const ctx = { view: this.buildView(), rng: Math.random };
-    const queue: GameEvent[] = [stampOrigin(initial, { from: 'engine' })];
+    const view = this.buildView();
+    const rng = Math.random;
+    const queue: GameEvent[] = [initial];
 
     let iterations = 0;
     while (queue.length > 0) {
@@ -302,84 +309,21 @@ export class CombatEngine {
         break;
       }
       const event = queue.shift()!;
-      const terminals = runPass(event, equipment, ctx, queue, (e, c) => this.enemyDefend(e, c.rng));
-      for (const t of terminals) {
-        const followups = this.apply(t, ctx.rng);
-        for (const f of followups) queue.push(stampOrigin(f, { from: 'engine' }, t));
-      }
+      queue.push(...this.apply(event, view, rng));
     }
   }
 
-  /**
-   * Защита моба-цели на входящий `damage`. Порядок: dodge → armor → thorns.
-   * Возвращает `null`, если это не урон по живому врагу с защитой.
-   */
-  private enemyDefend(e: GameEvent, rng: () => number): { result: EventResult; origin: Origin } | null {
-    if (e.type !== 'damage' || e.target.side !== 'enemy') return null;
-    const enemy = this.state.enemies[e.target.idx];
-    const def = enemy?.defense;
-    if (!enemy || enemy.hp <= 0 || !def) return null;
-
-    const origin: Origin = { from: 'enemy', id: enemy.id };
-
-    // dodge — полностью гасит удар (спавнит `dodge` для UI); armor/thorns не применяются.
-    if (def.dodge && rng() < def.dodge) {
-      return {
-        result: { replace: [], spawn: [{ type: 'dodge', source: e.source, target: e.target, origin }] },
-        origin,
-      };
-    }
-
-    // armor — плоский вычет очков из входящего урона (НЕ процент: процентная модель осталась только
-    // у брони героя, см. `mitigation.ts`). Результат остаётся ДРОБНЫМ и едет дальше по цепочке:
-    // единственное (стохастическое) округление ждёт в applyDamage. Мелкий урон (сплеш, шипы, прошив)
-    // броня сводит в 0 целиком — движок покажет его как `block`.
-    // armorPierce удара (напр. крит `war_pick`) снимает столько же ОЧКОВ брони на ЭТОТ удар —
-    // переносится с `attack` на `damage` в `apply()`, не стакается (одно значение на удар).
-    const before = e.amount;
-    let amount = before;
-    if (def.armor) {
-      const effectiveArmor = Math.max(0, def.armor - (e.armorPierce ?? 0));
-      amount = mitigateFlat(amount, effectiveArmor);
-    }
-
-    const spawn: GameEvent[] = [];
-
-    // thorns — отражает фикс в героя за сам факт удара (только на удар героя, не на встречные
-    // шипы героя — иначе шипы моба и шипы героя отражают друг друга по кругу).
-    if (def.thorns && e.source.side === 'hero' && !e.thorns) {
-      spawn.push({
-        type: 'damage',
-        source: { side: 'enemy', id: enemy.id, idx: e.target.idx },
-        target: { side: 'hero' },
-        amount: def.thorns,
-        thorns: true,
-        origin,
-      });
-    }
-
-    return {
-      result: { replace: [{ ...e, amount }], spawn: spawn.length ? spawn : undefined },
-      origin,
-    };
-  }
-
-  /** Применяет терминальное событие к состоянию + UI; возвращает порождённые follow-up события.
-   *  `rng` — общая с хуками нессиженная ручка (см. `dispatch`), нужна стохастическому округлению урона. */
-  private apply(e: GameEvent, rng: () => number): GameEvent[] {
+  /** Применяет одно событие к состоянию + UI; возвращает порождённые follow-up события. */
+  private apply(e: GameEvent, view: CombatView, rng: () => number): GameEvent[] {
     switch (e.type) {
       case 'attack_ready':
-        // Дошло до движка нетронутым → дефолт-автор (безоружный герой).
-        if (e.source.side === 'hero') {
-          return [{ type: 'attack', source: e.source, target: e.target, amount: UNARMED_DAMAGE, origin: e.origin }];
-        }
-        return [];
+        return this.authorFromReady(e, view, rng);
 
       case 'attack':
         return [{ type: 'damage', source: e.source, target: e.target, amount: e.amount, raw: e.amount, armorPierce: e.armorPierce, splash: e.splash, crit: e.crit, origin: e.origin }];
 
       case 'damage':
-        return this.applyDamage(e.source, e.target, e.amount, rng, e.crit, e.thorns || e.splash);
+        return this.handleDamage(e, view, rng);
 
       case 'block':
         this.cb.onBlock(e.target.side === 'hero' ? 'hero' : 'enemy', e.target.side === 'enemy' ? e.target.idx : -1);
@@ -390,7 +334,7 @@ export class CombatEngine {
         return [];
 
       // Чисто презентационное событие (как block/dodge) — HP не трогает, только UI-колбэк.
-      // Спавнится явно предметами вроде buckler рядом с настоящей атакой (см. content.items.hand_left.md).
+      // Спавнится явно триггером buckler рядом с настоящей атакой (см. content.items.hand_left.md).
       case 'counter':
         this.cb.onCounterAttack?.();
         return [];
@@ -418,6 +362,178 @@ export class CombatEngine {
     }
   }
 
+  /** Авторит атаку по `attack_ready`: оружие надетого слота (форма+крит, `resolution.ts`) —
+   *  либо дефолт-автор движка (безоружный герой / слот без `weapon()`). */
+  private authorFromReady(e: Extract<GameEvent, { type: 'attack_ready' }>, view: CombatView, rng: () => number): GameEvent[] {
+    if (e.source.side !== 'hero') return []; // враги никогда не эмитят attack_ready (см. tickEnemies)
+
+    const slot = e.source.slot;
+    const inst = slot ? this.state.hero.equipment[slot] : undefined;
+    const weapon = inst ? getItemBehavior(inst.item_id).weapon?.(inst.rarity) : undefined;
+
+    if (!weapon) {
+      return [{ type: 'attack', source: e.source, target: e.target, amount: UNARMED_DAMAGE, origin: e.origin }];
+    }
+
+    const hits = authorAttack(weapon, this.state.hero.channels, e.target, view, rng);
+    return hits.map(h => ({
+      type: 'attack', source: e.source, target: h.target, amount: h.amount,
+      armorPierce: h.armorPierce, splash: h.splash, crit: h.crit, origin: e.origin,
+    }));
+  }
+
+  /**
+   * Резолюция входящего урона: именованные стадии (`resolveDefense`) вместо порядка слотов —
+   * dodge → block → % митигация → округление → HP-гейты (инвулн/аварийный хил) → применение к HP
+   * → реактивная стадия (шипы/лайфстил/кастомные триггеры). Один путь для обеих сторон
+   * (`target.side` выбирает, чьи каналы считать), см. `docs/combat-events.md`.
+   */
+  private handleDamage(e: Extract<GameEvent, { type: 'damage' }>, view: CombatView, rng: () => number): GameEvent[] {
+    const target = e.target;
+    const isHero = target.side === 'hero';
+
+    let defenderChannels: ChannelSet;
+    if (target.side === 'hero') {
+      defenderChannels = this.state.hero.channels;
+    } else {
+      const enemy = this.state.enemies[target.idx];
+      if (!enemy || enemy.hp <= 0) return [];
+      defenderChannels = enemy.channels;
+    }
+
+    const outcome = resolveDefense(e.amount, e.armorPierce, defenderChannels, isHero, view, rng);
+    const rider = !!(e.thorns || e.splash);
+
+    const events: GameEvent[] = [];
+
+    if (outcome.kind === 'dodge') {
+      // Дюдж гасит вообще всё для этого удара, включая реактивную стадию (шипы/лайфстил не текут).
+      events.push({ type: 'dodge', source: e.source, target: e.target, origin: { from: 'engine' } });
+      return events;
+    }
+
+    let dealt = 0;
+
+    if (outcome.kind === 'blocked') {
+      events.push({ type: 'block', source: e.source, target: e.target, prevented: outcome.prevented, thorns: e.thorns, origin: { from: 'engine' } });
+    } else {
+      const scaled = isHero && this.state.hero.damageTakenMult !== 1
+        ? outcome.amount * this.state.hero.damageTakenMult
+        : outcome.amount;
+      const dmg = Math.max(0, stochasticRound(scaled, rng));
+
+      if (dmg <= 0) {
+        // Пола в 1 урон нет: полностью съеденный удар — «Блок» (кроме риддеров — те гаснут молча,
+        // см. stochasticRound doc / было в старом applyDamage).
+        if (scaled > 0 && !rider) {
+          events.push({ type: 'block', source: e.source, target: e.target, prevented: scaled, origin: { from: 'engine' } });
+        }
+      } else if (target.side === 'hero' && this.consumeInvuln()) {
+        this.cb.onInvulnHit?.();
+      } else {
+        dealt = dmg;
+        if (target.side === 'hero') {
+          const hero = this.state.hero;
+          hero.hp = Math.max(0, hero.hp - dmg);
+          this.cb.onDamageDealt('hero', dmg, -1, e.crit);
+        } else {
+          const enemy = this.state.enemies[target.idx];
+          enemy.hp = Math.max(0, enemy.hp - dmg);
+          this.cb.onDamageDealt('enemy', dmg, target.idx, e.crit);
+          if (enemy.hp <= 0) {
+            events.push({ type: 'kill', source: e.source, target: e.target, origin: { from: 'engine' } });
+            const killPct = this.state.hero.channels.query('lifesteal_on_kill_pct', view);
+            if (killPct > 0) {
+              const heal = Math.round((view.enemies[target.idx]?.maxHp ?? 0) * killPct);
+              if (heal > 0) events.push({ type: 'heal', source: { side: 'hero' }, target: { side: 'hero' }, amount: heal, origin: { from: 'engine' } });
+            }
+          }
+        }
+      }
+    }
+
+    // Реактивная стадия — шипы/лайфстил-за-удар/кастомные триггеры реагируют на сам факт удара
+    // независимо от того, что случится с HP защищавшегося дальше (напр. добивающий удар всё равно
+    // получает отражение шипов).
+    events.push(...this.runReactiveStage(e, dealt, view, rng));
+
+    if (isHero) {
+      const hero = this.state.hero;
+      if (hero.hp <= 0) {
+        this.state.phase = 'dead';
+        this.cb.onHeroDied();
+      } else {
+        this.applyEmergencyHealIfNeeded();
+      }
+    }
+
+    return events;
+  }
+
+  /** Шипы (герой/моб, унаследованный `raw`, анти-цикл `thorns`), лайфстил-за-удар героя и любые
+   *  кастомные триггеры экипировки (напр. контрудар `buckler`) — все читают ИСХОДНОЕ событие `e`,
+   *  ничего в нём не мутируя (порядок между ними на числовой исход не влияет). */
+  private runReactiveStage(e: Extract<GameEvent, { type: 'damage' }>, dealt: number, view: CombatView, rng: () => number): GameEvent[] {
+    const events: GameEvent[] = [];
+    const raw = e.raw ?? e.amount;
+    const target = e.target;
+    const isHero = target.side === 'hero';
+
+    if (!e.thorns && raw > 0) {
+      if (target.side === 'hero') {
+        const flat = this.state.hero.channels.query('thorns_flat', view);
+        if (flat > 0) {
+          events.push({ type: 'damage', source: { side: 'hero' }, target: e.source, amount: flat, thorns: true, origin: { from: 'engine' } });
+        }
+      } else if (e.source.side === 'hero') {
+        const enemy = this.state.enemies[target.idx];
+        const flat = enemy?.channels.query('thorns_flat', view) ?? 0;
+        if (flat > 0 && enemy) {
+          events.push({ type: 'damage', source: target, target: e.source, amount: flat, thorns: true, origin: { from: 'enemy', id: enemy.id } });
+        }
+      }
+    }
+
+    if (!isHero && e.source.side === 'hero' && dealt > 0 && !e.splash) {
+      if (this.state.hero.channels.roll('lifesteal_on_hit_chance', rng, view)) {
+        const heal = this.state.hero.channels.query('lifesteal_on_hit_flat', view);
+        if (heal > 0) events.push({ type: 'heal', source: e.source, target: { side: 'hero' }, amount: heal, origin: { from: 'engine' } });
+      }
+    }
+
+    events.push(...runTriggers(this.state.hero.equipment, this.state.hero.triggerState, e, view, rng));
+    return events;
+  }
+
+  /** Тратит один заряд неуязвимости (первый слот с зарядом>0) — суммарный пул, как раньше
+   *  (см. `getInvulnStatus` в triggers.ts для UI-суммы по всей экипировке). */
+  private consumeInvuln(): boolean {
+    for (const slot of SLOT_ORDER) {
+      const inv = this.state.hero.triggerState[slot]?.invuln as InvulnState | undefined;
+      if (inv && inv.charges > 0) {
+        inv.charges--;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private applyEmergencyHealIfNeeded() {
+    const hero = this.state.hero;
+    for (const slot of SLOT_ORDER) {
+      const eh = hero.triggerState[slot]?.emergency_heal as EmergencyHealState | undefined;
+      if (!eh || eh.used) continue;
+      if (hero.hp / hero.maxHp >= eh.config.thresholdRatio) continue;
+      eh.used = true;
+      const heal = Math.min(hero.maxHp - hero.hp, Math.round(hero.maxHp * eh.config.healPercent));
+      if (heal > 0) {
+        hero.hp += heal;
+        this.cb.onHeal?.(heal);
+      }
+      return; // один аварийный хил за бой суммарно (несколько источников не предполагается)
+    }
+  }
+
   /**
    * Сажает призванного врага. Ячейка выбирается по явной `position` призыва (приоритет),
    * иначе по стратегии `summonPlacement` призывателя; далее берётся ближайшая свободная
@@ -431,81 +547,6 @@ export class CombatEngine {
     const enemy = CombatEngine.buildEnemy(spec, slot, this.resolveSummon);
     this.state.enemies.push(enemy);
     this.cb.onEnemySummoned?.(enemy, this.state.enemies.length - 1);
-    return [];
-  }
-
-  /**
-   * Единственное место, где дробный урон превращается в целые HP. Округление стохастическое
-   * (см. `stochasticRound`): вся цепочка хуков перед этим считает в дробях, поэтому стак брони
-   * точен, а процент снижения работает одинаково на ударе любого размера.
-   *
-   * Пола в 1 урон нет: если броня срезала удар в 0, вместо урона уходит `block` — тот же терминал,
-   * что спавнит щит, только автор — движок (docs/mechanics.md §«Броня vs щит»).
-   *
-   * `rider` — урон вторичный (`thorns`/`splash`), не самостоятельный удар. Такой, округлившись в 0,
-   * гаснет МОЛЧА: «Блок» за пшикнувший рикошет — шум, а не событие боя (шипы 10% от удара в 3 дают
-   * 0.3, то есть ноль в 70% случаев — флоатер «Блок» висел бы над мобом почти на каждом попадании).
-   */
-  private applyDamage(source: Side, target: Side, rawAmount: number, rng: () => number, crit?: boolean, rider?: boolean): GameEvent[] {
-    const blocked = (): GameEvent[] =>
-      rider ? [] : [{ type: 'block', source, target, prevented: rawAmount, origin: { from: 'engine' } }];
-
-    if (target.side === 'enemy') {
-      const enemy = this.state.enemies[target.idx];
-      if (!enemy || enemy.hp <= 0) return [];
-
-      const amount = Math.max(0, stochasticRound(rawAmount, rng));
-      if (amount <= 0) return rawAmount > 0 ? blocked() : [];
-
-      enemy.hp = Math.max(0, enemy.hp - amount);
-      this.cb.onDamageDealt('enemy', amount, target.idx, crit);
-      if (enemy.hp <= 0) {
-        return [{ type: 'kill', source, target, origin: { from: 'engine' } }];
-      }
-      return [];
-    }
-
-    // target = hero
-    const hero = this.state.hero;
-
-    // Проклятие endless-зон (docs/content.zones.format.md) — масштабирует сырой урон до барьера,
-    // как и любой другой источник урона по герою (в т.ч. шипы моба). Домножаем ДО округления,
-    // чтобы округление на весь удар осталось ровно одно.
-    const scaled = hero.damageTakenMult !== 1 ? rawAmount * hero.damageTakenMult : rawAmount;
-
-    let dmg = Math.max(0, stochasticRound(scaled, rng));
-    // Броня погасила удар целиком — заряд неуязвимости на него не тратится.
-    if (dmg <= 0) return scaled > 0 ? blocked() : [];
-
-    // Неуязвимость (docs/content.items.amulet.md) — полностью гасит удар, тратит один заряд.
-    if (hero.invulnHits > 0) {
-      hero.invulnHits--;
-      dmg = 0;
-      this.cb.onInvulnHit?.();
-    }
-
-    if (dmg > 0) {
-      hero.hp = Math.max(0, hero.hp - dmg);
-      this.cb.onDamageDealt('hero', dmg, -1, crit);
-    }
-
-    if (hero.hp <= 0) {
-      this.state.phase = 'dead';
-      this.cb.onHeroDied();
-      return [];
-    }
-
-    // Аварийный хил (docs/content.items.amulet.md) — не более одного раза за бой.
-    const eh = hero.emergencyHeal;
-    if (eh && !hero.emergencyHealUsed && hero.hp / hero.maxHp < eh.thresholdRatio) {
-      hero.emergencyHealUsed = true;
-      const heal = Math.min(hero.maxHp - hero.hp, Math.round(hero.maxHp * eh.healPercent));
-      if (heal > 0) {
-        hero.hp += heal;
-        this.cb.onHeal?.(heal);
-      }
-    }
-
     return [];
   }
 
@@ -563,22 +604,22 @@ export class CombatEngine {
   }
 
   rebuildWeaponTimers() {
-    this.state.hero.weaponTimers = buildWeaponTimers(this.state.hero.equipment);
-    this.state.hero.unarmedTimer = 0;
+    const hero = this.state.hero;
+    hero.channels = buildHeroChannels(hero.equipment);
+    hero.weaponTimers = buildWeaponTimers(hero.equipment, hero.channels);
+    hero.unarmedTimer = 0;
   }
 
   static buildInitialHero(equipment: Partial<Record<SlotType, ItemInstance>>, damageTakenMult = 1): HeroState {
-    const { invulnHitsMax, emergencyHeal } = buildHeroResources(equipment);
+    const channels = buildHeroChannels(equipment);
     return {
       maxHp: 100,
       hp: 100,
       equipment,
-      weaponTimers: buildWeaponTimers(equipment),
+      weaponTimers: buildWeaponTimers(equipment, channels),
       unarmedTimer: 0,
-      invulnHits: invulnHitsMax,
-      invulnHitsMax,
-      emergencyHeal,
-      emergencyHealUsed: false,
+      channels,
+      triggerState: buildTriggerState(equipment),
       damageTakenMult,
     };
   }
@@ -611,6 +652,8 @@ export class CombatEngine {
       summonPlans,
       summonPlacement: spec.summon_placement ?? 'nearest',
       defense: spec.defense,
+      channels: buildEnemyChannels(spec.defense),
+      triggerState: {},
       isBoss: spec.isBoss,
     };
   }

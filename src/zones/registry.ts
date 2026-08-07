@@ -90,6 +90,31 @@ export const ALL_ZONE_IDS = [
   'battlefield',
 ];
 
+export type FactionKey = 'undead' | 'beasts' | 'marauders';
+
+/**
+ * Единый маршрут прохождения каждой фракции: стартовая → средние → Поле битвы.
+ * Источник порядка для линий карты (`CampScene`) и для цепочек разблокировок
+ * (`quests/definitions.ts`), а также для определения фракции зоны (`getZoneFaction`).
+ */
+export const FACTION_ROUTES: Record<FactionKey, string[]> = {
+  undead: ['dead-fields', 'mage-ruins', 'crypt', 'battlefield'],
+  beasts: ['trampled-meadows', 'beast-lair', 'predator-pasture', 'battlefield'],
+  marauders: ['armor-dump', 'abandoned-camp', 'marauder-lair', 'battlefield'],
+};
+
+/**
+ * Фракция обычной (не endless) зоны по её id. `battlefield` — общая для всех трёх фракций
+ * endless-зона, не привязана к одной — возвращает null (как и неизвестный id).
+ */
+export function getZoneFaction(zoneId: string): FactionKey | null {
+  if (zoneId === 'battlefield') return null;
+  for (const key of Object.keys(FACTION_ROUTES) as FactionKey[]) {
+    if (FACTION_ROUTES[key].includes(zoneId)) return key;
+  }
+  return null;
+}
+
 export type BgLayer = 'far' | 'mid' | 'near' | 'fore';
 export const BG_LAYERS: BgLayer[] = ['far', 'mid', 'near', 'fore'];
 

@@ -5,6 +5,7 @@ import { EventBus } from '../core/EventBus';
 import { getZoneConfig, zoneBgKey, ZONE_BG_VARIANTS, BG_LAYERS, type BgLayer, ZONE_BG_OBJECTS, zoneObjKey, type ScatterLayer } from '../zones/registry';
 import { CombatEngine } from '../combat/CombatEngine';
 import { rollLootTable, buildRewardOptions, type RewardOption } from '../combat/loot';
+import { getInvulnStatus } from '../combat/triggers';
 import { getItemBehavior } from '../items/registry';
 import { sumMeta } from '../items/meta';
 import { spawnFloater } from '../ui/Floater';
@@ -378,7 +379,7 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private initEquipmentFromStand() {
-    const stand = MetaStore.getArmorStand(this.standIndex);
+    const stand = MetaStore.getResolvedArmorStand(this.standIndex);
     for (const slot of EQUIP_SLOTS) {
       this.equipment[slot] = stand[slot] ?? undefined;
     }
@@ -750,11 +751,12 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private updateHeroHpBar() {
     if (!this.engine) return;
-    const { hp, maxHp, invulnHits, invulnHitsMax } = this.engine.state.hero;
+    const { hp, maxHp, triggerState } = this.engine.state.hero;
     const ratio = hp / maxHp;
     this.heroHpFill.setSize(80 * ratio, 10);
     this.heroHpText.setText(`${hp}/${maxHp}`);
 
+    const { hits: invulnHits, max: invulnHitsMax } = getInvulnStatus(triggerState);
     const hasInvuln = invulnHitsMax > 0 && invulnHits > 0;
     this.heroInvulnOverlay.setVisible(hasInvuln);
     if (hasInvuln) this.heroInvulnOverlay.setSize(this.heroHpFill.width, 10);
@@ -1345,7 +1347,7 @@ export class ExpeditionScene extends Phaser.Scene {
         const cur = this.equipment[slotId];
         if (!cur) return;
         icon.setHover(true);
-        this.tooltip.showItem(cur, x + SIZE, y - 40, bg);
+        this.tooltip.showItem(cur, x + SIZE, y - 40, bg, slotId);
       });
       bg.on('pointerout', () => { icon.setHover(false); this.tooltip.hideFor(bg); });
 
@@ -1360,8 +1362,27 @@ export class ExpeditionScene extends Phaser.Scene {
     for (const s of EQUIP_SLOTS) {
       if (this.equipment[s]) heroEquip[s as SlotType] = this.equipment[s]!;
     }
-    const fresh = CombatEngine.buildInitialHero(heroEquip, this.engine.state.hero.damageTakenMult);
-    fresh.hp = Math.min(this.engine.state.hero.hp, fresh.maxHp);
+    const prevHero = this.engine.state.hero;
+    const fresh = CombatEngine.buildInitialHero(heroEquip, prevHero.damageTakenMult);
+    fresh.hp = Math.min(prevHero.hp, fresh.maxHp);
+
+    // Хот-свап среди боя: заряды с формой {charges,max} (сейчас — только неуязвимость) переносятся
+    // остатком (клампится к новому максимуму), а не сбрасываются в максимум нового предмета —
+    // раньше это было открытым багом (docs/content.items.amulet.md), generic-перенос по форме
+    // стейта чинит его для любого будущего триггера с зарядами, не только invuln.
+    for (const slot of Object.keys(fresh.triggerState) as SlotType[]) {
+      const freshBag = fresh.triggerState[slot];
+      const prevBag = prevHero.triggerState[slot];
+      if (!freshBag || !prevBag) continue;
+      for (const key of Object.keys(freshBag)) {
+        const freshVal = freshBag[key] as { charges?: number; max?: number };
+        const prevVal = prevBag[key] as { charges?: number; max?: number };
+        if (typeof freshVal?.max === 'number' && typeof prevVal?.charges === 'number') {
+          freshVal.charges = Math.min(prevVal.charges, freshVal.max);
+        }
+      }
+    }
+
     this.engine.state.hero = fresh;
     this.updateHeroHpBar();
   }
@@ -1770,7 +1791,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.showStatus('Герой пал! Лут сохранён.', 3000);
     this.scheduleDelayed(2000, () => {
-      this.scene.start('CampScene');
+      this.scene.start('CampScene', { diedInZone: this.zoneId });
     });
   }
 

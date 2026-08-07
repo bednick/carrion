@@ -1,6 +1,5 @@
 import type { ItemBehavior } from '../behavior';
-
-const DMG_COLOR = '#ffcc44';
+import { CRIT_COLOR, OFFENSE_COLOR, WEAPON_COLOR } from '../statColors';
 
 // Крит: профильный стат — множитель крита (растёт с редкостью), шанс крита фиксирован (R5 — ровно
 // один профильный стат). Крит несёт rider `armorPierce` — снимает 3 очка брони цели на этот удар
@@ -9,9 +8,14 @@ const DMG_COLOR = '#ffcc44';
 // против более бронированных целей он её вычитает, а не обнуляет. Пробитие — часть анти-Мародёры
 // идентичности клевца (R6), см. docs/content.items.hand_right.md.
 //
+// Крит теперь общий агрегированный канал движка (см. resolution.ts:authorAttack) — этот предмет
+// лишь декларирует вклад (crit_chance/crit_mult/crit_armor_pierce), сам бросок и применение живут
+// в движке, одинаково для любого оружия. С heavy_gloves бонусы складываются НАД базой (единый
+// бросок на удар), а не два независимых броска, как раньше — см. docs/combat-events.md.
+//
 // damage/interval — явная таблица по редкости (не формула-скейл): средний DPS с учётом крита
 // (`damage · (1 - crit_chance + crit_chance · crit_mult) / interval`) растёт ×1.3 за уровень редкости
-// от анкора common (5.0). damage подобран под целые числа, interval — остаточная подгонка точности.
+// от анкора common (4.0). damage подобран под целые числа, interval — остаточная подгонка точности.
 const CRIT_CHANCE = 0.2;
 const CRIT_ARMOR_PIERCE = 2;
 const CRIT_MULT_BY_RARITY: Record<import('../types').Rarity, number> = {
@@ -29,11 +33,11 @@ const DAMAGE_BY_RARITY: Record<import('../types').Rarity, number> = {
   legendary: 9,
 };
 const INTERVAL_BY_RARITY: Record<import('../types').Rarity, number> = {
-  common: 0.96,
-  uncommon: 1.0,
-  rare: 0.994,
-  epic: 0.956,
-  legendary: 0.945,
+  common: 1.2,
+  uncommon: 1.25,
+  rare: 1.243,
+  epic: 1.195,
+  legendary: 1.182,
 };
 
 const damage = (rarity: import('../types').Rarity) => DAMAGE_BY_RARITY[rarity];
@@ -45,36 +49,19 @@ const behavior: ItemBehavior = {
   slots: ['hand_right'],
   type: 'weapon',
   tags: ['weapon', 'heavy', 'slow', 'crit'],
-  attackInterval: interval,
-  on: {
-    attack_ready: (e, ctx) => {
-      if (e.source.side !== 'hero' || e.source.slot !== ctx.slot || e.origin.from !== 'engine') {
-        return {};
-      }
-      const base = damage(ctx.rarity);
-      const isCrit = ctx.rng() < CRIT_CHANCE;
-      const dmg = isCrit ? Math.round(base * critMult(ctx.rarity)) : base;
-      return {
-        replace: [],
-        spawn: [{
-          type: 'attack',
-          source: e.source,
-          target: e.target,
-          amount: dmg,
-          armorPierce: isCrit ? CRIT_ARMOR_PIERCE : undefined,
-          crit: isCrit || undefined,
-          origin: e.origin,
-        }],
-      };
-    },
-  },
-  stats: (rarity) => [
-    { text: `Урон: ${damage(rarity)}`, color: DMG_COLOR },
-    { text: `Перезарядка: ${interval(rarity).toFixed(2)}s`, color: DMG_COLOR },
-    { text: `Шанс крита: ${Math.round(CRIT_CHANCE * 100)}%`, color: DMG_COLOR },
-    { text: `Множитель крита: ×${critMult(rarity)}, пробитие брони: ${CRIT_ARMOR_PIERCE}`, color: DMG_COLOR },
+  weapon: (rarity) => ({ interval: interval(rarity), baseDamage: damage(rarity), shape: 'single' }),
+  channels: (rarity) => [
+    { channel: 'crit_chance', tier: 'flat', value: CRIT_CHANCE },
+    { channel: 'crit_mult', tier: 'flat', value: critMult(rarity) - 1 },
+    { channel: 'crit_armor_pierce', tier: 'flat', value: CRIT_ARMOR_PIERCE },
   ],
-  baseDamage: damage,
+  stats: (rarity) => [
+    { text: `Урон: ${damage(rarity)}`, color: WEAPON_COLOR },
+    { text: `Перезарядка: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
+    { text: `Пробитие брони: ${CRIT_ARMOR_PIERCE}`, color: OFFENSE_COLOR },
+    { text: `Шанс крита: ${Math.round(CRIT_CHANCE * 100)}%`, color: CRIT_COLOR },
+    { text: `Множитель крита: ×${critMult(rarity)}`, color: CRIT_COLOR },
+  ],
 };
 
 export default behavior;

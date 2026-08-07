@@ -1,8 +1,10 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
-import { mitigateDamage } from '../../combat/mitigation';
+import { DEFENSE_COLOR } from '../statColors';
 
-// Латы отчаяния: защита включается только на грани смерти
+// Латы отчаяния: защита включается только на грани смерти — динамический вклад в armor_pct
+// (значение читается в момент резолюции урона, не при сборке героя): выше порога вклад нейтрален
+// (множитель 1, «не участвует»), ниже порога — полная величина защиты.
 const HP_THRESHOLD = 0.5;
 const REDUCTION: Record<Rarity, number> = {
   common: 0.41,  //EHP 135 (50 + 85)
@@ -17,15 +19,15 @@ const behavior: ItemBehavior = {
   slots: ['body'],
   type: 'armor',
   tags: ['armor', 'last_stand'],
-  on: {
-    damage: (e, ctx) => {
-      if (e.target.side !== 'hero') return {};
-      if (ctx.view.heroMaxHp <= 0 || ctx.view.heroHp / ctx.view.heroMaxHp >= HP_THRESHOLD) return {};
-      return { replace: [{ ...e, amount: mitigateDamage(e.amount, REDUCTION[ctx.rarity]) }] };
-    },
-  },
+  channels: (rarity) => [{
+    channel: 'armor_pct',
+    tier: 'more',
+    value: (view) => (view.heroMaxHp > 0 && view.heroHp / view.heroMaxHp < HP_THRESHOLD)
+      ? 1 - REDUCTION[rarity]
+      : 1,
+  }],
   stats: (rarity) => [
-    { text: `Защита при HP < ${Math.round(HP_THRESHOLD * 100)}%: ${Math.round(REDUCTION[rarity] * 100)}%`, color: '#44aaff' },
+    { text: `Защита при HP < ${Math.round(HP_THRESHOLD * 100)}%: ${Math.round(REDUCTION[rarity] * 100)}%`, color: DEFENSE_COLOR },
   ],
 };
 

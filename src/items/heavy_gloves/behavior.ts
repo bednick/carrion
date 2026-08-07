@@ -1,10 +1,11 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
+import { CRIT_COLOR } from '../statColors';
 
-// Тяжёлые перчатки: независимый крит-бросок поверх атаки hand_right — работает на ЛЮБОМ оружии,
-// даже без своего крита (сами дают крит-шанс с нуля). Обычный `replace` на amount, тот же приём,
-// что у брони (только повышает, не снижает). С war_pick — второй независимый бросок поверх
-// первого, легитимный стак (см. docs/content.items.hand_left.md).
+// Тяжёлые перчатки: доп. вклад в общий крит-канал движка (не свой собственный бросок) — работает
+// на ЛЮБОМ оружии hand_right, даже без своего крита (сами дают крит-шанс с нуля). С war_pick
+// бонусы складываются НАД базой в одном агрегированном канале (один бросок на удар, не два
+// независимых — см. docs/content.items.hand_left.md, консолидация крита в docs/combat-events.md).
 const CRIT_CHANCE: Record<Rarity, number> = {
   common: 0.05,
   uncommon: 0.10,
@@ -19,16 +20,13 @@ const behavior: ItemBehavior = {
   slots: ['hand_left'],
   type: 'gloves',
   tags: ['gloves', 'crit'],
-  on: {
-    attack: (e, ctx) => {
-      if (e.source.side !== 'hero' || e.source.slot !== 'hand_right') return {};
-      if (ctx.rng() >= CRIT_CHANCE[ctx.rarity]) return {};
-      return { replace: [{ ...e, amount: Math.round(e.amount * CRIT_MULT), crit: true }] };
-    },
-  },
+  channels: (rarity) => [
+    { channel: 'crit_chance', tier: 'flat', value: CRIT_CHANCE[rarity] },
+    { channel: 'crit_mult', tier: 'flat', value: CRIT_MULT - 1 },
+  ],
   stats: (rarity) => [
-    { text: `Доп. крит-шанс: ${Math.round(CRIT_CHANCE[rarity] * 100)}%`, color: '#ffcc44' },
-    { text: `Множитель крита: ×${CRIT_MULT}`, color: '#ffcc44' },
+    { text: `Доп. крит-шанс: ${Math.round(CRIT_CHANCE[rarity] * 100)}%`, color: CRIT_COLOR },
+    { text: `Множитель крита: ×${CRIT_MULT}`, color: CRIT_COLOR },
   ],
 };
 

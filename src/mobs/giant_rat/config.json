@@ -2,12 +2,21 @@
   "id": "giant_rat",
   "name": "Огромная крыса",
   "tier": "common",
-  "health": 24,
+  "health": 12,
   "position": 1,
   "attacks": [
     {
-      "damage": 16,
+      "damage": 11,
       "interval": 4.1
+    }
+  ],
+  "summons": [
+    {
+      "mob_id": "rat",
+      "count": 1,
+      "trigger": {
+        "type": "start"
+      }
     }
   ],
   "ui": {

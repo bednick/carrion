@@ -109,9 +109,10 @@ interface FightResult {
 }
 
 // Строит героя заново на каждый бой (как ExpeditionScene.beginFight), перенося только hp —
-// invulnHits/emergencyHealUsed/weaponTimers обязаны обнуляться каждый бой (docs/content.items.amulet.md:
-// «Полный invulnHitsMax — на каждый бой», «Флаг сбрасывается каждый новый бой»). Общий на всю экспедицию
-// объект hero тут раньше был багом: оберег/неуязвимость могли сработать лишь раз за экспедицию, а не за бой.
+// triggerState (заряды неуязвимости, флаг «аварийный хил сработал»)/weaponTimers обязаны
+// обнуляться каждый бой (docs/content.items.amulet.md: «Полный запас — на каждый бой», «Флаг
+// сбрасывается каждый новый бой»). Общий на всю экспедицию объект hero тут раньше был багом:
+// оберег/неуязвимость могли сработать лишь раз за экспедицию, а не за бой.
 function runFight(
   equipment: Partial<Record<SlotType, ItemInstance>>,
   prevHp: number,

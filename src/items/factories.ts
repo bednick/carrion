@@ -1,10 +1,7 @@
 import type { Rarity } from './types';
 import type { ItemCombatBehavior } from './behavior';
 import { scaleByRarity } from './rarity';
-import { mitigateDamage } from '../combat/mitigation';
-
-const DMG_COLOR = '#ffcc44';
-const DEF_COLOR = '#44aaff';
+import { DEFENSE_COLOR, WEAPON_COLOR } from './statColors';
 
 export interface WeaponRarityStats {
   damage: number;
@@ -14,33 +11,20 @@ export interface WeaponRarityStats {
 export type WeaponOpts = Record<Rarity, WeaponRarityStats>;
 
 /**
- * Обычное оружие: объявляет поток стамины (`attackInterval`) и авторит атаку на `attack_ready`.
- * Урон и интервал задаются явной таблицей по редкости (не формулой-скейлом) — так проще подогнать
- * DPS вручную под целые числа урона на каждом тире, не гоняясь за наименьшим общим кратным степеней.
+ * Обычное оружие: одна цель, без риддеров формы (крит — общая стадия движка, читает каналы
+ * `crit_chance`/`crit_mult`, не завязана на конкретное оружие). Урон и интервал — явная таблица
+ * по редкости (не формула-скейл) — так проще подогнать DPS вручную под целые числа урона.
  */
 export function standardWeapon(opts: WeaponOpts): ItemCombatBehavior {
   const interval = (rarity: Rarity) => opts[rarity].interval;
   const damage = (rarity: Rarity) => opts[rarity].damage;
 
   return {
-    attackInterval: interval,
-    on: {
-      attack_ready: (e, ctx) => {
-        // Авторим только собственный «естественный» взмах (origin движка) — иначе петля удвоения.
-        if (e.source.side !== 'hero' || e.source.slot !== ctx.slot || e.origin.from !== 'engine') {
-          return {};
-        }
-        return {
-          replace: [], // тик готовности израсходован
-          spawn: [{ type: 'attack', source: e.source, target: e.target, amount: damage(ctx.rarity), origin: e.origin }],
-        };
-      },
-    },
+    weapon: (rarity) => ({ interval: interval(rarity), baseDamage: damage(rarity), shape: 'single' }),
     stats: (rarity) => [
-      { text: `Урон: ${damage(rarity)}`, color: DMG_COLOR },
-      { text: `Перезарядка: ${interval(rarity).toFixed(1)}s`, color: DMG_COLOR },
+      { text: `Урон: ${damage(rarity)}`, color: WEAPON_COLOR },
+      { text: `Перезарядка: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
     ],
-    baseDamage: damage,
   };
 }
 
@@ -56,10 +40,10 @@ export interface ArmorOpts {
   cap?: number;
 }
 
-/** Броня: мультипликативно снижает входящий по герою урон (стакается с другой бронёй по порядку).
- *  Результат дробный — округляется один раз, стохастически, в `CombatEngine.applyDamage`, поэтому
- *  процент работает и на мелких ударах, а на самых слабых может свести удар в 0 («Блок»).
- *  См. `mitigateDamage`. */
+/** Броня: вклад в канал `armor_pct` тиром `more` — каждый источник брони независимый множитель
+ *  «доля урона, прошедшая через этот слой» (0.74 = держит 26%). Несколько источников стакаются
+ *  произведением Π(more_i) — то же самое, что раньше давала цепочка `mitigateDamage`-вызовов,
+ *  но не зависит от того, в каком слоте лежит предмет (см. channels.ts). */
 export function standardArmor(opts: ArmorOpts): ItemCombatBehavior {
   const scale = opts.scale ?? 1.5;
   const cap = opts.cap ?? 0.6;
@@ -69,45 +53,7 @@ export function standardArmor(opts: ArmorOpts): ItemCombatBehavior {
     : (rarity: Rarity) => raw[rarity];
 
   return {
-    on: {
-      damage: (e, ctx) => {
-        if (e.target.side !== 'hero') return {};
-        return { replace: [{ ...e, amount: mitigateDamage(e.amount, pct(ctx.rarity)) }] };
-      },
-    },
-    stats: (rarity) => [{ text: `Защита: ${Math.round(pct(rarity) * 100)}%`, color: DEF_COLOR }],
-  };
-}
-
-export interface ShieldOpts {
-  block: number; // шанс блока 0..1 при common
-  scale?: number;
-}
-
-/** Щит: с шансом полностью отклоняет входящий урон — заглушает `damage` и спавнит `block`. */
-export function standardShield(opts: ShieldOpts): ItemCombatBehavior {
-  const scale = opts.scale ?? 1.0;
-  const chance = (rarity: Rarity) => Math.min(1, scaleByRarity(opts.block, rarity, scale));
-
-  return {
-    on: {
-      damage: (e, ctx) => {
-        if (e.target.side !== 'hero') return {};
-        if (ctx.rng() >= chance(ctx.rarity)) return {};
-        return {
-          replace: [],
-          // source = атаковавший враг (для контрударов «за блок»); блокер — в origin (слот).
-          spawn: [{
-            type: 'block',
-            source: e.source,
-            target: e.target,
-            prevented: e.amount,
-            thorns: e.thorns,
-            origin: e.origin,
-          }],
-        };
-      },
-    },
-    stats: (rarity) => [{ text: `Блок: ${Math.round(chance(rarity) * 100)}%`, color: DEF_COLOR }],
+    channels: (rarity) => [{ channel: 'armor_pct', tier: 'more', value: 1 - pct(rarity) }],
+    stats: (rarity) => [{ text: `Защита: ${Math.round(pct(rarity) * 100)}%`, color: DEFENSE_COLOR }],
   };
 }

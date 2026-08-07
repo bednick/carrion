@@ -1,6 +1,6 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
-import type { GameEvent } from '../../combat/events';
+import { DEFENSE_COLOR, REACTIVE_COLOR } from '../statColors';
 
 const BLOCK_CHANCE: Record<Rarity, number> = {
   common: 0.21,  //EHP 126
@@ -9,61 +9,31 @@ const BLOCK_CHANCE: Record<Rarity, number> = {
   epic: 0.37,  //EHP 159
   legendary: 0.43,  //EHP 177
 };
-const THORNS_RATIO: Record<Rarity, number> = {
-  common: 0.20,
-  uncommon: 0.20,
-  rare: 0.20,
-  epic: 0.20,
-  legendary: 0.20
+const THORNS: Record<Rarity, number> = {
+  common: 1,
+  uncommon: 2,
+  rare: 3,
+  epic: 4,
+  legendary: 5,
 };
 
+// Блок и шипы независимы — оба просто каналы, резолвятся отдельными стадиями движка
+// (resolution.ts:resolveDefense для блока, CombatEngine.runReactiveStage для шипов). Шипы
+// безусловны (без броска), фикс. число за каждый удар и срабатывают даже на заблокированный удар
+// — движок сам гарантирует это одной стадией, без нужды во втором хуке «поймать блок другого
+// слота», как было раньше (docs/combat-events.md).
 const behavior: ItemBehavior = {
   name: 'Шипастый щит',
   slots: ['hand_left'],
   type: 'shield',
   tags: ['shield', 'thorns', 'block'],
-  on: {
-    damage: (e, ctx) => {
-      if (e.target.side !== 'hero') return {};
-
-      // Блок и шипы независимы (один хук на слот катает оба исхода сам): блок гасит удар броском,
-      // шипы отражают долю пришедшего урона всегда — заблокированный удар тоже оплачивается назад.
-      // Гейтить шипы исходом блока нельзя: тогда детерминированность шипов (весь смысл предмета)
-      // снова упирается в удачу, см. docs/content.items.hand_left.md §«Отклонённые направления».
-      const blocked = ctx.rng() < BLOCK_CHANCE[ctx.rarity];
-
-      // e.thorns: урон уже порождён чужими шипами (моба) — не отражаем его снова, иначе шипы
-      // моба и героя отражают друг друга по кругу до предохранителя каскада.
-      // Доля — от e.raw (сырой урон удара до снижений); на этом слоте (первый, кто трогает входящий
-      // по герою урон) e.raw === e.amount всегда, но явное имя не зависит от порядка слотов.
-      // Дробь не округляем: спавненный `damage` округлится один раз в applyDamage (стохастически),
-      // иначе шипы 10% от удара в 1 всегда давали бы 0.
-      const raw = e.raw ?? e.amount;
-      const reflected = raw > 0 && !e.thorns ? raw * THORNS_RATIO[ctx.rarity] : 0;
-
-      if (!blocked && reflected <= 0) return {};
-
-      const spawn: GameEvent[] = [];
-      if (blocked) {
-        spawn.push({ type: 'block', source: e.source, target: e.target, prevented: e.amount, thorns: e.thorns, origin: e.origin });
-      }
-      if (reflected > 0) {
-        spawn.push({
-          type: 'damage',
-          source: { side: 'hero', slot: ctx.slot },
-          target: e.source,
-          amount: reflected,
-          thorns: true,
-          origin: e.origin,
-        });
-      }
-
-      return blocked ? { replace: [], spawn } : { spawn };
-    },
-  },
+  channels: (rarity) => [
+    { channel: 'block_chance', tier: 'flat', value: BLOCK_CHANCE[rarity] },
+    { channel: 'thorns_flat', tier: 'flat', value: THORNS[rarity] },
+  ],
   stats: (rarity) => [
-    { text: `Блок: ${Math.round(BLOCK_CHANCE[rarity] * 100)}%`, color: '#44aaff' },
-    { text: `Шипы: ${Math.round(THORNS_RATIO[rarity] * 100)}% урона назад`, color: '#ff8844' },
+    { text: `Блок: ${Math.round(BLOCK_CHANCE[rarity] * 100)}%`, color: DEFENSE_COLOR },
+    { text: `Шипы: ${THORNS[rarity]}`, color: REACTIVE_COLOR },
   ],
 };
 

@@ -1,29 +1,18 @@
 import type { Rarity, SlotType, ItemType, ItemInstance } from './types';
-import type { EventType, EventOf, EventResult } from '../combat/events';
 import type { EmergencyHealConfig } from '../combat/types';
+import type { ChannelContribution } from '../combat/channels';
+import type { TriggerDef } from '../combat/triggers';
 
-/** Снимок боя «только для чтения», доступный хукам для условных синергий. */
+/** Снимок боя «только для чтения», доступный каналам/триггерам для условных синергий. */
 export interface CombatView {
   heroHp: number;
   heroMaxHp: number;
   enemies: { id: string; hp: number; maxHp: number; slot: number; isBoss?: boolean }[];
   equipment: Partial<Record<SlotType, ItemInstance>>;
-  // Базовый урон надетого hand_right (см. ItemBehavior.baseDamage), посчитан один раз за dispatch —
+  // Базовый урон надетого hand_right (см. ItemBehavior.weapon), посчитан один раз за dispatch —
   // чтобы кросс-slot эффекты (напр. контрудар buckler) не лезли в registry сами (циклический импорт).
   mainWeaponBaseDamage?: number;
 }
-
-export interface HandlerContext {
-  rarity: Rarity; // редкость обрабатывающего предмета
-  slot: SlotType; // слот, в котором надет предмет
-  view: CombatView;
-  rng: () => number;
-}
-
-/** Набор хуков предмета: по одному (опциональному) на тип события, с точной типизацией нагрузки. */
-export type EventHandlers = {
-  [T in EventType]?: (e: EventOf<T>, ctx: HandlerContext) => EventResult;
-};
 
 export interface StatLine {
   text: string;
@@ -32,24 +21,22 @@ export interface StatLine {
 
 /**
  * Вклад предмета в мета-петлю (вне боя). Суммируется по всей экипировке и читается в нужных точках
- * (лут-ролл, шанс побега, длина забега…). Пока реализован `magicFind`.
+ * (лут-ролл, длина забега…). Пока реализован `magicFind`. Независим от боевой channel/trigger-модели.
  */
 export interface MetaModifiers {
   magicFind?: number;   // шанс улучшить редкость каждого выпавшего предмета на тир (геометрически, до кап предмета)
   fightDelta?: number;  // ± число рядовых боёв в забеге; фиксируется при старте экспедиции
-  // escapeBonus/secureSlots убраны вместе с побегом/схроном (см. docs/roadmap.md).
 }
 
-/**
- * Кросс-slot модификатор таймера ДРУГОГО надетого оружия (напр. перчатки `hand_left` → `hand_right`).
- * Оба поля опциональны и независимы:
- * - `intervalMult` — домножает `attackInterval` цели на каждую постройку таймеров (весь бой).
- * - `firstTickRatio` — разово (0..1): какая доля интервала цели считается «уже прошедшей» на момент
- *   постройки таймеров, приближает первый тик. Не влияет на дальнейшие тики боя.
- */
-export interface WeaponTimerMod {
-  intervalMult?: number;
-  firstTickRatio?: number;
+/** Форма атаки оружия — авторится общей стадией движка (`resolution.ts`), не хуком предмета. */
+export interface WeaponAuthoring {
+  interval: number; // секунды
+  baseDamage: number;
+  shape: 'single' | 'multihit' | 'cleave' | 'pierce';
+  shapeParams?: {
+    hits?: number;          // multihit: число ударов по той же цели
+    splashRatios?: number[]; // cleave: доля урона по дальности от основной цели
+  };
 }
 
 /** Идентичность предмета (бывший config.json) — обязательны для любого предмета. Цена продажи
@@ -63,27 +50,35 @@ export interface ItemIdentity {
 
 /**
  * Поведение предмета. Всё, кроме identity-полей, опционально — отсутствие поля = «ничего не делает».
- * - `attackInterval` — делает предмет оружием: движок строит по нему поток стамины (секунды).
- * - `on` — хуки-трансформеры событий.
- * - `stats` — строки для тултипа (единый источник правды по статам).
- * - `weaponTimerMod` — кросс-slot модификатор таймера другого слота (см. `WeaponTimerMod`).
- * - `baseDamage` — «паспортный» урон оружия (без крита/риддеров), читается кросс-slot через
- *   `CombatView.mainWeaponBaseDamage` (напр. контрудар buckler «бьёт как обычная атака»).
- * - `invulnHitsGrant`/`emergencyHeal` — не хуки-трансформеры, а декларативные значения, читаемые
- *   ДВИЖКОМ один раз при сборке героя (`CombatEngine.buildInitialHero`, тот же приём, что у
- *   `attackInterval`) — сама механика (гашение урона неуязвимостью, разовый порог) живёт в
- *   `CombatEngine.applyDamage`, не в `on`-хуке предмета (нужно мутируемое per-fight состояние,
- *   которого у стейтлес-хуков нет), см. `docs/content.items.amulet.md`.
+ * - `weapon` — делает предмет оружием: форма атаки + база урона/интервала, автор — общая стадия
+ *   движка (крит и таргетинг multihit/cleave/pierce живут в `resolution.ts`, не в предмете).
+ * - `channels` — статические числовые вклады («сколько») — броня, крит, блок, шипы, лайфстил,
+ *   cross-slot модификаторы таймера оружия. Агрегируются один раз при сборке героя/моба. Получает
+ *   `slot`, в котором СЕЙЧАС лежит этот конкретный экземпляр — нужно предметам, чей вклад зависит
+ *   от собственного слота (напр. `dagger`, который штрафует себя же только будучи в hand_left, а
+ *   не любое оружие в hand_left вообще — см. `weapon_interval_mult` в `channels.ts`).
+ * - `triggers` — декларативные правила «на событие → действие» («когда») для того, что не сводится
+ *   к числовому каналу (напр. контрудар `buckler`, читающий чужой базовый урон).
+ * - `invuln`/`emergencyHeal` — не хуки, а декларативные значения, читаемые ДВИЖКОМ один раз при
+ *   сборке героя в per-fight стейт-бэг (`buildTriggerState`) — сама механика (гашение урона,
+ *   разовый порог) живёт в `CombatEngine.applyDamage`, не здесь (нужно мутируемое состояние).
+ * - `stats` — строки для тултипа (единый источник правды по статам, пишется вручную и должен
+ *   брать числа из тех же констант, что `channels`/`weapon`/`triggers`).
  */
 export interface ItemBehavior extends ItemIdentity {
-  attackInterval?: (rarity: Rarity) => number;
-  on?: EventHandlers;
-  stats?: (rarity: Rarity) => StatLine[];
-  meta?: (rarity: Rarity) => MetaModifiers;
-  weaponTimerMod?: (rarity: Rarity, targetSlot: SlotType) => WeaponTimerMod | undefined;
-  baseDamage?: (rarity: Rarity) => number;
-  invulnHitsGrant?: (rarity: Rarity) => number;
+  weapon?: (rarity: Rarity) => WeaponAuthoring;
+  channels?: (rarity: Rarity, slot: SlotType) => ChannelContribution[];
+  // TriggerDef<any>: каждый предмет декларирует триггеры на разные типы событий (`event: 'damage'`
+  // и т.п.), список неизбежно разнороден по T — рантайм-диспетчер (`runTriggers`) сам фильтрует по
+  // `t.event === e.type` перед вызовом, так что сужение типа тут не нужно и мешало бы литералам.
+  triggers?: (rarity: Rarity) => TriggerDef<any>[];
+  invuln?: (rarity: Rarity) => { charges: number };
   emergencyHeal?: (rarity: Rarity) => EmergencyHealConfig;
+  // `slot` — куда сейчас надет предмет (undefined для рюкзака/сундука — там показываем базовые
+  // статы «как в hand_right»). Нужен предметам вроде `dagger`, чей эффективный DPS зависит от
+  // слота (см. cross-slot `weapon_interval_mult` в src/combat/channels.ts).
+  stats?: (rarity: Rarity, slot?: SlotType) => StatLine[];
+  meta?: (rarity: Rarity) => MetaModifiers;
 }
 
 /** Часть `ItemBehavior` без identity-полей — то, что возвращают фабрики (`standardWeapon` и т.п.). */

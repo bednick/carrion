@@ -1,17 +1,20 @@
 // Характеристики оружия (слот hand_right) для balance-items.html.
-// УВС (урон в секунду) считается прогоном РЕАЛЬНОГО хука `on.attack_ready` каждого предмета
-// (тот же код, что в CombatEngine) против N болванок-врагов с фиксированной раскладкой по слотам
-// доски — числа гарантированно совпадают с игрой, включая ситуативные архетипы (прошив/cleave/крит).
-// Для детерминированных предметов (нет ctx.rng()) множественные сэмплы избыточны, но дёшевы —
-// война_pick (крит) единственный, кому усреднение реально нужно.
+// УВС (урон в секунду) считается прогоном РЕАЛЬНОГО authorAttack (тот же код, что в CombatEngine)
+// против N болванок-врагов с фиксированной раскладкой по слотам доски — числа гарантированно
+// совпадают с игрой, включая ситуативные архетипы (прошив/cleave/крит). Канал-агрегат строится
+// ТОЛЬКО из собственных channels() этого предмета (не всей экипировки) — «сила самого оружия»,
+// включая его собственный крит (напр. war_pick), без чужих бонусов вроде heavy_gloves.
+// Для детерминированных предметов (нет броска) множественные сэмплы избыточны, но дёшевы — war_pick
+// (крит) единственный, кому усреднение реально нужно.
 
 import { ITEM_BEHAVIORS } from '../items/registry';
-import type { Rarity, SlotType } from '../items/types';
+import type { Rarity } from '../items/types';
 import type { CombatView } from '../items/behavior';
-import type { GameEvent } from '../combat/events';
+import type { Side } from '../combat/events';
+import { aggregateChannels } from '../combat/channels';
+import { authorAttack } from '../combat/resolution';
 
 const SAMPLES = 2000;
-const SLOT: SlotType = 'hand_right';
 
 // Строки stats(), которые уже вынесены в отдельные колонки таблицы (урон/интервал) — остальное
 // идёт в колонку «доп. эффекты».
@@ -25,23 +28,20 @@ function mockView(targetCount: number): CombatView {
 }
 
 function activationDamage(itemId: string, rarity: Rarity, targetCount: number): number {
-  const hook = ITEM_BEHAVIORS[itemId]?.on?.attack_ready;
-  if (!hook) return 0;
+  const behavior = ITEM_BEHAVIORS[itemId];
+  const weapon = behavior?.weapon?.(rarity);
+  if (!weapon) return 0;
 
-  const event: GameEvent = {
-    type: 'attack_ready',
-    source: { side: 'hero', slot: SLOT },
-    target: { side: 'enemy', id: 'e0', idx: 0 },
-    origin: { from: 'engine' },
-  };
+  // Таблица считает предмет в hand_right (см. коммент вверху файла) — тем же слотом резолвим
+  // слот-зависимые вклады вроде dagger's weapon_interval_mult (см. dagger/behavior.ts).
+  const channels = aggregateChannels(behavior.channels?.(rarity, 'hand_right') ?? []);
   const view = mockView(targetCount);
+  const target: Side = { side: 'enemy', id: 'e0', idx: 0 };
 
   let total = 0;
   for (let i = 0; i < SAMPLES; i++) {
-    const result = hook(event as never, { rarity, slot: SLOT, view, rng: Math.random });
-    for (const ev of result.spawn ?? []) {
-      if (ev.type === 'attack') total += ev.amount;
-    }
+    const hits = authorAttack(weapon, channels, target, view, Math.random);
+    for (const h of hits) total += h.amount;
   }
   return total / SAMPLES;
 }
@@ -62,8 +62,9 @@ export function getWeaponRows(rarity: Rarity): WeaponRow[] {
   const rows: WeaponRow[] = [];
   for (const [id, behavior] of Object.entries(ITEM_BEHAVIORS)) {
     if (behavior.type !== 'weapon') continue;
-    const interval = behavior.attackInterval?.(rarity) ?? 0;
-    const damage = behavior.baseDamage?.(rarity) ?? 0;
+    const weapon = behavior.weapon?.(rarity);
+    const interval = weapon?.interval ?? 0;
+    const damage = weapon?.baseDamage ?? 0;
     const effects = (behavior.stats?.(rarity) ?? [])
       .map((s) => s.text)
       .filter((text) => !OWN_COLUMN_PREFIXES.some((re) => re.test(text)));

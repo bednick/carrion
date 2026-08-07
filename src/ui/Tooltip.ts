@@ -3,7 +3,7 @@ import { FONT_FAMILY } from './theme';
 import { getItemBehavior } from '../items/registry';
 import { RARITY_HEX } from '../items/rarity';
 import { NEUTRAL_PLATE_KEY } from './itemIcon';
-import type { ItemInstance } from '../items/types';
+import type { ItemInstance, SlotType } from '../items/types';
 
 // Метрики тултипа (x1.6 от исходных — читаемость).
 const FONT_SIZE = 21;
@@ -42,6 +42,7 @@ export class Tooltip {
 
   // Текущий показываемый предмет — нужен для живой перерисовки при нажатии/отпускании Ctrl.
   private currentItem: ItemInstance | null = null;
+  private currentSlot: SlotType | undefined = undefined;
   private currentX = 0;
   private currentY = 0;
 
@@ -59,17 +60,21 @@ export class Tooltip {
     this.ctrlKey?.on('up', this.refreshIfVisible, this);
   }
 
-  showItem(item: ItemInstance, x: number, y: number, owner?: unknown) {
+  // `slot` — куда предмет сейчас надет (передаётся из петель по экипировке); undefined для
+  // рюкзака/сундука, где актуального слота нет — тогда показываются базовые (hand_right) статы.
+  showItem(item: ItemInstance, x: number, y: number, owner?: unknown, slot?: SlotType) {
     this.owner = owner ?? null;
     this.currentItem = item;
+    this.currentSlot = slot;
     this.currentX = x;
     this.currentY = y;
-    this.render(this.buildItemSections(item), x, y);
+    this.render(this.buildItemSections(item, slot), x, y);
   }
 
   showText(lines: string[], x: number, y: number, owner?: unknown) {
     this.owner = owner ?? null;
     this.currentItem = null;
+    this.currentSlot = undefined;
     this.render([lines.map(t => ({ text: t, color: '#ffffff' }))], x, y);
   }
 
@@ -77,6 +82,7 @@ export class Tooltip {
   showLines(lines: { text: string; color?: string; icon?: string; iconRow?: Line['iconRow']; parts?: Line['parts'] }[], x: number, y: number, owner?: unknown) {
     this.owner = owner ?? null;
     this.currentItem = null;
+    this.currentSlot = undefined;
     this.render([lines.map(l => ({ text: l.text, color: l.color ?? '#ffffff', icon: l.icon, iconRow: l.iconRow, parts: l.parts }))], x, y);
   }
 
@@ -85,12 +91,13 @@ export class Tooltip {
   showMob(data: { name: string; nameColor: string; isBoss?: boolean; stats: { text: string; color: string }[] }, x: number, y: number, owner?: unknown) {
     this.owner = owner ?? null;
     this.currentItem = null;
+    this.currentSlot = undefined;
     const identity: Line[] = [{ text: data.name, color: data.nameColor }];
     this.render([identity, data.stats], x, y);
   }
 
   /** Секции: [идентичность, характеристики]. Пустые секции отбрасываются при рендере. */
-  private buildItemSections(item: ItemInstance): Line[][] {
+  private buildItemSections(item: ItemInstance, slot?: SlotType): Line[][] {
     const beh = getItemBehavior(item.item_id);
     const full = !!this.ctrlKey?.isDown;
 
@@ -99,14 +106,14 @@ export class Tooltip {
     if (full) identity.push({ text: `Слоты: ${beh.slots.join(', ')}`, color: '#aaaaaa' });
 
     // Боевые статы — единый источник правды в behavior.ts (docs/combat-events.md §5).
-    const stats: Line[] = beh.stats ? beh.stats(item.rarity) : [];
+    const stats: Line[] = beh.stats ? beh.stats(item.rarity, slot) : [];
 
     return [identity, stats];
   }
 
   private refreshIfVisible() {
     if (!this.container.visible || !this.currentItem) return;
-    this.render(this.buildItemSections(this.currentItem), this.currentX, this.currentY);
+    this.render(this.buildItemSections(this.currentItem, this.currentSlot), this.currentX, this.currentY);
   }
 
   /** Рендерит секции сверху вниз, разделяя их тонкой горизонтальной линией. */

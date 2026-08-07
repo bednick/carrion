@@ -1,8 +1,10 @@
 import type { ItemBehavior } from '../behavior';
-import type { Rarity, SlotType } from '../types';
-import { mitigateDamage } from '../../combat/mitigation';
+import type { Rarity } from '../types';
+import { DEFENSE_COLOR, PENALTY_COLOR } from '../statColors';
 
-// Тяжёлые латы: максимум защиты в семействе body ценой замедления hand_right — кросс-slot
+// Тяжёлые латы: максимум защиты в семействе body ценой замедления всего надетого оружия — кросс-slot
+// канал weapon_interval_mult без scope (та же idea, что раньше давал weaponTimerMod), участвует в
+// каждом weaponTimer, не только hand_right.
 const REDUCTION: Record<Rarity, number> = {
   common: 0.31,  //EHP 145
   uncommon: 0.37,  //EHP 159
@@ -23,19 +25,17 @@ const behavior: ItemBehavior = {
   slots: ['body'],
   type: 'armor',
   tags: ['armor', 'slow'],
-  on: {
-    damage: (e, ctx) => {
-      if (e.target.side !== 'hero') return {};
-      return { replace: [{ ...e, amount: mitigateDamage(e.amount, REDUCTION[ctx.rarity]) }] };
+  channels: (rarity) => [
+    { channel: 'armor_pct', tier: 'more', value: 1 - REDUCTION[rarity] },
+    {
+      channel: 'weapon_interval_mult',
+      tier: 'more',
+      value: 1 + INTERVAL_PENALTY[rarity],
     },
-  },
-  weaponTimerMod: (rarity: Rarity, targetSlot: SlotType) => {
-    if (targetSlot !== 'hand_right') return undefined;
-    return { intervalMult: 1 + INTERVAL_PENALTY[rarity] };
-  },
+  ],
   stats: (rarity) => [
-    { text: `Защита: ${Math.round(REDUCTION[rarity] * 100)}%`, color: '#44aaff' },
-    { text: `Скорость атаки: −${Math.round(INTERVAL_PENALTY[rarity] * 100)}%`, color: '#ff6666' },
+    { text: `Защита: ${Math.round(REDUCTION[rarity] * 100)}%`, color: DEFENSE_COLOR },
+    { text: `Скорость атаки: −${Math.round(INTERVAL_PENALTY[rarity] * 100)}%`, color: PENALTY_COLOR },
   ],
 };
 

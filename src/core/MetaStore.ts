@@ -52,6 +52,10 @@ export interface MetaState {
   chest: ItemInstance[];
   armor_stands: ArmorStand[]; // ровно ARMOR_STAND_COUNT стоек-пресетов
   active_stand: number;       // индекс последней выбранной стойки (0..ARMOR_STAND_COUNT-1)
+  // Фиксация предмета между стойками: slotId -> индекс стойки-владельца зафиксированного
+  // предмета. Один лок на slotId — ровно как один физический предмет занимает слот этого
+  // типа только на одной стойке; на двух других слот в этом случае пуст (см. CampScene).
+  armor_stand_locks: Partial<Record<SlotId, number>>;
   run_speed: number;          // ускорение последнего забега (1|2|4) — восстанавливается в новом
   // Рекорд endless-зоны (battlefield, docs/content.zones.format.md): сколько мобов подряд убито
   // за лучший забег. Цель игры в этой зоне — превзойти это число, не «пройти» зону.
@@ -63,6 +67,9 @@ export interface MetaState {
     pending_reward: string[];
     completed: string[];
   };
+  // Id разовых реплик НПС (см. src/core/DialogSystem.ts), уже показанных игроку — вставки
+  // вроде «первая смерть на территории фракции» показываются ровно один раз за сейв.
+  seen_npc_dialogs: string[];
 }
 
 function emptyStand(): ArmorStand {
@@ -142,9 +149,11 @@ function createDefault(): MetaState {
     chest: [],
     armor_stands: defaultStands(pendingStartWeapon),
     active_stand: 0,
+    armor_stand_locks: {},
     run_speed: 1,
     battlefield_best_depth: 0,
     stats: emptyStats(),
+    seen_npc_dialogs: [],
     // Квест зачистки и квест сбора предметов зоны выдаются одновременно (см.
     // docs/quests.md) — оба доступны с самого начала, а не только после зачистки.
     quests: {
@@ -176,11 +185,13 @@ export const MetaStore = {
       chest: parsed.chest ?? defaults.chest,
       armor_stands: normalizeStands(parsed.armor_stands),
       active_stand: clampStand(parsed.active_stand),
+      armor_stand_locks: parsed.armor_stand_locks ?? defaults.armor_stand_locks,
       run_speed: clampRunSpeed(parsed.run_speed),
       battlefield_best_depth: parsed.battlefield_best_depth ?? defaults.battlefield_best_depth,
       // Поверхностного merge достаточно: каждое поле stats независимо, а недостающие
       // (в старых сейвах) добираются из emptyStats(). Версионирование схемы не ведём.
       stats: { ...defaults.stats, ...(parsed.stats ?? {}) },
+      seen_npc_dialogs: parsed.seen_npc_dialogs ?? defaults.seen_npc_dialogs,
       quests: {
         active: parsed.quests?.active ?? defaults.quests.active,
         pending_reward: parsed.quests?.pending_reward ?? [],
@@ -198,6 +209,12 @@ export const MetaStore = {
       for (const slot of Object.keys(stand) as SlotId[]) {
         const it = stand[slot];
         if (it && !hasItemBehavior(it.item_id)) stand[slot] = null;
+      }
+    }
+    for (const slot of Object.keys(state.armor_stand_locks) as SlotId[]) {
+      const owner = state.armor_stand_locks[slot];
+      if (owner === undefined || !state.armor_stands[owner]?.[slot]) {
+        delete state.armor_stand_locks[slot];
       }
     }
   },
@@ -311,6 +328,11 @@ export const MetaStore = {
   },
 
   setArmorStandSlot(standIndex: number, slot: SlotId, item: ItemInstance | null) {
+    // Любое изменение слота этого типа — на стойке-владельце или на «призрачной» — рвёт
+    // фиксацию: реального предмета для показа на других стойках больше нет.
+    if (state.armor_stand_locks[slot] !== undefined) {
+      delete state.armor_stand_locks[slot];
+    }
     state.armor_stands[standIndex][slot] = item;
     this.save();
   },
@@ -321,6 +343,42 @@ export const MetaStore = {
 
   getArmorStands(): ArmorStand[] {
     return state.armor_stands;
+  },
+
+  /** Стойка для боя: пустые слоты, зафиксированные за другой стойкой, подменяются реальным
+   *  предметом владельца. Не использовать в UI стоек — там нужны «сырые» null для drag&drop. */
+  getResolvedArmorStand(standIndex: number): ArmorStand {
+    const stand = state.armor_stands[standIndex];
+    const resolved = { ...stand };
+    for (const [slot, owner] of Object.entries(state.armor_stand_locks) as [SlotId, number][]) {
+      if (resolved[slot] == null && owner !== standIndex) {
+        resolved[slot] = state.armor_stands[owner][slot];
+      }
+    }
+    return resolved;
+  },
+
+  getStandLockOwner(slot: SlotId): number | undefined {
+    return state.armor_stand_locks[slot];
+  },
+
+  canLockStandSlot(standIndex: number, slot: SlotId): boolean {
+    if (state.armor_stand_locks[slot] !== undefined) return false;
+    if (!state.armor_stands[standIndex][slot]) return false;
+    return state.armor_stands.every((stand, i) => i === standIndex || !stand[slot]);
+  },
+
+  lockStandSlot(standIndex: number, slot: SlotId): boolean {
+    if (!this.canLockStandSlot(standIndex, slot)) return false;
+    state.armor_stand_locks[slot] = standIndex;
+    this.save();
+    return true;
+  },
+
+  unlockStandSlot(slot: SlotId) {
+    if (state.armor_stand_locks[slot] === undefined) return;
+    delete state.armor_stand_locks[slot];
+    this.save();
   },
 
   /** Последняя выбранная стойка — с ней герой уходит на локацию (можно сменить в бою). */
@@ -455,5 +513,25 @@ export const MetaStore = {
     state.stats.zones_returned[zoneId] = (state.stats.zones_returned[zoneId] ?? 0) + 1;
     this.save();
     EventBus.emit('stats_changed');
+  },
+
+  // --- Реплики НПС (src/core/DialogSystem.ts) -----------------------------
+
+  hasSeenDialog(id: string): boolean {
+    return state.seen_npc_dialogs.includes(id);
+  },
+
+  markDialogSeen(id: string) {
+    if (state.seen_npc_dialogs.includes(id)) return;
+    state.seen_npc_dialogs.push(id);
+    this.save();
+  },
+
+  /** Есть ли хотя бы один экземпляр предмета в сундуке или на любой из стоек. */
+  hasItemAnywhere(itemId: string): boolean {
+    if (state.chest.some((it) => it.item_id === itemId)) return true;
+    return state.armor_stands.some((stand) =>
+      Object.values(stand).some((it) => it?.item_id === itemId),
+    );
   },
 };

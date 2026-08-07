@@ -11,7 +11,7 @@ import { getItemBehavior } from '../items/registry';
 import {
   craftPreview, ESSENCE_TIERS, ESSENCE_NAMES,
   ESSENCE_EXCHANGE_RATE, ESSENCE_EXCHANGE_TARGET, isEssenceExchangeUnlocked, emptyEssence,
-  FUSE_COUNT, fusePreview, fuseItems,
+  FUSE_COUNT, fusePreview, fuseItems, isFuseUnlocked,
 } from '../items/craft';
 import type { Rarity, SlotType, EssencePool, EssenceTier } from '../items/types';
 import { itemIconKey } from '../items/icons';
@@ -22,7 +22,9 @@ import { essenceIconKey, essenceIconKeyByRarity } from '../ui/rewards';
 import { slotSilhouetteKey, upgradeIconKey } from '../ui/silhouettes';
 import { Tooltip } from '../ui/Tooltip';
 import { DragDropManager } from '../ui/DragDropManager';
-import { getZoneConfig, getZoneLootItemIds, isZoneFullyLooted, WIP_ZONE_IDS } from '../zones/registry';
+import { getZoneConfig, getZoneLootItemIds, isZoneFullyLooted, WIP_ZONE_IDS, FACTION_ROUTES } from '../zones/registry';
+import { checkFactionDeathDialogs, checkSmithUnlockDialog, checkFuseUnlockDialog } from '../core/DialogSystem';
+import { NpcDialogBox } from '../ui/NpcDialogBox';
 import type { ZoneConfig } from '../zones/types';
 import { QuestTracker } from '../ui/QuestTracker';
 import { claimQuestReward } from '../core/QuestSystem';
@@ -69,19 +71,15 @@ const MAP_ZONE_LAYOUT: MapZoneEntry[] = [
   { id: 'battlefield',       label: 'Поле битвы',          x: 640,  y: 172 },
 ];
 
-// Единый маршрут прохождения каждой фракции: стартовая → средние → Поле битвы.
-// Источник порядка для линий карты и для цепочек разблокировок в quests/definitions.ts.
-const FACTION_ROUTES: string[][] = [
-  ['dead-fields', 'mage-ruins', 'crypt', 'battlefield'],
-  ['trampled-meadows', 'beast-lair', 'predator-pasture', 'battlefield'],
-  ['armor-dump', 'abandoned-camp', 'marauder-lair', 'battlefield'],
-];
+// Маршрут каждой фракции (стартовая → средние → Поле битвы) — импортирован из
+// zones/registry.ts (FACTION_ROUTES), источник порядка для линий карты, цепочек
+// разблокировок (quests/definitions.ts) и определения фракции зоны (DialogSystem).
 
 // Предшественник каждой зоны в маршруте (кроме центра): зона появляется на карте как
 // «пройди прошлую» только после того, как предыдущая зона пройдена (попала в
 // completed_areas). Старт первого маршрута (dead-fields) предшественника не имеет.
 const ZONE_PREREQ: Record<string, string> = {};
-for (const route of FACTION_ROUTES) {
+for (const route of Object.values(FACTION_ROUTES)) {
   for (let i = 1; i < route.length; i++) {
     if (route[i] === 'battlefield') continue;
     ZONE_PREREQ[route[i]] = route[i - 1];
@@ -171,17 +169,22 @@ export class CampScene extends Phaser.Scene {
   private dealerAlert: Phaser.GameObjects.Container | null = null;
   private dealerBlinkHint: Phaser.GameObjects.Image | null = null;
   private firstExpeditionHint: Phaser.GameObjects.Image | null = null;
+  private npcDialogBox!: NpcDialogBox;
 
   // Панель, которую надо переоткрыть после рестарта сцены (см. relayoutOnResize).
   private panelToRestore: 'smith' | 'dealer' | 'chest' | 'map' | null = null;
+  // Зона, в которой погиб герой — приходит от ExpeditionScene.onHeroDeath, читается один раз
+  // в create() для реплики НПС о фракции (см. DialogSystem.checkFactionDeathDialogs).
+  private diedInZone?: string;
 
   constructor() {
     super({ key: 'CampScene' });
   }
 
-  init(data?: { panelState?: 'smith' | 'dealer' | 'chest' | 'map' | null }) {
+  init(data?: { panelState?: 'smith' | 'dealer' | 'chest' | 'map' | null; diedInZone?: string }) {
     this.panelToRestore = data?.panelState ?? null;
     this.panelState = null;
+    this.diedInZone = data?.diedInZone;
   }
 
   /**
@@ -209,6 +212,8 @@ export class CampScene extends Phaser.Scene {
     this.buildPanel();
 
     this.questTracker = new QuestTracker(this);
+    this.npcDialogBox = new NpcDialogBox(this);
+    this.showPendingNpcDialogs();
 
     EventBus.on('quest_completed', this.onQuestCompleted, this);
     EventBus.on('quest_reward_claimed', this.onRewardClaimed, this);
@@ -222,7 +227,15 @@ export class CampScene extends Phaser.Scene {
 
     // Горячие клавиши лагеря: быстрый доступ к панелям без мыши. Повторное нажатие закрывает (как ESC).
     const kb = this.input.keyboard!;
-    kb.on('keydown-SPACE', () => this.togglePanel('map',    () => this.openMapPanel()));
+    kb.on('keydown-SPACE', () => {
+      if (this.blockingModal) return; // как и в togglePanel — диалог НПС поверх сцены блокирует хоткеи
+      if (this.panelState === 'dealer' && this.panelContainer.visible
+          && MetaStore.get().quests.pending_reward.length > 0) {
+        this.claimAllQuestRewards();
+        return;
+      }
+      this.togglePanel('map', () => this.openMapPanel());
+    });
     kb.on('keydown-I',     () => this.togglePanel('chest',  () => this.openChestPanel()));
     kb.on('keydown-S',     () => this.togglePanel('smith',  () => this.openSmithPanel()));
     kb.on('keydown-D',     () => this.togglePanel('dealer', () => this.openDealerPanel()));
@@ -325,6 +338,22 @@ export class CampScene extends Phaser.Scene {
       balanceBtn.on('pointerout',  () => balanceBtn.setFillStyle(0x0a1a1a));
       balanceBtn.on('pointerdown', () => window.open('./balance.html', '_blank'));
     }
+  }
+
+  // Разовые реплики НПС (см. src/core/DialogSystem.ts): фракционная подсказка+подарок после
+  // первой смерти на территории фракции, затем — новость об обмене у кузнеца, если он тоже
+  // впервые открылся. Каждая функция сама решает, показывать ли что-то, и сама отмечает
+  // диалог увиденным — здесь только сборка очереди и показ.
+  private showPendingNpcDialogs() {
+    const queue = [
+      ...(checkFactionDeathDialogs(this.diedInZone) ?? []),
+      ...(checkFuseUnlockDialog() ?? []),
+      ...(checkSmithUnlockDialog() ?? []),
+    ];
+    this.diedInZone = undefined;
+    if (queue.length === 0) return;
+    this.blockingModal = true;
+    this.npcDialogBox.show(queue, () => { this.blockingModal = false; });
   }
 
   private confirmReset() {
@@ -797,6 +826,7 @@ export class CampScene extends Phaser.Scene {
   }
 
   private togglePanel(state: 'smith' | 'dealer' | 'chest' | 'map', open: () => void) {
+    if (this.blockingModal) return; // диалог НПС поверх сцены — хоткеи панелей молчат
     if (this.panelState === state && this.panelContainer.visible) this.closePanel();
     else open();
   }
@@ -967,6 +997,28 @@ export class CampScene extends Phaser.Scene {
     }
   }
 
+  private claimAllQuestRewards() {
+    const pending = [...MetaStore.get().quests.pending_reward];
+    if (pending.length === 0) return;
+
+    SoundManager.play('quest_reward');
+    pending.forEach((questId, i) => {
+      const def = QUEST_DEFS[questId];
+      const rewards = def ? this.essenceRewards(def.rewards) : [];
+      claimQuestReward(questId);
+
+      const y = 238 + i * 44; // должно совпадать с раскладкой строк в buildQuestList()
+      const fx = this.panelX(500);
+      const fy = this.panelY(y + 18);
+      rewards.forEach((r, j) => {
+        spawnIconFloater(this, essenceIconKey(r.tier), `+${r.amount}`, fx, fy - j * 24, RARITY_HEX[r.tier]);
+      });
+    });
+
+    this.refreshHUD();
+    this.rebuildPanel();
+  }
+
   private openChestPanel() {
     if (this.panelState !== 'chest') { this.closePanel(); this.panelState = 'chest'; }
     this.rebuildPanel();
@@ -997,6 +1049,12 @@ export class CampScene extends Phaser.Scene {
       const y = originY + dy;
       const inst = stand[slotId];
 
+      // Фиксация: предмет отсутствует в этом слоте, но зафиксирован за другой стойкой —
+      // показываем его призраком (полупрозрачно), пока сюда не положат реальный предмет.
+      const lockOwner = MetaStore.getStandLockOwner(slotId);
+      const ghost = !inst && lockOwner !== undefined ? MetaStore.getArmorStand(lockOwner)[slotId] : null;
+      const hoverItem = inst ?? ghost;
+
       // Рамку редкости несёт плашка иконки (src/ui/itemIcon.ts), у ячейки — нейтральный контур.
       const bg = this.add.rectangle(x, y, SIZE, SIZE, 0x2a2a3a)
         .setStrokeStyle(1, 0x444455);
@@ -1004,12 +1062,13 @@ export class CampScene extends Phaser.Scene {
       objs.push(bg);
 
       const view = addItemIcon(this, x, y, {
-        itemId: inst?.item_id,
-        rarity: inst?.rarity,
+        itemId: hoverItem?.item_id,
+        rarity: hoverItem?.rarity,
         silhouette: slotSilhouetteKey(slotId),
         size: SIZE,
         iconAlpha: inst ? 1 : 0.75,
       });
+      if (ghost) view.setAlpha(0.45);
       objs.push(view);
 
       if (this.dragDrop) {
@@ -1025,13 +1084,15 @@ export class CampScene extends Phaser.Scene {
         });
       }
 
-      if ((onSlotClick || this.dragDrop) && inst) {
+      if ((onSlotClick || this.dragDrop) && hoverItem) {
         bg.setInteractive({ useHandCursor: true });
         const sid = slotId;
-        bg.on('pointerover', () => { view.setHover(true); if (inst) this.tooltip.showItem(inst, this.panelX(x + SIZE / 2 + 8), this.panelY(y - SIZE / 2 - 8)); });
+        bg.on('pointerover', () => { view.setHover(true); this.tooltip.showItem(hoverItem, this.panelX(x + SIZE / 2 + 8), this.panelY(y - SIZE / 2 - 8), undefined, sid); });
         bg.on('pointerout',  () => { view.setHover(false); this.tooltip.hide(); });
+        // Взять в «руку» можно только реальный предмет — призрак не лежит в этом слоте физически.
         if (this.dragDrop) {
           bg.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+            if (!inst) return;
             if (this.dragDrop?.isHolding()) return; // клик с предметом в руке обрабатывает pointerup
             this.pendingDrag = {
               slotId: `stand_${slotId}`, downX: ptr.x, downY: ptr.y,
@@ -1039,7 +1100,32 @@ export class CampScene extends Phaser.Scene {
             };
           });
         } else if (onSlotClick) {
-          bg.on('pointerdown', () => onSlotClick(sid));
+          bg.on('pointerdown', () => { if (inst) onSlotClick(sid); });
+        }
+      }
+
+      // Замочек фиксации — только когда в слоте реальный предмет и его можно (или уже) зафиксировать
+      // на все стойки: либо он уже зафиксирован этой стойкой, либо оба других слота этого типа пусты.
+      if (inst) {
+        const locked = lockOwner === si;
+        const otherStandsEmpty = Array.from({ length: ARMOR_STAND_COUNT }, (_, i) => i)
+          .filter(i => i !== si)
+          .every(i => !MetaStore.getArmorStand(i)[slotId]);
+        if (locked || (lockOwner === undefined && otherStandsEmpty)) {
+          const sid = slotId;
+          const lockIcon = this.add
+            .image(x + SIZE / 2 - 10, y - SIZE / 2 + 10, slotSilhouetteKey(locked ? 'lock' : 'lock-open'))
+            .setDisplaySize(16, 16)
+            .setInteractive({ useHandCursor: true });
+          lockIcon.on('pointerdown', () => {
+            if (locked) {
+              MetaStore.unlockStandSlot(sid);
+            } else if (MetaStore.lockStandSlot(si, sid)) {
+              EventBus.emit('item_equipped');
+            }
+            this.time.delayedCall(0, () => this.rebuildPanel());
+          });
+          objs.push(lockIcon);
         }
       }
     }
@@ -1210,8 +1296,11 @@ export class CampScene extends Phaser.Scene {
     const arrowX = cx + 46;
     const resultX = cx + 98;
 
+    // Открыто только после трёх стартовых зон (docs/meta-progression.md «Реплики НПС», fuse_unlock) —
+    // до этого блок затемняется целиком и предметы в него положить нельзя (см. ниже по методу).
+    const unlocked = isFuseUnlocked(MetaStore.get().completed_areas);
     const preview = fusePreview(this.fuseInputItems);
-    const canFuse = preview.nextRarity !== null && !this.fuseResultItem;
+    const canFuse = unlocked && preview.nextRarity !== null && !this.fuseResultItem;
     const toAdd: Phaser.GameObjects.GameObject[] = [];
 
     toAdd.push(this.add.text(cx, labelY, `Слияние: ${FUSE_COUNT} предмета одной редкости → 1 следующей`, {
@@ -1228,7 +1317,7 @@ export class CampScene extends Phaser.Scene {
         ?? this.add.image(x, slotY, upgradeIconKey('plus')).setDisplaySize(18, 18);
       toAdd.push(bg, content);
 
-      if (this.dragDrop) {
+      if (this.dragDrop && unlocked) {
         this.dragDrop.registerSlot({
           id: `fuse_input_${i}`,
           placeable: true,
@@ -1261,7 +1350,7 @@ export class CampScene extends Phaser.Scene {
     });
 
     // Ловит дроп мимо конкретной ячейки, но рядом с блоком — кладёт в первую свободную.
-    if (this.dragDrop) {
+    if (this.dragDrop && unlocked) {
       this.dragDrop.registerSlot({
         id: 'fuse_zone',
         placeable: true,
@@ -1300,7 +1389,7 @@ export class CampScene extends Phaser.Scene {
     }
     toAdd.push(s3Bg, s3Content);
 
-    if (this.dragDrop && resultItem) {
+    if (this.dragDrop && unlocked && resultItem) {
       this.dragDrop.registerSlot({
         id: 'fuse_result_slot',
         rect: this.panelRect(resultX - S / 2, slotY - S / 2, S, S),
@@ -1352,11 +1441,20 @@ export class CampScene extends Phaser.Scene {
       });
     }
 
-    const hintText = this.fuseResultItem ? 'Заберите результат из ячейки справа' : preview.error;
+    const hintText = !unlocked
+      ? 'Слияние откроется после трёх стартовых зон (по одной от каждой фракции)'
+      : (this.fuseResultItem ? 'Заберите результат из ячейки справа' : preview.error);
     if (hintText) {
       toAdd.push(this.add.text(cx, btnY + BTN_H / 2 + 14, hintText, {
         fontSize: '10px', fontFamily: FONT_FAMILY, color: '#886655', align: 'center', wordWrap: { width: 260 },
       }).setOrigin(0.5));
+    }
+
+    if (!unlocked) {
+      // Тот же приём, что у заблокированной строки обмена эссенции (buildSmithContent) — гасим
+      // весь собранный блок и кладём замочек поверх (последним, чтобы не погас вместе с остальным).
+      toAdd.forEach((o) => (o as unknown as Phaser.GameObjects.Components.Alpha).setAlpha(0.35));
+      toAdd.push(this.add.image(cx, slotY, slotSilhouetteKey('lock')).setDisplaySize(30, 30));
     }
 
     this.panelContainer.add(toAdd);
@@ -1748,8 +1846,10 @@ export class CampScene extends Phaser.Scene {
       };
     }
     // На вкладке кузнеца Shift-клик по предмету сундука кладёт его в первую свободную ячейку
-    // слияния (см. buildFuseContent) — быстрый путь вместо драга/руки.
-    if (this.panelState === 'smith') {
+    // слияния (см. buildFuseContent) — быстрый путь вместо драга/руки. Пока слияние заблокировано
+    // (три стартовые зоны не пройдены), обработчик не регистрируется вовсе — молчаливый no-op,
+    // тот же UX, что у заблокированной строки обмена эссенции.
+    if (this.panelState === 'smith' && isFuseUnlocked(MetaStore.get().completed_areas)) {
       return (inst, idx) => {
         const filledRarity = this.fuseInputItems.find((f) => f)?.rarity;
         if (filledRarity && inst.rarity !== filledRarity) {
@@ -2022,7 +2122,7 @@ export class CampScene extends Phaser.Scene {
   private buildMapConnections() {
     const pos = new Map(MAP_ZONE_LAYOUT.map(z => [z.id, { x: z.x, y: z.y }] as const));
     const EDGES: [string, string][] = [];
-    for (const route of FACTION_ROUTES) {
+    for (const route of Object.values(FACTION_ROUTES)) {
       for (let i = 0; i + 1 < route.length; i++) EDGES.push([route[i], route[i + 1]]);
     }
 

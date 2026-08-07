@@ -6,6 +6,7 @@ import ring from './ring.svg';
 import amulet from './amulet.svg';
 import legs from './legs.svg';
 import lock from './lock.svg';
+import lockOpen from './lock-open.svg';
 import warrior from './warrior.svg';
 import backpackSil from './backpack.svg';
 import anvil from './anvil.svg';
@@ -34,6 +35,7 @@ export const SLOT_SILHOUETTE_URLS: Record<string, string> = {
   amulet,
   legs,
   lock,
+  'lock-open': lockOpen,
 };
 
 export function slotSilhouetteKey(slotId: string): string {
