@@ -1,5 +1,5 @@
 import type { QuestRecord } from '../quests/definitions';
-import { getItemBehavior, hasItemBehavior, ITEM_BEHAVIORS } from '../items/registry';
+import { hasItemBehavior } from '../items/registry';
 import type { EssenceTier, EssencePool, Rarity } from '../items/types';
 import { rarityIndex } from '../items/rarity';
 import { EventBus } from './EventBus';
@@ -12,10 +12,6 @@ const CENTER_GATE_ZONES = ['crypt', 'predator-pasture', 'marauder-lair'];
 // Несовместимые изменения формата допустимы без бампа ключа — после них нужно явно
 // сбросить прогресс (MetaStore.resetAll или очистка localStorage). См. docs/meta-progression.md.
 const STORAGE_KEY = 'carrion.meta.v1';
-
-// Переживает location.reload() между «Сбросить» и следующей инициализацией: выбор игрока на
-// экране стартового оружия. Читается один раз в createDefault() и тут же стирается.
-const PENDING_START_WEAPON_KEY = 'carrion.meta.pending_start_weapon';
 
 export type SlotId = 'head' | 'body' | 'legs' | 'hand_left' | 'hand_right' | 'ring' | 'amulet';
 
@@ -70,6 +66,11 @@ export interface MetaState {
   // Id разовых реплик НПС (см. src/core/DialogSystem.ts), уже показанных игроку — вставки
   // вроде «первая смерть на территории фракции» показываются ровно один раз за сейв.
   seen_npc_dialogs: string[];
+  // Пройдена обучающая зона (training-camp, см. docs/zones/training-camp.md). Пока false — карта
+  // лагеря показывает только её плитку (CampScene.buildMapContent), «Мёртвые поля» не открыты и
+  // их квесты не посажены (см. QuestSystem.grantTutorialUnlock). У сейвов до этого поля (создан
+  // раньше правки) при загрузке трактуется как true — см. MetaStore.init().
+  tutorial_completed: boolean;
 }
 
 function emptyStand(): ArmorStand {
@@ -84,18 +85,10 @@ function emptyStand(): ArmorStand {
   };
 }
 
-/** Предмет валиден как стартовое оружие: существует, оружие, носится в правой руке. */
-function isValidStartWeapon(itemId: string): boolean {
-  if (!hasItemBehavior(itemId)) return false;
-  const beh = getItemBehavior(itemId);
-  return beh.type === 'weapon' && beh.slots.includes('hand_right');
-}
-
-/** Три пустые стойки; в первой — стартовое оружие (по умолчанию `battle_staff`) в правой руке. */
-function defaultStands(startWeaponId?: string): ArmorStand[] {
+/** Три пустые стойки; в первой — стартовое оружие (всегда `dagger`) в правой руке. */
+function defaultStands(): ArmorStand[] {
   const stands = Array.from({ length: ARMOR_STAND_COUNT }, () => emptyStand());
-  const weaponId = startWeaponId && isValidStartWeapon(startWeaponId) ? startWeaponId : 'battle_staff';
-  stands[0].hand_right = { item_id: weaponId, rarity: 'common' };
+  stands[0].hand_right = { item_id: 'dagger', rarity: 'common' };
   return stands;
 }
 
@@ -140,30 +133,27 @@ function emptyStats(): PlayerStats {
 }
 
 function createDefault(): MetaState {
-  const pendingStartWeapon = localStorage.getItem(PENDING_START_WEAPON_KEY) ?? undefined;
-  if (pendingStartWeapon) localStorage.removeItem(PENDING_START_WEAPON_KEY);
   return {
     essence: emptyEssence(),
     completed_areas: [],
-    unlocked_areas: ['dead-fields'],
+    // «Мёртвые поля» больше не открыты с ходу — их открывает и сеет свои квесты
+    // QuestSystem.grantTutorialUnlock() сразу после прохождения обучающей зоны
+    // (training-camp, вне карты/маршрутов, см. docs/zones/training-camp.md).
+    unlocked_areas: [],
     chest: [],
-    armor_stands: defaultStands(pendingStartWeapon),
+    armor_stands: defaultStands(),
     active_stand: 0,
     armor_stand_locks: {},
     run_speed: 1,
     battlefield_best_depth: 0,
     stats: emptyStats(),
     seen_npc_dialogs: [],
-    // Квест зачистки и квест сбора предметов зоны выдаются одновременно (см.
-    // docs/quests.md) — оба доступны с самого начала, а не только после зачистки.
     quests: {
-      active: [
-        { id: 'dead_fields_clear', progress: 0, target: 1 },
-        { id: 'collect_dead_fields_items', progress: 0, target: 4 },
-      ],
+      active: [],
       pending_reward: [],
       completed: [],
     },
+    tutorial_completed: false,
   };
 }
 
@@ -197,6 +187,12 @@ export const MetaStore = {
         pending_reward: parsed.quests?.pending_reward ?? [],
         completed: parsed.quests?.completed ?? defaults.quests.completed,
       },
+      // Поле добавлено вместе с обучающей зоной (training-camp) — у сейвов, созданных раньше,
+      // его нет в JSON. Такой сейв по определению уже прошёл через старый прямой старт с
+      // «Мёртвыми полями», поэтому отсутствие поля трактуется как «туториал пройден» (true), а не
+      // false — иначе игрока с прогрессом откинуло бы обратно в обучение. Только у по-настоящему
+      // новых сейвов (нет raw вовсе, см. ветку выше) поле явно false.
+      tutorial_completed: parsed.tutorial_completed ?? true,
     };
     this.purgeUnknownItems();
   },
@@ -223,16 +219,9 @@ export const MetaStore = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   },
 
-  /** startWeaponId — выбор игрока на экране стартового оружия (см. CampScene); без него — battle_staff. */
-  resetAll(startWeaponId?: string) {
-    if (startWeaponId) localStorage.setItem(PENDING_START_WEAPON_KEY, startWeaponId);
+  resetAll() {
     localStorage.removeItem(STORAGE_KEY);
     location.reload();
-  },
-
-  /** Список id предметов, годных как стартовое оружие (weapon, слот hand_right). */
-  listStartWeapons(): string[] {
-    return Object.keys(ITEM_BEHAVIORS).filter(isValidStartWeapon);
   },
 
   get(): MetaState {
@@ -269,6 +258,18 @@ export const MetaStore = {
       state.completed_areas.push(zoneId);
       this.save();
     }
+  },
+
+  /**
+   * Обучающая зона (training-camp) пройдена — вызывается из ExpeditionScene вместо обычного
+   * completeArea (зона вне completed_areas-семантики, не часть карты/маршрутов). Открытие
+   * «Мёртвых полей» и посадка её квестов — отдельно, в QuestSystem.grantTutorialUnlock(),
+   * читающей этот флаг при каждом evaluateQuests().
+   */
+  completeTutorial() {
+    if (state.tutorial_completed) return;
+    state.tutorial_completed = true;
+    this.save();
   },
 
   /** true, если depth — новый рекорд endless-зоны (battlefield, см. ExpeditionScene). */

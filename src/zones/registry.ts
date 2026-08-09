@@ -10,8 +10,14 @@ import mageRuinsCfg from './mage-ruins/config.json';
 import predatorPastureCfg from './predator-pasture/config.json';
 import marauderLairCfg from './marauder-lair/config.json';
 import battlefieldCfg from './battlefield/config.json';
+import trainingCampCfg from './training-camp/config.json';
 
+// `training-camp` — обучающая зона вне карты/маршрутов (см. docs/zones/training-camp.md):
+// регистрируется ТОЛЬКО здесь, в ZONE_CONFIGS (нужно ExpeditionScene для getZoneConfig).
+// Намеренно НЕ добавляется в ALL_ZONE_IDS/FACTION_ROUTES/MAP_ZONE_LAYOUT — иначе она попала бы
+// в essenceSourceZoneIds/isFuseUnlocked/подсчёт «всех 9 зон» и на обычную карту.
 export const ZONE_CONFIGS: Record<string, ZoneConfig> = {
+  'training-camp': trainingCampCfg as unknown as ZoneConfig,
   'dead-fields': deadFieldsCfg as unknown as ZoneConfig,
   'trampled-meadows': trampledMeadowsCfg as unknown as ZoneConfig,
   'armor-dump': armorDumpCfg as unknown as ZoneConfig,

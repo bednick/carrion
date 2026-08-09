@@ -23,7 +23,7 @@ import { slotSilhouetteKey, upgradeIconKey } from '../ui/silhouettes';
 import { Tooltip } from '../ui/Tooltip';
 import { DragDropManager } from '../ui/DragDropManager';
 import { getZoneConfig, getZoneLootItemIds, isZoneFullyLooted, WIP_ZONE_IDS, FACTION_ROUTES } from '../zones/registry';
-import { checkFactionDeathDialogs, checkSmithUnlockDialog, checkFuseUnlockDialog } from '../core/DialogSystem';
+import { checkFactionDeathDialogs, checkSmithUnlockDialog, checkFuseUnlockDialog, checkTutorialRewardDialog } from '../core/DialogSystem';
 import { NpcDialogBox } from '../ui/NpcDialogBox';
 import type { ZoneConfig } from '../zones/types';
 import { QuestTracker } from '../ui/QuestTracker';
@@ -346,6 +346,7 @@ export class CampScene extends Phaser.Scene {
   // диалог увиденным — здесь только сборка очереди и показ.
   private showPendingNpcDialogs() {
     const queue = [
+      ...(checkTutorialRewardDialog() ?? []),
       ...(checkFactionDeathDialogs(this.diedInZone) ?? []),
       ...(checkFuseUnlockDialog() ?? []),
       ...(checkSmithUnlockDialog() ?? []),
@@ -373,60 +374,9 @@ export class CampScene extends Phaser.Scene {
       [overlay, box, text, yesBtn, yesLbl, noBtn, noLbl].forEach(o => o.destroy());
     };
     this.input.keyboard?.on('keydown-ESC', onEsc);
-    yesBtn.on('pointerdown', () => { close(); this.showStartWeaponPicker(); });
+    yesBtn.on('pointerdown', () => { close(); MetaStore.resetAll(); });
     noBtn.on('pointerdown', () => close());
     overlay.on('pointerdown', () => close());
-  }
-
-  // Экран выбора стартового оружия — второй шаг сброса прогресса. Выбор обязателен (клик по
-  // фону не закрывает экран): подтверждение уже дано на предыдущем шаге, отступать некуда.
-  private showStartWeaponPicker() {
-    const weaponIds = MetaStore.listStartWeapons();
-
-    const overlay = this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0.88).setDepth(90).setInteractive();
-    const title = this.add.text(CX, 190, 'Выбери стартовое оружие', {
-      fontSize: '20px', fontFamily: FONT_FAMILY, color: '#ffdd44',
-    }).setOrigin(0.5).setDepth(92);
-    const hint = this.add.text(CX, 218, 'Common — единственный предмет на стойке новой игры', {
-      fontSize: '12px', fontFamily: FONT_FAMILY, color: '#888888',
-    }).setOrigin(0.5).setDepth(92);
-
-    const objs: Phaser.GameObjects.GameObject[] = [overlay, title, hint];
-
-    const CARD_W = 130, CARD_H = 140, GAP = 16, COLS = 4;
-    const rows = Math.ceil(weaponIds.length / COLS);
-    const startY = 420 - ((rows - 1) * (CARD_H + GAP)) / 2;
-
-    weaponIds.forEach((id, i) => {
-      const col = i % COLS;
-      const row = Math.floor(i / COLS);
-      const rowCount = Math.min(COLS, weaponIds.length - row * COLS);
-      const rowTotal = rowCount * CARD_W + (rowCount - 1) * GAP;
-      const rowStartX = CX - rowTotal / 2 + CARD_W / 2;
-      const x = rowStartX + col * (CARD_W + GAP);
-      const y = startY + row * (CARD_H + GAP);
-
-      const beh = getItemBehavior(id);
-      const card = this.add.rectangle(x, y, CARD_W, CARD_H, 0x1a1a2a)
-        .setStrokeStyle(2, 0x666666).setDepth(91).setInteractive({ useHandCursor: true });
-      const icon = addItemIcon(this, x, y - 24, { itemId: id, rarity: 'common', size: 56 }).setDepth(92);
-      const label = this.add.text(x, y + 32, beh.name, {
-        fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd', align: 'center',
-        wordWrap: { width: CARD_W - 12 },
-      }).setOrigin(0.5, 0).setDepth(92);
-      objs.push(card, icon, label);
-
-      card.on('pointerover', () => {
-        card.setFillStyle(0x2a2a3a);
-        this.tooltip.showItem({ item_id: id, rarity: 'common' }, x + CARD_W / 2 + 8, y - CARD_H / 2);
-      });
-      card.on('pointerout', () => { card.setFillStyle(0x1a1a2a); this.tooltip.hide(); });
-      card.on('pointerdown', () => {
-        this.tooltip.hide();
-        objs.forEach(o => o.destroy());
-        MetaStore.resetAll(id);
-      });
-    });
   }
 
   private refreshHUD() {
@@ -2108,6 +2058,14 @@ export class CampScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.panelContainer.add([bg, border, title]);
 
+    // Пока обучающая зона не пройдена — карта показывает только её плитку по центру, ни одна
+    // из 9 обычных зон и маршрутов не отображается вовсе (см. docs/zones/training-camp.md).
+    // После MetaStore.tutorial_completed эта ветка больше никогда не срабатывает.
+    if (!meta.tutorial_completed) {
+      this.buildTrainingCampNode();
+      return;
+    }
+
     // Выбор стойки убран с карты: клик по зоне уходит с последней активной стойкой
     // (её меняют на стенде или прямо в бою). См. docs/ui.md.
     this.buildMapConnections();
@@ -2115,6 +2073,40 @@ export class CampScene extends Phaser.Scene {
     for (const entry of MAP_ZONE_LAYOUT) {
       this.buildMapZoneNode(entry, meta.unlocked_areas, meta.completed_areas, meta.stats.items_carried_out);
     }
+  }
+
+  // Упрощённый узел карты для обучающей зоны (training-camp) — всегда открыт и кликабелен, без
+  // стрелок-маршрутов, без состояний «заблокировано»/«пройдено» (визуальный язык — как у обычного
+  // открытого узла в buildMapZoneNode, но без гейтов). Зона вне ZONE_CONFIGS-маршрутов/карты, см.
+  // src/zones/registry.ts.
+  private buildTrainingCampNode() {
+    const x = 640, y = 373;
+    const fillColor = 0x224466, borderColor = 0x4488cc;
+    const node = this.add.rectangle(x, y, 170, 80, fillColor).setStrokeStyle(2, borderColor);
+    const nameText = this.add.text(x, y - 12, 'Тренировочный лагерь', {
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#ddddff',
+      align: 'center', wordWrap: { width: 160 },
+    }).setOrigin(0.5);
+    this.panelContainer.add([node, nameText]);
+
+    node.setInteractive({ useHandCursor: true });
+    nameText.setInteractive({ useHandCursor: true });
+    const cfg = getZoneConfig('training-camp');
+    [node, nameText].forEach(obj => {
+      obj.on('pointerover', () => {
+        node.setFillStyle(0x336688);
+        const lines = [{ text: cfg.name, color: zoneNameColor(cfg) }];
+        for (const l of wrapText(cfg.description ?? '')) lines.push({ text: l, color: '#bbbbbb' });
+        this.tooltip.showLines(lines, this.panelX(x + 65), this.panelY(y - 70));
+      });
+      obj.on('pointerout', () => { node.setFillStyle(fillColor); this.tooltip.hide(); });
+      obj.on('pointerdown', () => {
+        this.tooltip.hide();
+        const standIndex = this.selectedStandIndex;
+        this.closePanel();
+        this.scene.start('ExpeditionScene', { zoneId: 'training-camp', standIndex });
+      });
+    });
   }
 
   // Направленные стрелки маршрута каждой фракции (из FACTION_ROUTES): задают порядок

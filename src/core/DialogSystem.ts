@@ -2,7 +2,7 @@ import { MetaStore } from './MetaStore';
 import { getZoneFaction } from '../zones/registry';
 import { isEssenceExchangeUnlocked, isFuseUnlocked } from '../items/craft';
 import type { EssenceTier } from '../items/types';
-import { FACTION_INFO, FACTION_GIFT, FACTION_RECOMMEND, SMITH_UNLOCK_DIALOG, FUSE_UNLOCK_DIALOG } from '../dialogs/definitions';
+import { FACTION_INFO, FACTION_GIFT, FACTION_RECOMMEND, SMITH_UNLOCK_DIALOG, FUSE_UNLOCK_DIALOG, TUTORIAL_REWARD_DIALOG } from '../dialogs/definitions';
 import type { DialogEntry } from '../dialogs/definitions';
 
 /**
@@ -35,6 +35,22 @@ export function checkFactionDeathDialogs(zoneId: string | undefined): DialogEntr
     queue.push(FACTION_RECOMMEND[faction]);
   }
   return queue;
+}
+
+/**
+ * Награда за обучающую зону (training-camp) — одноразовая реплика Информатора сразу после
+ * возврата в лагерь с MetaStore.tutorial_completed === true. В отличие от FACTION_GIFT, предмет
+ * не условный (не зависит от того, что уже есть у игрока) — «Латы отчаяния» выдаются всегда,
+ * это гарантированная, а не рекомендательная награда.
+ */
+export function checkTutorialRewardDialog(): DialogEntry[] | null {
+  const dialogId = 'tutorial_reward';
+  if (MetaStore.hasSeenDialog(dialogId)) return null;
+  if (!MetaStore.get().tutorial_completed) return null;
+
+  MetaStore.markDialogSeen(dialogId);
+  MetaStore.addToChest({ item_id: 'desperate_plate', rarity: 'common' });
+  return TUTORIAL_REWARD_DIALOG;
 }
 
 /** Первое открытие слияния у кузнеца (после трёх стартовых зон) — одноразовая реплика Кузнеца. */

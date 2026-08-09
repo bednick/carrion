@@ -102,3 +102,28 @@
 
 Гейт открытия центра (после прохождения всех 9 обычных зон) и отображение результата на карте — это логика
 `CampScene`/`MetaStore`, не поле конфига зоны.
+
+## Обучающая зона (вне карты)
+
+Единственная такая зона — `training-camp` (`docs/zones/training-camp.md`). Как и `endless`, режим включается
+явным полем, а не выводится из данных:
+
+```json
+{
+  "id": "training-camp",
+  "tutorial": true,
+  "fights": { "min": 3, "max": 3 },
+  "mob_pool": [{ "mob_id": "straw_dummy", "weight": 100 }],
+  "mob_loot": { "items": [] },
+  "boss": { "mob_id": "bound_corpse", "loot": { "items": [] } }
+}
+```
+
+- `tutorial: true` меняет поведение `ExpeditionScene.onExpeditionComplete()`: победа над боссом **не** открывает
+  стандартный драфт награды (`boss.loot`/`mob_loot` у такой зоны пусты — без флага `buildRewardOptions` вернула бы
+  0 карточек, и экран награды застрял бы без кнопки продолжения), а сразу возвращает в лагерь и помечает
+  `MetaStore.tutorial_completed`. Награда выдаётся отдельно, диалогом НПС (`DialogSystem.checkTutorialRewardDialog`).
+- Зона регистрируется **только** в `ZONE_CONFIGS` (`src/zones/registry.ts`) — не входит в `ALL_ZONE_IDS`/
+  `FACTION_ROUTES`/`MAP_ZONE_LAYOUT`, поэтому не участвует в подсчёте «всех 9 зон», гейте слияния/обмена эссенции
+  и никогда не всплывает на обычной карте. Пока не пройдена — карта лагеря вместо обычного списка зон рисует
+  только её собственную плитку (см. `docs/ui.md` §«Карта»).

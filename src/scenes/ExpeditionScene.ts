@@ -1825,6 +1825,18 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private onExpeditionComplete() {
+    // Обучающая зона (training-camp, docs/zones/training-camp.md) не даёт лута и не показывает
+    // стандартный драфт награды: её boss.loot/mob_loot пусты, buildRewardOptions вернула бы 0
+    // карточек — экран застрял бы без кнопки продолжения. Награда («Латы отчаяния») выдаётся
+    // отдельно, диалогом Информатора в лагере (DialogSystem.checkTutorialRewardDialog).
+    if (this.zoneCfg.tutorial) {
+      this.dumpBackpackToChest();
+      MetaStore.completeTutorial();
+      EventBus.emit('expedition_returned', this.zoneId);
+      this.scene.start('CampScene');
+      return;
+    }
+
     // Рюкзак НЕ вываливаем здесь: пока идёт выбор награды, добыча похода должна оставаться
     // видимой в сетке рюкзака — иначе игроку кажется, что предметы пропали. Уходит в сундук
     // в finishExpedition(), сразу после выбора карточки.

@@ -195,4 +195,12 @@ export interface ZoneConfig {
   boss?: BossRef;
   /** Присутствует только у endless-зоны (см. `EndlessConfig`). */
   endless?: EndlessConfig;
+  /**
+   * Обучающая зона вне карты/маршрутов (см. `docs/zones/training-camp.md`) — единственный явный
+   * флаг такого рода, по аналогии с `endless`. Меняет поведение `ExpeditionScene`: победа над
+   * боссом не открывает стандартный драфт награды (`boss.loot`/`mob_loot` у такой зоны пусты —
+   * без флага `buildRewardOptions` вернула бы 0 карточек и экран застрял бы), а сразу возвращает
+   * в лагерь и помечает `MetaStore.tutorial_completed`. Награда выдаётся отдельно, диалогом НПС.
+   */
+  tutorial?: boolean;
 }

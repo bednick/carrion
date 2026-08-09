@@ -60,6 +60,8 @@ import cleaverEnragedCfg from './cleaver_enraged/config.json';
 import overseerCfg from './overseer/config.json';
 import brigadierCfg from './brigadier/config.json';
 import brigadierLightCfg from './brigadier_light/config.json';
+import strawDummyCfg from './straw_dummy/config.json';
+import boundCorpseCfg from './bound_corpse/config.json';
 
 const MOB_CONFIGS: Record<string, MobConfig> = {
   raised_infantry: raisedInfantryCfg as unknown as MobConfig,
@@ -123,6 +125,8 @@ const MOB_CONFIGS: Record<string, MobConfig> = {
   overseer: overseerCfg as unknown as MobConfig,
   brigadier: brigadierCfg as unknown as MobConfig,
   brigadier_light: brigadierLightCfg as unknown as MobConfig,
+  straw_dummy: strawDummyCfg as unknown as MobConfig,
+  bound_corpse: boundCorpseCfg as unknown as MobConfig,
 };
 
 export const ALL_MOB_IDS = Object.keys(MOB_CONFIGS);

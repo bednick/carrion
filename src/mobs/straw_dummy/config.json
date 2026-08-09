@@ -1,0 +1,12 @@
+{
+  "id": "straw_dummy",
+  "name": "Соломенное чучело",
+  "tier": "common",
+  "health": 5,
+  "attacks": [
+    {
+      "damage": 0,
+      "interval": 2.0
+    }
+  ]
+}

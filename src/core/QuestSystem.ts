@@ -72,11 +72,26 @@ function grantBattlefieldChain() {
 }
 
 /**
+ * Обучающая зона (training-camp, вне карты/маршрутов — см. docs/zones/training-camp.md) больше не
+ * открывает «Мёртвые поля» и не сеет их стартовые квесты через MetaStore.createDefault() — это
+ * происходит здесь, сразу после того, как MetaStore.tutorial_completed стал true
+ * (ExpeditionScene.onExpeditionComplete). unlockArea/addActiveQuest идемпотентны по id, поэтому
+ * безопасно звать на каждый evaluateQuests(), как и grantBattlefieldChain().
+ */
+function grantTutorialUnlock() {
+  if (!MetaStore.get().tutorial_completed) return;
+  MetaStore.unlockArea('dead-fields');
+  MetaStore.addActiveQuest('dead_fields_clear', QUEST_DEFS.dead_fields_clear.target);
+  MetaStore.addActiveQuest('collect_dead_fields_items', QUEST_DEFS.collect_dead_fields_items.target);
+}
+
+/**
  * Сверяет все активные квесты (stat-, zone_items- и battlefield_depth-условия) против
  * текущей статистики и засчитывает выполненные. Срабатывает и задним числом — при выдаче
  * квеста ('quest_granted') и при любом изменении статов ('stats_changed').
  */
 function evaluateQuests() {
+  grantTutorialUnlock();
   grantBattlefieldChain();
 
   const meta = MetaStore.get();
