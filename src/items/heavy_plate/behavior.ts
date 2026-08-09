@@ -6,18 +6,18 @@ import { DEFENSE_COLOR, PENALTY_COLOR } from '../statColors';
 // канал weapon_interval_mult без scope (та же idea, что раньше давал weaponTimerMod), участвует в
 // каждом weaponTimer, не только hand_right.
 const REDUCTION: Record<Rarity, number> = {
-  common: 0.31,  //EHP 145
-  uncommon: 0.37,  //EHP 159
-  rare: 0.43,  //EHP 177
-  epic: 0.50,  //EHP 200
-  legendary: 0.57,  //EHP 230
+  common: 0.16,  //EHP +19
+  uncommon: 0.22,  //EHP +28
+  rare: 0.28,  //EHP +39
+  epic: 0.33,  //EHP +50
+  legendary: 0.40,  //EHP +65
 };
 const INTERVAL_PENALTY: Record<Rarity, number> = {
-  common: 0.30,
-  uncommon: 0.30,
-  rare: 0.30,
-  epic: 0.30,
-  legendary: 0.30
+  common: 0.10,
+  uncommon: 0.10,
+  rare: 0.10,
+  epic: 0.10,
+  legendary: 0.10
 };
 
 const behavior: ItemBehavior = {

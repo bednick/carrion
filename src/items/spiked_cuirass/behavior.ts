@@ -4,11 +4,11 @@ import { DEFENSE_COLOR, REACTIVE_COLOR } from '../statColors';
 
 // Шипастый нагрудник: броня ниже «чистой» (gleaming_plate).
 const REDUCTION: Record<Rarity, number> = {
-  common: 0.21,  //EHP 126
-  uncommon: 0.26,  //EHP 135
-  rare: 0.31,  //EHP 145
-  epic: 0.37,  //EHP 159
-  legendary: 0.43,  //EHP 177
+  common: 0.05,
+  uncommon: 0.10,  //EHP +11.1
+  rare: 0.16,  //EHP +19
+  epic: 0.22,  //EHP +28
+  legendary: 0.28,  //EHP +39
 };
 const THORNS: Record<Rarity, number> = {
   common: 1,

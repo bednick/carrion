@@ -4,11 +4,11 @@ import { standardArmor } from '../factories';
 
 // Чистая броня: верхняя/нижняя планка оси «форма снижения урона» (docs/content.items.body.md).
 const REDUCTION: Record<Rarity, number> = {
-  common: 0.26,  //EHP 135
-  uncommon: 0.31,  //EHP 145
-  rare: 0.37,  //EHP 159
-  epic: 0.43,  //EHP 177
-  legendary: 0.50,  //EHP 200
+  common: 0.10,  //EHP +11.1
+  uncommon: 0.16,  //EHP +19
+  rare: 0.22,  //EHP +28
+  epic: 0.28,  //EHP +39
+  legendary: 0.33,  //EHP +50
 };
 
 const behavior: ItemBehavior = {

@@ -7,11 +7,11 @@ import { DEFENSE_COLOR } from '../statColors';
 // (множитель 1, «не участвует»), ниже порога — полная величина защиты.
 const HP_THRESHOLD = 0.5;
 const REDUCTION: Record<Rarity, number> = {
-  common: 0.41,  //EHP 135 (50 + 85)
-  uncommon: 0.48,  //EHP 145 (50 + 95)
-  rare: 0.54,  //EHP 159 (50 + 109)
-  epic: 0.60,  //EHP 177 (50 + 127)
-  legendary: 0.67,  //EHP 200 (50 + 150)
+  common: 0.18,  //EHP 111 (50 + 61)
+  uncommon: 0.27,  //EHP 118.5 (50 + 68.5)
+  rare: 0.36,  //EHP 128.1 (50 + 78.1)
+  epic: 0.43,  //EHP 137.7 (50 + 87.7)
+  legendary: 0.50,  //EHP 150 (50 + 100)
 };
 
 const behavior: ItemBehavior = {
