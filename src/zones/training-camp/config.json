@@ -3,7 +3,7 @@
   "name": "Тренировочный лагерь",
   "description": "Двор у самого костра, где новичков учат держать оружие прежде, чем отпустить за край поля.",
   "faction": "Без фракции",
-  "rarity": "uncommon",
+  "rarity": "common",
   "tutorial": true,
   "fights": { "min": 3, "max": 3 },
   "mob_pool": [
