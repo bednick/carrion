@@ -3,11 +3,11 @@ import type { Rarity } from '../types';
 import { DEFENSE_COLOR, REACTIVE_COLOR } from '../statColors';
 
 const BLOCK_CHANCE: Record<Rarity, number> = {
-  common: 0.21,  //EHP 126
-  uncommon: 0.26,  //EHP 135
-  rare: 0.31,  //EHP 145
-  epic: 0.37,  //EHP 159
-  legendary: 0.43,  //EHP 177
+  common: 0.04,
+  uncommon: 0.08,
+  rare: 0.12,
+  epic: 0.16,
+  legendary: 0.20,
 };
 const THORNS: Record<Rarity, number> = {
   common: 1,

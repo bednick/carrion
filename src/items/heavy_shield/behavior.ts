@@ -4,11 +4,11 @@ import { DEFENSE_COLOR } from '../statColors';
 
 // Чистая защита: только block_chance, без риддера — самый высокий голый блок в семье.
 const BLOCK_CHANCE: Record<Rarity, number> = {
-  common: 0.26,  //EHP 135
-  uncommon: 0.31,  //EHP 145
-  rare: 0.37,  //EHP 159
-  epic: 0.43,  //EHP 177
-  legendary: 0.50,  //EHP 200
+  common: 0.08,
+  uncommon: 0.12,
+  rare: 0.16,
+  epic: 0.20,
+  legendary: 0.25,
 };
 
 const behavior: ItemBehavior = {
