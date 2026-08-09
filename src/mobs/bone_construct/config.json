@@ -10,7 +10,10 @@
       "interval": 4.55
     }
   ],
+  "defense": {
+    "block": 0.35
+  },
   "ui": {
-    "scale": 1.3
+    "scale": 1.6
   }
 }

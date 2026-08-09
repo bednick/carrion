@@ -11,7 +11,7 @@
     }
   ],
   "defense": {
-    "dodge": 0.3
+    "dodge": 0.40
   },
   "ui": {
     "alpha": 0.5,

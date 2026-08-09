@@ -20,7 +20,7 @@ import type { SlotType, EssenceTier } from '../items/types';
 import type { ZoneConfig, MobConfig, EnemySpec, PhaseOverride, SummonRef } from '../zones/types';
 import { getMobConfig } from '../mobs/registry';
 import { slotSilhouetteKey, zoneDecorKey } from '../ui/silhouettes';
-import { MOB_MECHANIC_DEFS, MOB_MECHANIC_COLOR_NUM, mobMechanicIconKey, type MechanicId } from '../ui/mobMechanics';
+import { MOB_MECHANIC_DEFS, MOB_MECHANIC_NEST_ORDER, MOB_MECHANIC_COLOR_NUM, mobMechanicIconKey, type MechanicId } from '../ui/mobMechanics';
 import { addItemIcon, ItemIconView } from '../ui/itemIcon';
 import { essenceTag } from '../ui/priceTag';
 import { newBadge } from '../ui/newBadge';
@@ -42,10 +42,10 @@ function heroX(): number {
 // Та же палитра, что у характеристик предметов в тултипе (src/items/factories.ts,
 // src/items/spiked_cuirass/behavior.ts) — тултип моба должен выглядеть единообразно с ними.
 const DMG_COLOR = '#ffcc44';
-// Броня/уклон/шипы — тот же цвет, что и у одноимённых гнёзд механик правой колонки
+// Броня/уклон/блок/шипы — тот же цвет, что и у одноимённых гнёзд механик правой колонки
 // (единственный источник — MOB_MECHANIC_DEFS, см. src/ui/mobMechanics), чтобы палитра не разъезжалась.
-const DEF_COLOR = MOB_MECHANIC_DEFS.find(d => d.id === 'armor')!.color;
-const THORNS_COLOR = MOB_MECHANIC_DEFS.find(d => d.id === 'thorns')!.color;
+const DEF_COLOR = MOB_MECHANIC_DEFS.armor.color;
+const THORNS_COLOR = MOB_MECHANIC_DEFS.thorns.color;
 
 /** Нормализует моба (или его форму-override) в EnemySpec для движка. */
 function resolveSpec(ref: PhaseOverride, isBoss: boolean): EnemySpec {
@@ -135,16 +135,20 @@ function nearestFreeSlotFrom(from: number, occupied: Set<number>): number | null
  * Призыв только с `trigger.type: 'start'` в счёт не идёт: такие враги уже стоят на доске в начале
  * боя — с точки зрения игрока это просто «бой начался с несколькими мобами», а не механика призыва
  * посреди боя. Иконка загорается, только если есть хотя бы один интервальный/по HP/посмертный призыв.
+ *
+ * `evade`/`block` делят одно гнездо (см. `MOB_MECHANIC_NEST_ORDER`) — если у этого конкретного моба
+ * есть оба стата, в счёт идёт только `block` (приоритет тот же, что и при отрисовке гнезда).
  */
 function getMobMechanics(e: EnemyState): MechanicId[] {
   const cfg = getMobConfig(e.id);
   const present = new Set<MechanicId>();
-  if (e.defense?.dodge) present.add('evade');
+  if (e.defense?.block) present.add('block');
+  else if (e.defense?.dodge) present.add('evade');
   if (e.defense?.armor) present.add('armor');
   if (e.defense?.thorns) present.add('thorns');
   if (cfg.summons?.some(s => s.trigger.type !== 'start')) present.add('summon');
   if (cfg.phases?.length) present.add('phase');
-  return MOB_MECHANIC_DEFS.map(d => d.id).filter(id => present.has(id));
+  return Array.from(present);
 }
 
 const EQUIP_SLOTS: SlotId[] = ['head', 'body', 'legs', 'hand_left', 'hand_right', 'ring', 'amulet'];
@@ -228,7 +232,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private enemyGraphics: (EnemyGraphic | null)[] = [];
 
   // Гнёзда механик боя (правая колонка нижней панели, docs/ui.md «Механики»): у каждой механики —
-  // своё постоянное место (индекс = позиция в MOB_MECHANIC_DEFS), сбрасываются в onFightEnd/onHeroDeath.
+  // своё постоянное место (индекс = позиция в MOB_MECHANIC_NEST_ORDER; первое гнездо общее для
+  // evade/block, приоритет — блоку), сбрасываются в onFightEnd/onHeroDeath.
   private mechanicSlots: { bg: Phaser.GameObjects.Rectangle; icon: Phaser.GameObjects.Image }[] = [];
   private discoveredMechanics: Set<MechanicId> = new Set();
 
@@ -940,6 +945,7 @@ export class ExpeditionScene extends Phaser.Scene {
         // героя в статах нагрудников (`src/items/factories.ts`), чтобы тултипы не путались.
         if (def?.armor) stats.push({ text: `Броня: ${def.armor}`, color: DEF_COLOR });
         if (def?.dodge) stats.push({ text: `Уклон: ${Math.round(def.dodge * 100)}%`, color: DEF_COLOR });
+        if (def?.block) stats.push({ text: `Блок: ${Math.round(def.block * 100)}%`, color: DEF_COLOR });
         if (def?.thorns) stats.push({ text: `Шипы: ${def.thorns}`, color: THORNS_COLOR });
 
         const nameColor = RARITY_TEXT_COLORS[getMobConfig(eCapture.id).tier ?? 'common'];
@@ -1036,8 +1042,10 @@ export class ExpeditionScene extends Phaser.Scene {
 
   /**
    * 5 гнёзд под иконки механик мобов, встреченных в текущем бою (docs/ui.md). Место гнезда
-   * фиксировано за механикой — позиция `i` всегда `MOB_MECHANIC_DEFS[i]` (уворот/защита/шипы/
-   * призыв/фаза), а не порядок обнаружения: пусто, пока эта конкретная механика не встретилась.
+   * фиксировано за позицией в `MOB_MECHANIC_NEST_ORDER` (уворот/блок → защита → шипы → призыв →
+   * фаза), а не порядок обнаружения: пусто, пока ни одна механика из списка гнезда не встретилась.
+   * Первое гнездо — общее для `evade`/`block` (взаимоисключающие по лору, см. `docs/factions.md`):
+   * приоритет — блоку, см. `activeNestId`.
    */
   private buildMechanicNests() {
     const col = this.panelColumn(2);
@@ -1045,21 +1053,23 @@ export class ExpeditionScene extends Phaser.Scene {
     // BACKPACK_CELL/BACKPACK_GAP, оба уже учитывают panelScale().
     const SIZE = this.BACKPACK_CELL;
     const GAP = this.BACKPACK_GAP;
-    const count = MOB_MECHANIC_DEFS.length;
+    const count = MOB_MECHANIC_NEST_ORDER.length;
     const totalW = count * SIZE + (count - 1) * GAP;
     const startX = col.cx - totalW / 2 + SIZE / 2;
     const y = ExpeditionScene.PANEL_HEADER_Y + 46;
 
-    this.mechanicSlots = MOB_MECHANIC_DEFS.map((def, i) => {
+    this.mechanicSlots = MOB_MECHANIC_NEST_ORDER.map((nestIds, i) => {
       const x = startX + i * (SIZE + GAP);
       const bg = this.add.rectangle(x, y, SIZE, SIZE, 0x2a2a3a).setStrokeStyle(1, 0x444455);
       // 0.78 — та же доля иконки от размера ячейки, что у предметных плашек (DEFAULT_ICON_RATIO, src/ui/itemIcon.ts).
       const iconSize = Math.round(SIZE * 0.78);
-      const icon = this.add.image(x, y, mobMechanicIconKey(def.id))
+      const icon = this.add.image(x, y, mobMechanicIconKey(nestIds[0]))
         .setDisplaySize(iconSize, iconSize).setVisible(false);
       bg.setInteractive({ useHandCursor: false });
       bg.on('pointerover', () => {
-        if (!this.discoveredMechanics.has(def.id)) return;
+        const id = this.activeNestId(i);
+        if (!id) return;
+        const def = MOB_MECHANIC_DEFS[id];
         this.tooltip.showLines([
           { text: def.title, color: def.color },
           { text: def.description, color: '#aaaaaa' },
@@ -1072,13 +1082,18 @@ export class ExpeditionScene extends Phaser.Scene {
     this.refreshMechanicNests();
   }
 
-  /** Проставляет видимость и цвет фона каждого гнезда по текущему `discoveredMechanics`. */
+  /** Механика, реально показанная в гнезде `i` — первая из его приоритетного списка, обнаруженная в этом бою. */
+  private activeNestId(i: number): MechanicId | undefined {
+    return MOB_MECHANIC_NEST_ORDER[i].find(id => this.discoveredMechanics.has(id));
+  }
+
+  /** Проставляет иконку, видимость и цвет фона каждого гнезда по текущему `discoveredMechanics`. */
   private refreshMechanicNests() {
     this.mechanicSlots.forEach((slot, i) => {
-      const def = MOB_MECHANIC_DEFS[i];
-      if (this.discoveredMechanics.has(def.id)) {
-        slot.icon.setVisible(true);
-        const colorNum = MOB_MECHANIC_COLOR_NUM[def.id];
+      const id = this.activeNestId(i);
+      if (id) {
+        slot.icon.setTexture(mobMechanicIconKey(id)).setVisible(true);
+        const colorNum = MOB_MECHANIC_COLOR_NUM[id];
         slot.bg.setFillStyle(colorNum, 0.18).setStrokeStyle(1, colorNum, 0.8);
       } else {
         slot.icon.setVisible(false);
@@ -1090,7 +1105,7 @@ export class ExpeditionScene extends Phaser.Scene {
     });
   }
 
-  /** Открывает механики моба `e` на их постоянных местах (см. `MOB_MECHANIC_DEFS`). */
+  /** Открывает механики моба `e` на их постоянных местах (см. `MOB_MECHANIC_NEST_ORDER`). */
   private registerMobMechanics(e: EnemyState) {
     const found = getMobMechanics(e);
     const fresh = found.filter(id => !this.discoveredMechanics.has(id));
@@ -1587,7 +1602,7 @@ export class ExpeditionScene extends Phaser.Scene {
           SoundManager.play('hero_attack');
           const g = this.enemyGraphics[enemyIdx];
           if (g) {
-            // Цифра урона — в случайной точке нижних 2/3 модельки (надписи Блок/мимо остаются над головой).
+            // Цифра урона — в случайной точке нижних 2/3 модельки (надпись «Блок» остаётся над головой).
             const p = this.damageSpot(g.sprite);
             spawnFloater(this, 'damage', amount, p.x, p.y, { crit });
             this.flashSprite(g.sprite, 0xff0000);
@@ -1607,7 +1622,7 @@ export class ExpeditionScene extends Phaser.Scene {
         }
         const g = this.enemyGraphics[enemyIdx];
         if (!g) return;
-        // Надпись — над головой моба, как «мимо» у уклонения (цифры урона живут ниже, в damageSpot).
+        // Надпись — над головой моба (цифры урона живут ниже, в damageSpot).
         const headY = g.sprite instanceof Phaser.GameObjects.Sprite
           ? g.sprite.y - g.sprite.displayHeight - 10
           : g.sprite.y - 60;
@@ -1617,14 +1632,11 @@ export class ExpeditionScene extends Phaser.Scene {
       onDodge: (enemyIdx) => {
         SoundManager.play('block');
         const g = this.enemyGraphics[enemyIdx];
-        if (g) {
-          const headY = g.sprite instanceof Phaser.GameObjects.Sprite
-            ? g.sprite.y - g.sprite.displayHeight - 10
-            : g.sprite.y - 60;
-          spawnFloater(this, 'miss', 0, g.sprite.x, headY);
-          this.jerkEnemy(enemyIdx, 12);
-        }
-        this.showStatus('Уклонение!', 600);
+        if (g) this.jerkEnemy(enemyIdx, 12);
+        // Промах — всегда над персонажем: и когда моб увернулся от героя, и когда герой увернулся от моба.
+        const b = this.heroSprite.getBounds();
+        const x = b.x + Math.random() * b.width;
+        spawnFloater(this, 'miss', 0, x, 130);
       },
       onCounterAttack: () => {
         // Ответный удар героя (щит и т.п.) — надпись над героем, кто его совершил, а не над целью.

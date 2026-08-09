@@ -15,7 +15,6 @@
   ],
   "mob_loot": {
     "items": [
-      { "item_id": "dagger", "chance": 0.10},
       { "item_id": "leech_bead", "chance": 0.10}
     ]
   },
@@ -28,7 +27,6 @@
         "epic":  {"min": 10, "max": 20}
       },
       "items": [
-        { "item_id": "dagger", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "leech_bead", "chance": 0.10, "rarity": "uncommon" }
       ]
     }

@@ -10,5 +10,8 @@
       "interval": 2.73
     }
   ],
+  "defense": {
+    "block": 0.15
+  },
   "summons": []
 }

@@ -4,14 +4,14 @@
   "description": "Выжженная равнина магической фракции. Ритуалы удержали павших на ногах.",
   "faction": "Магия — Нежить",
   "rarity": "uncommon",
-  "fights": { "min": 3, "max": 5 },
+  "fights": { "min": 4, "max": 6 },
   "mob_pool": [
     { "mob_id": "raised_infantry", "weight": 60 },
     { "mob_id": "skeleton", "weight": 40 }
   ],
   "mob_loot": {
     "items": [
-      { "item_id": "short_sword", "chance": 0.10 },
+      { "item_id": "dagger", "chance": 0.10 },
       { "item_id": "light_gloves", "chance": 0.10 },
       { "item_id": "desperate_plate", "chance": 0.10 }
     ]
@@ -21,7 +21,7 @@
     "loot": {
       "essence": {"uncommon":  {"min": 10, "max": 20}},
       "items": [
-        { "item_id": "short_sword", "chance": 0.10, "rarity": "uncommon" },
+        { "item_id": "dagger", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "light_gloves", "chance": 0.10, "rarity": "uncommon" },
         { "item_id": "desperate_plate", "chance": 0.10, "rarity": "uncommon" }
       ]

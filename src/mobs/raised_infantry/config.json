@@ -2,7 +2,7 @@
   "id": "raised_infantry",
   "name": "Поднятый пехотинец",
   "tier": "common",
-  "health": 13,
+  "health": 8,
   "position": 1,
   "attacks": [
     {
@@ -10,6 +10,9 @@
       "interval": 1.5
     }
   ],
+  "defense": {
+    "block": 0.60
+  },
   "ui": {
     "move": {
       "left": 0.12

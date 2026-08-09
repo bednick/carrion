@@ -117,7 +117,7 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
       { type: 'essence', tier: 'rare', amount: 4 },
     ],
     next: ['mage_ruins_clear', 'collect_mage_ruins_items'],
-    condition: { kind: 'zone_items', itemIds: ['light_gloves', 'short_sword', 'desperate_plate'] },
+    condition: { kind: 'zone_items', itemIds: ['light_gloves', 'dagger', 'desperate_plate'] },
     areas: ['dead-fields'],
   },
   mage_ruins_clear: {

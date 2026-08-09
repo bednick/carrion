@@ -16,7 +16,7 @@ const LABELS: Record<FloaterType, (v: number) => string> = {
   damage: v => `-${v}`,
   heal: v => `+${v} HP`,
   essence: v => `+${v}`,
-  miss: () => 'мимо',
+  miss: () => 'промах',
   block: () => 'Блок',
   counter: () => 'Контрудар!',
   invuln: () => 'Неуязвимость!',
@@ -40,7 +40,7 @@ const BOLT_PTS: ReadonlyArray<readonly [number, number]> = [
 
 export function spawnFloater(scene: Phaser.Scene, type: FloaterType, value: number, x: number, y: number, opts?: { crit?: boolean }) {
   const isCrit = type === 'damage' && !!opts?.crit;
-  // Цифры урона рисуем поверх длинных надписей (Блок/мимо), чтобы не терялись при наложении.
+  // Цифры урона рисуем поверх длинных надписей (Блок/промах), чтобы не терялись при наложении.
   const depth = type === 'damage' ? 320 : 300;
   const text = scene.add.text(x, y, LABELS[type](value), {
     fontSize: `${isCrit ? CRIT_FONT_SIZE : (FONT_SIZES[type] ?? FONT_SIZE)}px`,

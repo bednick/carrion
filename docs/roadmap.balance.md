@@ -23,7 +23,7 @@
 Добавлена `training-camp` (`docs/zones/training-camp.md`) — обязательная обучающая зона перед любой из трёх
 стартовых. Как следствие, изменился реальный стартовый набор нового игрока:
 
-- Дефолтное оружие сменилось с `battle_staff` на `dagger` (`MetaStore.defaultStands()`).
+- Дефолтное оружие сменилось с `battle_staff` на `short_sword` (`MetaStore.defaultStands()`).
 - После прохождения `training-camp` игрок гарантированно получает «Латы отчаяния» (`desperate_plate`, common) в
   сундук — ещё до входа в `dead-fields`/`trampled-meadows`/`armor-dump`.
 
@@ -32,7 +32,7 @@
 описывают реальный старт игры — числа мобов трёх стартовых зон не пересчитаны под это изменение в этом заходе.
 
 **Не сделано** (отдельная будущая задача):
-1. Собрать новый якорный билд-файл (кинжал `common` + `desperate_plate` `common`) взамен/в дополнение к
+1. Собрать новый якорный билд-файл (короткий меч `common` + `desperate_plate` `common`) взамен/в дополнение к
    `basic-start.json`.
 2. Прогнать `npm run balance -- <zoneId> --trials=5000 --build=<новый файл>` по всем трём стартовым зонам
    (`dead-fields`, `trampled-meadows`, `armor-dump`) и подобрать `health`/`attacks[].damage` под тот же коридор

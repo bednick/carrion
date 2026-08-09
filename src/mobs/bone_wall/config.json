@@ -5,6 +5,9 @@
   "health": 40,
   "position": 1,
   "attacks": [],
+  "defense": {
+    "block": 0.50
+  },
   "ui": {
     "scale": 1.2,
     "move": {

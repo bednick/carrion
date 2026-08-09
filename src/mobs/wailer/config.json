@@ -10,6 +10,9 @@
       "interval": 7.92
     }
   ],
+  "defense": {
+    "dodge": 0.25
+  },
   "ui": {
     "alpha": 0.5
   }

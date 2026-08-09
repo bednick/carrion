@@ -11,7 +11,7 @@
     }
   ],
   "defense": {
-    "armor": 1
+    "block": 0.5
   },
   "ui": {
     "move": {

@@ -223,6 +223,7 @@ dodge → block → % митигация → округление (stochasticRou
 | Шипы (моб)                    | канал `thorns_flat` — та же реактивная стадия, полностью симметрично      |
 | Броня моба                    | канал `armor_flat`, вычет очков (`mitigateFlat`) — стадия % митигации     |
 | Уклонение моба                | канал `dodge_chance` — стадия dodge (короткое замыкание)                  |
+| Блок моба                     | канал `block_chance`, тир `flat` — стадия block (короткое замыкание), тот же канал, что у щита героя |
 | Cross-slot таймер оружия      | каналы `weapon_interval_mult`/`weapon_first_tick_ratio`, `scope.targetSlot` — читаются при постройке `weaponTimers` |
 
 Старый «второй хук `on.block`» у `spiked_cuirass` (ловил блок чужого слота, случившийся раньше по

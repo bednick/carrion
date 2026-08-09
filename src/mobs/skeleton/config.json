@@ -2,9 +2,12 @@
   "id": "skeleton",
   "name": "Скелет",
   "tier": "common",
-  "health": 25,
+  "health": 4,
   "position": 1,
   "attacks": [
     { "damage": 2, "interval": 1.25 }
-  ]
+  ],
+  "defense": {
+    "block": 0.80
+  }
 }

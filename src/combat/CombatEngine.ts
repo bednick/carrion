@@ -74,8 +74,9 @@ function buildHeroChannels(equipment: Partial<Record<SlotType, ItemInstance>>): 
  *  (`resolution.ts:resolveDefense`), что и у героя, параметризованный «чьими каналами». */
 function buildEnemyChannels(defense?: MobDefense): ChannelSet {
   const contributions: ChannelContribution[] = [];
-  if (defense?.armor) contributions.push({ channel: 'armor_flat', tier: 'flat', value: defense.armor });
   if (defense?.dodge) contributions.push({ channel: 'dodge_chance', tier: 'flat', value: defense.dodge });
+  if (defense?.block) contributions.push({ channel: 'block_chance', tier: 'flat', value: defense.block });
+  if (defense?.armor) contributions.push({ channel: 'armor_flat', tier: 'flat', value: defense.armor });
   if (defense?.thorns) contributions.push({ channel: 'thorns_flat', tier: 'flat', value: defense.thorns });
   return aggregateChannels(contributions);
 }

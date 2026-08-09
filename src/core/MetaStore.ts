@@ -85,10 +85,10 @@ function emptyStand(): ArmorStand {
   };
 }
 
-/** Три пустые стойки; в первой — стартовое оружие (всегда `dagger`) в правой руке. */
+/** Три пустые стойки; в первой — стартовое оружие (всегда `short_sword`) в правой руке. */
 function defaultStands(): ArmorStand[] {
   const stands = Array.from({ length: ARMOR_STAND_COUNT }, () => emptyStand());
-  stands[0].hand_right = { item_id: 'dagger', rarity: 'common' };
+  stands[0].hand_right = { item_id: 'short_sword', rarity: 'common' };
   return stands;
 }
 

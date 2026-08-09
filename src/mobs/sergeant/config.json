@@ -2,7 +2,7 @@
   "id": "sergeant",
   "name": "Сержант",
   "tier": "legendary",
-  "health": 50,
+  "health": 20,
   "position": 1,
   "attacks": [
     {
@@ -10,6 +10,9 @@
       "interval": 1.25
     }
   ],
+  "defense": {
+    "block": 0.50
+  },
   "phases": [
     {
       "id": "headless_knight",
