@@ -131,6 +131,7 @@ export const BG_LAYERS: BgLayer[] = ['far', 'mid', 'near', 'fore'];
  * ВАЖНО: добавил файлы — обнови счётчик здесь (public нельзя перечислить автоматически).
  */
 export const ZONE_BG_VARIANTS: Record<string, Partial<Record<BgLayer, number>>> = {
+  'training-camp': { far: 1, near: 1 },
   'dead-fields': { far: 2, near: 2 },
   'armor-dump': { far: 2, near: 2 },
   'trampled-meadows': { far: 2, near: 2 },

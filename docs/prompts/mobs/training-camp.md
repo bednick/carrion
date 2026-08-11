@@ -8,10 +8,10 @@
   (`docs/prompts/_style-guide.md`), но зона мирная и приземлённая (двор лагеря, не поле боя) — без магического
   свечения/некротического фиолетового, только приглушённые деревянные/земляные тона.
 - Прозрачный фон, без земли/тени/текста.
-- **Заглушка = одиночный idle-кадр.** Полные листы (`idle/attack/hit/death` по `docs/art-spec.md`) — позже тем же
+- **Заглушка = одиночный кадр.** Полные листы (`idle/attack/hit/death` по `docs/art-spec.md`) — позже тем же
   описанием.
-- Путь спрайтов: `public/sprites/mobs/<id>/idle.png`. Размеры относительные (рядовой ≈ кадр героя, босс/пленник
-  крупнее); точные px не важны — отмасштабируем.
+- Путь спрайтов: `public/sprites/mobs/<id>/base.webp` (генерить PNG с альфой, класть lossless WebP). Размеры
+  относительные (рядовой ≈ кадр героя, босс/пленник крупнее); точные px не важны — отмасштабируем.
 
 ---
 
@@ -19,34 +19,58 @@
 
 > Учебная мишень на деревянной палке — не бьёт, стоит смирно, пока по нему упражняются новички.
 
-```
-Pixel-art dark fantasy training-dummy sprite for a side-scrolling battler. A crude
-practice target: a stuffed straw effigy with a lumpy sackcloth "head" and torso, bound
-with frayed rope, mounted on a single weathered wooden post driven into the ground.
-Patched burlap, loose straw poking through torn seams, a few old scuff marks and cut
-gouges from practice weapons. No face, no weapon, no limbs reaching out — just a still
-practice post. Muted earthy palette (worn brown wood, dull straw-yellow, dusty grey
-burlap), cold desaturated dark-fantasy tone overall, but no magical glow.
+**Заменяемый файл:** `public/sprites/mobs/straw_dummy/base.webp`
+**Референсы:** `public/sprites/mobs/bone_stub/base.webp` (масштаб/подача рядового моба, альфа),
+`public/sprites/mobs/skeleton/base.webp` (толщина контура, пиксель-плотность)
 
-Side view, facing LEFT, full "body" (post included) from base to top, standing, centered.
-Hand-crafted pixel art. Fully transparent background — output a PNG with an alpha
-channel. Roughly human height, slightly squat.
+Сгенерирован (256×332):
+```
+Using the attached image as the exact style reference — same hand-crafted pixel art
+technique, same pixel density and outline weight, same cold desaturated dark-fantasy
+palette, same side-view framing and same overall sprite height — generate a NEW enemy
+sprite: a straw training dummy.
+
+A crude practice target: a stuffed straw effigy with a lumpy sackcloth head and a bulky
+torso, bound with frayed rope, mounted on a single weathered wooden post driven into the
+ground. Patched burlap, loose straw poking through torn seams, old scuff marks and cut
+gouges from practice weapons, one crooked wooden crossbar for arms. No face, no weapon,
+no reaching limbs — it is a still, inanimate practice post, slightly pathetic.
+Muted earthy colors: worn brown wood, dull straw-yellow, dusty grey burlap. Cold
+desaturated dark-fantasy tone overall, but absolutely no magical glow, no purple, no
+glowing eyes.
+
+Side view, facing LEFT, full figure including the post base, standing upright, centered in
+frame. Roughly human height, slightly squat and wider than a person.
+Fully transparent background — output a PNG with an alpha channel. No ground, no shadow
+under it, no background scenery, no text, no border, no frame.
 ```
 
 ## Скованный мертвец `bound_corpse` (common, «босс» — финальный бой зоны)
 
 > Пленная нежить, которую камп держит на цепи как живую учебную цель — уже слабо огрызается.
 
-```
-Pixel-art dark fantasy enemy sprite for a side-scrolling battler. A shackled undead
-captive kept as a live training target in a mercenary camp yard — a gaunt raised corpse
-in ragged clothes, wrists and ankles bound in heavy rusted chains anchored to a stout
-wooden cage post behind it, hunched low, one chained arm weakly raised as if to claw.
-Sunken grey skin, faint dim purple glow in the eye sockets (much fainter than a proper
-undead warrior — this one is starved and weak), no armor, no weapon. Cold desaturated
-grey-purple palette, muted, slightly pathetic rather than menacing.
+**Заменяемый файл:** `public/sprites/mobs/bound_corpse/base.webp`
+**Референсы:** `public/sprites/mobs/ghoul/base.webp` (пропорции нежити, сгорбленность, палитра),
+`public/sprites/mobs/skeleton/base.webp` (толщина контура, пиксель-плотность)
 
-Side view, facing LEFT, full body, standing, centered. Hand-crafted pixel art. Fully
-transparent background — output a PNG with an alpha channel. Human height, gaunt and
-slightly stooped.
+Сгенерирован (256×341):
+```
+Using the attached image as the exact style reference — same hand-crafted pixel art
+technique, same pixel density and outline weight, same cold desaturated dark-fantasy
+palette, same side-view framing and comparable sprite height — generate a NEW enemy
+sprite: a shackled undead captive.
+
+A gaunt raised corpse kept chained in a mercenary camp yard as a live training target.
+Ragged filthy clothes hanging off a starved frame, exposed ribs, sunken grey-green skin,
+wrists and ankles locked in heavy rusted iron shackles, thick chains running back and down
+to a short stout wooden stake behind it. Hunched low, head drooping, one chained arm weakly
+raised as if trying to claw forward — the chain visibly holding it back. Faint dim purple
+light in the empty eye sockets, much weaker than a proper undead warrior: this one is
+starved, exhausted and slightly pathetic rather than menacing. No armor, no weapon, no
+bright glow, no aura effects.
+
+Side view, facing LEFT, full body including the anchor stake and chains, standing but
+stooped, centered in frame. Human height, gaunt.
+Fully transparent background — output a PNG with an alpha channel. No ground, no shadow
+under it, no background scenery, no text, no border, no frame.
 ```

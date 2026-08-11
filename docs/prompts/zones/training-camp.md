@@ -15,36 +15,66 @@
 
 ---
 
-## FAR — `far.png` (небо/дальний план, непрозрачный, медленный)
+## FAR — небо/дальний план (непрозрачный, медленный)
 
-**Вариант 1 (`far.1.png`):**
+**Заменяемый файл:** `public/backgrounds/zones/training-camp/far.1.webp` (генерить в PNG, класть как WebP `-q 85`)
+**Референсы:** `public/backgrounds/zones/abandoned-camp/far.1.webp` (стиль far-слоя, пропорции, горизонт),
+`public/backgrounds/zones/dead-fields/far.1.webp` (небо/градиент)
+
+Сгенерирован (2928×352):
 ```
-Generate a pixel-art far background layer for a dark-fantasy side-scrolling battler — the "Training Camp" zone, a
-mundane fenced practice yard just outside the player's own camp (not a battlefield). Hand-crafted dark fantasy
-pixel art, cold desaturated palette, grim but calm dusk mood.
-A low wooden palisade fence stretching along the horizon, a few dim torches on posts glowing warm-orange against
-the cold dusk sky, faint smoke haze drifting up from a campfire just out of frame, overcast grey-blue sky with no
-moon emphasis. Keep every distinct distant shape different — no repeated silhouettes. Sky and distant fence line
-ONLY — no foreground, no large objects, no people, no text. Opaque image.
-Very wide horizontal strip, about 8:1 (much wider than one screen), not a square; tiles seamlessly left to right.
-Limited cold palette with warm torch accents, approximately: #1a1a2e, #3a3a4a, #c88a44.
+Using the attached image as the exact style reference — same hand-crafted pixel-art
+technique, same cold desaturated dark-fantasy palette, same very wide strip proportions,
+same horizon height and same silhouette-style rendering of distant structures — generate
+a NEW far background layer for a different zone: the "Training Camp", a mundane fenced
+practice yard just outside the player's own mercenary camp. Not a battlefield: calm, lived-in,
+dusk.
+
+Content along the horizon: a low sagging wooden palisade of rough split logs running the
+whole width, a plain gate frame, a couple of dim torches on posts glowing warm orange
+against the cold sky, one leaning watch post, faint smoke haze drifting up from a campfire
+just out of frame. Overcast grey-blue dusk sky above, no moon, no magical glow, no
+necrotic purple. Keep every distinct distant shape different — no repeated silhouettes,
+vary fence height and lean.
+
+Sky and distant fence line ONLY — no ground detail in the foreground band, no large close-up
+objects, no characters, no UI, no text, no frames or borders. Opaque image, no transparency.
+Very wide horizontal strip, about 8:1, tiling seamlessly left to right (left and right edges
+must match).
+Palette approximately: #1a1a2e sky, #3a3a4a cold grey-blue, #c88a44 torch light,
+#3a2e22 dark wood.
 ```
 
 ---
 
-## NEAR — `near.png` (земля, непрозрачный, скорость героя)
+## NEAR — земля (непрозрачный, скорость героя)
 
-**Вариант 1 (`near.1.png`):**
+**Заменяемый файл:** `public/backgrounds/zones/training-camp/near.1.webp`
+**Референсы:** `public/backgrounds/zones/trampled-meadows/near.1.webp` (угол камеры, плотность деталей,
+бесшовность), `public/backgrounds/zones/abandoned-camp/near.1.webp` (земля обитаемого лагеря)
+
+Сгенерирован (2544×416):
 ```
-Generate a pixel-art GROUND/floor layer for a dark-fantasy battle game — the packed dirt yard of the "Training
-Camp" zone the character walks on. Hand-crafted dark fantasy pixel art, cold desaturated palette.
-Hard-packed trodden earth seen from a high oblique angle — a steep near-top-down view (camera tilted down, NOT
-straight overhead and NOT a side view); the surface fills the whole band and recedes gently toward the top, fading
-darker there. Evenly, uniformly detailed: scuffed dirt, faint boot-worn ruts, a few scattered wood chips and straw
-wisps from practice dummies — distributed evenly, no large unique landmark objects, no sky, no horizon. Opaque
-image.
-A very wide, short horizontal band (~8:1), seamlessly tileable left to right with no visible seam (this layer
-scrolls fastest). Cold earthy palette: #3a2e22, #5a4a38, faint straw #8a7a4a.
+Using the attached image as the exact style reference — same hand-crafted pixel-art
+technique, same steep oblique near-top-down camera angle, same very wide short band
+proportions, same even uniform detail density, same darkening toward the top edge —
+generate a NEW ground layer for a different zone: the packed dirt yard of a "Training Camp",
+a mundane fenced practice yard outside a mercenary camp.
+
+Surface: hard-packed trodden brown earth, not cracked dead soil and not burnt ground —
+lived-in and worn. Scuffed dirt, faint boot-worn ruts and drag marks, scattered wood chips,
+loose straw wisps and a few splintered practice-stave fragments, a couple of shallow puddles
+of muddy water. All of it distributed evenly across the whole width — no large unique
+landmark object, no single focal point, nothing that would look wrong when the layer repeats.
+No bones, no skulls, no magical glow, no purple.
+
+The surface fills the entire band and recedes gently toward the top, fading darker there.
+No sky, no horizon line, no fence, no characters, no text, no borders. Opaque image, no
+transparency.
+Very wide short horizontal band, about 6:1, tiling seamlessly left to right (left and right
+edges must match exactly — this layer scrolls fastest).
+Palette approximately: #3a2e22 packed earth, #5a4a38 lighter dirt, #8a7a4a straw and wood
+chips, cold desaturated overall.
 ```
 
 ---
