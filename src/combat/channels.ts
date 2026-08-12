@@ -15,9 +15,8 @@ export type ChannelId =
   | 'armor_pct' // герой: доля урона, которая проходит (1 = без брони); каждый источник — 'more'
   | 'armor_flat' // моб: очки, вычитаемые из удара (mitigateFlat)
   | 'thorns_flat' // герой и моб: фикс. урон назад за каждый удар (разные ChannelSet — не пересекаются)
-  | 'lifesteal_on_hit_chance'
-  | 'lifesteal_on_hit_flat'
-  | 'lifesteal_on_kill_pct'
+  // Лайфстила тут нет: лечение за удар/убийство — не канал, а конечный ресурс забега
+  // (`RunStateBag.hitLeech`/`killHeal`), ему нужно мутируемое состояние — см. runState.ts.
   | 'weapon_interval_mult' // cross-slot; без scope — влияет на КАЖДЫЙ weaponTimer (не только hand_right)
   | 'weapon_first_tick_ratio'; // cross-slot, combine='max', scope.targetSlot обязателен
 
@@ -63,9 +62,6 @@ const CHANNEL_SPECS: Record<ChannelId, ChannelSpec> = {
   armor_pct: { base: 1, combine: 'tiered', clamp: [0, 1] },
   armor_flat: { base: 0, combine: 'tiered', clamp: [0, Infinity] },
   thorns_flat: { base: 0, combine: 'tiered', clamp: [0, Infinity] },
-  lifesteal_on_hit_chance: { base: 0, combine: 'tiered', clamp: [0, 1] },
-  lifesteal_on_hit_flat: { base: 0, combine: 'tiered' },
-  lifesteal_on_kill_pct: { base: 0, combine: 'tiered' },
   weapon_interval_mult: { base: 1, combine: 'tiered' },
   weapon_first_tick_ratio: { base: 0, combine: 'max' },
 };

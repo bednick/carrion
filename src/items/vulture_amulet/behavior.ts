@@ -2,21 +2,22 @@ import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { HEAL_COLOR } from '../statColors';
 
-// Лечение за убийство: доля от maxHp убитого врага (не героя) — общая стадия движка
-// (CombatEngine.handleDamage) читает канал lifesteal_on_kill_pct в момент, когда враг умирает,
-// с maxHp из того же снимка боя, что использовался для резолюции этого удара (maxHp не меняется
-// по ходу боя, так что это эквивалентно чтению из состояния). legendary не крафтится — повторяет
-// epic (см. docs/content.items.amulet.md).
-const HEAL_PERCENT: Record<Rarity, number> = { common: 0.10, uncommon: 0.15, rare: 0.20, epic: 0.25, legendary: 0.25 };
+// Лечение за убийство: величина фиксирована (от maxHp убитого больше не зависит — иначе жирный
+// босс лечил бы кратно сильнее рядового моба), а редкость скейлит ЧИСЛО срабатываний за забег.
+// Это конечный ресурс, а не канал: запас живёт в per-run стейт-бэге (RunStateBag.killHeal,
+// src/combat/runState.ts) и между боями экспедиции не восстанавливается — стадия движка
+// (CombatEngine.handleDamage) тратит по заряду на килл, пока они есть.
+const HEAL_AMOUNT = 5;
+const CHARGES: Record<Rarity, number> = { common: 2, uncommon: 3, rare: 4, epic: 5, legendary: 6 };
 
 const behavior: ItemBehavior = {
   name: 'Амулет грифа',
   slots: ['amulet'],
   type: 'accessory',
   tags: ['accessory', 'on_kill', 'lifesteal'],
-  channels: (rarity) => [{ channel: 'lifesteal_on_kill_pct', tier: 'flat', value: HEAL_PERCENT[rarity] }],
+  killHeal: (rarity) => ({ amount: HEAL_AMOUNT, charges: CHARGES[rarity] }),
   stats: (rarity) => [
-    { text: `Лечение за убийство: ${Math.round(HEAL_PERCENT[rarity] * 100)}% от макс. HP врага`, color: HEAL_COLOR },
+    { text: `Лечение за убийство: ${HEAL_AMOUNT} HP (${CHARGES[rarity]} раз за забег)`, color: HEAL_COLOR },
   ],
 };
 

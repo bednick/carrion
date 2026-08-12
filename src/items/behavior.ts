@@ -59,9 +59,11 @@ export interface ItemIdentity {
  *   не любое оружие в hand_left вообще — см. `weapon_interval_mult` в `channels.ts`).
  * - `triggers` — декларативные правила «на событие → действие» («когда») для того, что не сводится
  *   к числовому каналу (напр. контрудар `buckler`, читающий чужой базовый урон).
- * - `invuln`/`emergencyHeal` — не хуки, а декларативные значения, читаемые ДВИЖКОМ один раз при
- *   сборке героя в per-fight стейт-бэг (`buildTriggerState`) — сама механика (гашение урона,
- *   разовый порог) живёт в `CombatEngine.applyDamage`, не здесь (нужно мутируемое состояние).
+ * - `invuln`/`emergencyHeal`/`killHeal`/`hitLeech` — не хуки, а декларативные значения, читаемые
+ *   ДВИЖКОМ один раз при входе в забег в per-run стейт-бэг (`syncRunState`) — сама механика
+ *   (гашение урона, разовый порог, трата заряда, затухание шанса) живёт стадиями в `CombatEngine`,
+ *   не здесь: ей нужно мутируемое состояние, которого у стейтлес channels/triggers нет. Все
+ *   четыре лимита живут ЗАБЕГ, а не бой (docs/content.items.amulet.md).
  * - `stats` — строки для тултипа (единый источник правды по статам, пишется вручную и должен
  *   брать числа из тех же констант, что `channels`/`weapon`/`triggers`).
  */
@@ -74,6 +76,10 @@ export interface ItemBehavior extends ItemIdentity {
   triggers?: (rarity: Rarity) => TriggerDef<any>[];
   invuln?: (rarity: Rarity) => { charges: number };
   emergencyHeal?: (rarity: Rarity) => EmergencyHealConfig;
+  // Лечение за убийство: `amount` HP за каждого убитого врага, но не больше `charges` раз за забег.
+  killHeal?: (rarity: Rarity) => { amount: number; charges: number };
+  // Лайфстил за удар: `chance` на прок, каждый прок множит шанс на `decay` до конца забега.
+  hitLeech?: (rarity: Rarity) => { chance: number; decay: number; amount: number };
   // `slot` — куда сейчас надет предмет (undefined для рюкзака/сундука — там показываем базовые
   // статы «как в hand_right»). Нужен предметам вроде `dagger`, чей эффективный DPS зависит от
   // слота (см. cross-slot `weapon_interval_mult` в src/combat/channels.ts).

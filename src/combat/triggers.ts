@@ -1,7 +1,6 @@
 import type { Rarity, SlotType, ItemInstance } from '../items/types';
 import type { EventType, EventOf, GameEvent } from './events';
 import type { CombatView } from '../items/behavior';
-import type { EmergencyHealConfig } from './types';
 import { getItemBehavior } from '../items/registry';
 
 /** Приватный кусок per-fight стейт-бэга, доступный конкретному триггеру (см. `TriggerStateBag`). */
@@ -38,15 +37,11 @@ export interface TriggerDef<T extends EventType = EventType> {
  *  коллизионно-безопасный идентификатор «этого надетого экземпляра», отдельная identity не нужна. */
 export type TriggerStateBag = Partial<Record<SlotType, Record<string, unknown>>>;
 
-export interface InvulnState { charges: number; max: number; }
-export interface EmergencyHealState { used: boolean; config: EmergencyHealConfig; }
-
 /**
- * Строит per-fight стейт-бэг: заряды неуязвимости/аварийный хил (декларативные поля
- * `ItemBehavior.invuln`/`emergencyHeal`, читаются один раз при сборке — сама механика гейта
- * живёт в `CombatEngine.applyDamage`, ей нужно мутируемое состояние, которого у стейтлес-триггеров
- * нет) + `initState()` всех `triggers()` надетой экипировки. Свежий на каждый `buildInitialHero` —
- * тот же контракт сброса, что был у старых `invulnHits`/`emergencyHealUsed`.
+ * Строит per-fight стейт-бэг из `initState()` всех `triggers()` надетой экипировки. Свежий на
+ * каждый `buildInitialHero` — это и есть скоуп «за бой». Лимиты предметов, живущие весь забег
+ * (неуязвимость, аварийный хил, лечения за убийство/удар), сюда НЕ входят: у них свой бэг
+ * `RunStateBag` с другим владельцем и другим сбросом — см. `runState.ts`.
  */
 export function buildTriggerState(equipment: Partial<Record<SlotType, ItemInstance>>): TriggerStateBag {
   const state: TriggerStateBag = {};
@@ -56,15 +51,6 @@ export function buildTriggerState(equipment: Partial<Record<SlotType, ItemInstan
     const beh = getItemBehavior(inst.item_id);
     const bag: Record<string, unknown> = {};
 
-    if (beh.invuln) {
-      const charges = beh.invuln(inst.rarity).charges;
-      const s: InvulnState = { charges, max: charges };
-      bag.invuln = s;
-    }
-    if (beh.emergencyHeal) {
-      const s: EmergencyHealState = { used: false, config: beh.emergencyHeal(inst.rarity) };
-      bag.emergency_heal = s;
-    }
     for (const t of beh.triggers?.(inst.rarity) ?? []) {
       if (t.initState) bag[t.id] = t.initState(inst.rarity);
     }
@@ -99,17 +85,4 @@ export function runTriggers(
     }
   }
   return spawned;
-}
-
-/** Заряды неуязвимости для UI (счётчик текущий/максимум) — суммирует по всей экипировке героя. */
-export function getInvulnStatus(triggerState: TriggerStateBag): { hits: number; max: number } {
-  let hits = 0;
-  let max = 0;
-  for (const bag of Object.values(triggerState)) {
-    const s = bag?.invuln as InvulnState | undefined;
-    if (!s) continue;
-    hits += s.charges;
-    max += s.max;
-  }
-  return { hits, max };
 }

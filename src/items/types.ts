@@ -2,6 +2,10 @@ export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 export type SlotType = 'head' | 'body' | 'legs' | 'hand_left' | 'hand_right' | 'ring' | 'amulet';
 export type ItemType = 'weapon' | 'armor' | 'shield' | 'accessory' | 'gloves';
 
+/** Канонический порядок слотов — детерминированный обход экипировки везде, где порядок виден
+ *  снаружи (какой предмет первым отдаст заряд, в каком порядке собираются каналы/таймеры). */
+export const SLOT_ORDER: readonly SlotType[] = ['hand_right', 'hand_left', 'head', 'body', 'legs', 'ring', 'amulet'];
+
 /**
  * Тиры эссенции — ресурса обычного улучшения (upgradeEssenceCost в items/craft.ts) и обмена
  * между тирами. Источник — только награды зональных квестов (см. docs/meta-progression.md).

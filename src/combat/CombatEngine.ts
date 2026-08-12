@@ -2,6 +2,10 @@ import type { CombatState, EnemyState, HeroState, SummonPlan } from './types';
 import { BOARD_SLOTS, placementAnchor } from './types';
 import type { EnemySpec, SummonRef, MobDefense } from '../zones/types';
 import type { SlotType, ItemInstance } from '../items/types';
+// Канонический порядок слотов: детерминированная сборка таймеров/каналов и детерминированный
+// порядок трат per-run зарядов. Каналы сами по себе порядок-независимы (сумма/произведение
+// коммутативны) — там порядок только ради стабильности вывода (порядок weaponTimers[] и т.п.).
+import { SLOT_ORDER } from '../items/types';
 import type { CombatView } from '../items/behavior';
 import type { GameEvent, Side } from './events';
 import { UNARMED_DAMAGE } from './events';
@@ -9,7 +13,8 @@ import { getItemBehavior } from '../items/registry';
 import type { ChannelContribution } from './channels';
 import { aggregateChannels, type ChannelSet } from './channels';
 import { authorAttack, resolveDefense } from './resolution';
-import { buildTriggerState, runTriggers, type InvulnState, type EmergencyHealState } from './triggers';
+import { buildTriggerState, runTriggers } from './triggers';
+import { buildRunState, equippedRunStates, type RunStateBag } from './runState';
 import { stochasticRound } from './mitigation';
 import { unseededRng, type Rng } from '../core/rng';
 
@@ -25,10 +30,6 @@ const ATTACK_WINDUP_MS = 160;
 // отражающие друг друга — гасится флагом `thorns`, но предохранитель остаётся на всякий случай).
 const MAX_CASCADE = 64;
 
-// Канонический порядок слотов для детерминированной сборки таймеров/каналов/стейт-бэга.
-// Каналы сами по себе порядок-независимы (сумма/произведение коммутативны) — порядок тут только
-// ради стабильности вывода (порядок weaponTimers[] и т.п.), не влияет на исход боя.
-const SLOT_ORDER: SlotType[] = ['hand_right', 'hand_left', 'head', 'body', 'legs', 'ring', 'amulet'];
 
 export interface CombatCallbacks {
   onDamageDealt: (target: 'hero' | 'enemy', amount: number, enemyIdx: number, crit?: boolean) => void;
@@ -443,11 +444,10 @@ export class CombatEngine {
           this.cb.onDamageDealt('enemy', dmg, target.idx, e.crit);
           if (enemy.hp <= 0) {
             events.push({ type: 'kill', source: e.source, target: e.target, origin: { from: 'engine' } });
-            const killPct = this.state.hero.channels.query('lifesteal_on_kill_pct', view);
-            if (killPct > 0) {
-              const heal = Math.round((view.enemies[target.idx]?.maxHp ?? 0) * killPct);
-              if (heal > 0) events.push({ type: 'heal', source: { side: 'hero' }, target: { side: 'hero' }, amount: heal, origin: { from: 'engine' } });
-            }
+            // Лечение за убийство — конечный ресурс забега (не канал): величина фиксирована,
+            // от maxHp убитого не зависит, запас тратится один раз на килл (docs/content.items.amulet.md).
+            const killHeal = e.source.side === 'hero' ? this.consumeKillHeal() : 0;
+            if (killHeal > 0) events.push({ type: 'heal', source: { side: 'hero' }, target: { side: 'hero' }, amount: killHeal, origin: { from: 'engine' } });
           }
         }
       }
@@ -496,23 +496,26 @@ export class CombatEngine {
     }
 
     if (!isHero && e.source.side === 'hero' && dealt > 0 && !e.splash) {
-      if (this.state.hero.channels.roll('lifesteal_on_hit_chance', rng, view)) {
-        const heal = this.state.hero.channels.query('lifesteal_on_hit_flat', view);
-        if (heal > 0) events.push({ type: 'heal', source: e.source, target: { side: 'hero' }, amount: heal, origin: { from: 'engine' } });
-      }
+      const heal = this.rollHitLeech(rng);
+      if (heal > 0) events.push({ type: 'heal', source: e.source, target: { side: 'hero' }, amount: heal, origin: { from: 'engine' } });
     }
 
     events.push(...runTriggers(this.state.hero.equipment, this.state.hero.triggerState, e, view, rng));
     return events;
   }
 
-  /** Тратит один заряд неуязвимости (первый слот с зарядом>0) — суммарный пул, как раньше
-   *  (см. `getInvulnStatus` в triggers.ts для UI-суммы по всей экипировке). */
+  /** Состояния предметов забега в порядке слотов — общий обход для всех per-run гейтов ниже
+   *  (детерминированный порядок трат, см. `runState.ts`). */
+  private runStates() {
+    return equippedRunStates(this.state.hero.equipment, this.state.hero.runState);
+  }
+
+  /** Тратит один заряд неуязвимости (первый предмет с зарядом>0) — суммарный пул на весь забег,
+   *  между боями не восстанавливается (см. `getInvulnStatus` в runState.ts для UI-суммы). */
   private consumeInvuln(): boolean {
-    for (const slot of SLOT_ORDER) {
-      const inv = this.state.hero.triggerState[slot]?.invuln as InvulnState | undefined;
-      if (inv && inv.charges > 0) {
-        inv.charges--;
+    for (const s of this.runStates()) {
+      if (s.invuln && s.invuln.charges > 0) {
+        s.invuln.charges--;
         return true;
       }
     }
@@ -521,18 +524,43 @@ export class CombatEngine {
 
   private applyEmergencyHealIfNeeded() {
     const hero = this.state.hero;
-    for (const slot of SLOT_ORDER) {
-      const eh = hero.triggerState[slot]?.emergency_heal as EmergencyHealState | undefined;
+    for (const s of this.runStates()) {
+      const eh = s.emergencyHeal;
       if (!eh || eh.used) continue;
       if (hero.hp / hero.maxHp >= eh.config.thresholdRatio) continue;
       eh.used = true;
-      const heal = Math.min(hero.maxHp - hero.hp, Math.round(hero.maxHp * eh.config.healPercent));
+      const heal = Math.min(hero.maxHp - hero.hp, eh.config.healFlat);
       if (heal > 0) {
         hero.hp += heal;
         this.cb.onHeal?.(heal);
       }
-      return; // один аварийный хил за бой суммарно (несколько источников не предполагается)
+      return; // один аварийный хил за забег суммарно (несколько источников не предполагается)
     }
+  }
+
+  /** Лечение за убийство: фиксированная величина, конечный запас срабатываний на забег.
+   *  Возвращает 0, когда запас исчерпан — до конца забега киллы больше не лечат. */
+  private consumeKillHeal(): number {
+    for (const s of this.runStates()) {
+      if (s.killHeal && s.killHeal.charges > 0) {
+        s.killHeal.charges--;
+        return s.killHeal.amount;
+      }
+    }
+    return 0;
+  }
+
+  /** Лайфстил за удар: шанс редеет с каждым проком до конца забега (`baseChance * decay^procs`),
+   *  нуля не достигает — предмет не выключается совсем, а только слабеет. Возвращает 0 без прока. */
+  private rollHitLeech(rng: () => number): number {
+    for (const s of this.runStates()) {
+      const hl = s.hitLeech;
+      if (!hl) continue;
+      if (rng() >= hl.baseChance * Math.pow(hl.decay, hl.procs)) continue;
+      hl.procs++;
+      return hl.amount;
+    }
+    return 0;
   }
 
   /**
@@ -611,7 +639,16 @@ export class CombatEngine {
     hero.unarmedTimer = 0;
   }
 
-  static buildInitialHero(equipment: Partial<Record<SlotType, ItemInstance>>, damageTakenMult = 1): HeroState {
+  /**
+   * `runState` — бэг ЗАБЕГА, приходит от владельца (`ExpeditionScene`/`simulate.ts`) и кладётся по
+   * ссылке: лимиты амулетов обязаны пережить сборку героя на следующий бой. Без аргумента строится
+   * свежий — для превью/разовых вызовов вне забега.
+   */
+  static buildInitialHero(
+    equipment: Partial<Record<SlotType, ItemInstance>>,
+    damageTakenMult = 1,
+    runState?: RunStateBag,
+  ): HeroState {
     const channels = buildHeroChannels(equipment);
     return {
       maxHp: 100,
@@ -621,6 +658,7 @@ export class CombatEngine {
       unarmedTimer: 0,
       channels,
       triggerState: buildTriggerState(equipment),
+      runState: runState ?? buildRunState(equipment),
       damageTakenMult,
     };
   }

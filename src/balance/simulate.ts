@@ -9,6 +9,7 @@
 import { CombatEngine } from '../combat/CombatEngine';
 import { BOARD_SLOTS, placementAnchor } from '../combat/types';
 import type { CombatState, EnemyState } from '../combat/types';
+import { buildRunState, type RunStateBag } from '../combat/runState';
 import { getMobConfig } from '../mobs/registry';
 import { sumMeta } from '../items/meta';
 import type { EnemySpec, PhaseOverride, SummonRef, MobConfig, ZoneConfig } from '../zones/types';
@@ -108,11 +109,11 @@ interface FightResult {
   hpEnd: number;
 }
 
-// Строит героя заново на каждый бой (как ExpeditionScene.beginFight), перенося только hp —
-// triggerState (заряды неуязвимости, флаг «аварийный хил сработал»)/weaponTimers обязаны
-// обнуляться каждый бой (docs/content.items.amulet.md: «Полный запас — на каждый бой», «Флаг
-// сбрасывается каждый новый бой»). Общий на всю экспедицию объект hero тут раньше был багом:
-// оберег/неуязвимость могли сработать лишь раз за экспедицию, а не за бой.
+// Строит героя заново на каждый бой (как ExpeditionScene.beginFight), перенося hp и бэг забега.
+// weaponTimers/triggerState обнуляются каждый бой, а лимиты предметов (заряды неуязвимости, флаг
+// «аварийный хил сработал», остаток лечений за убийство, счётчик проков лайфстила) живут ЗАБЕГ и
+// приходят снаружи в `runState` — без этого симуляция систематически переоценивала бы амулеты,
+// восстанавливая им запас перед каждым боем (docs/content.items.amulet.md).
 function runFight(
   equipment: Partial<Record<SlotType, ItemInstance>>,
   prevHp: number,
@@ -120,9 +121,10 @@ function runFight(
   fightIdx: number,
   totalFights: number,
   isBoss: boolean,
+  runState: RunStateBag,
   damageTakenMult = 1,
 ): FightResult {
-  const hero = CombatEngine.buildInitialHero(equipment, damageTakenMult);
+  const hero = CombatEngine.buildInitialHero(equipment, damageTakenMult, runState);
   hero.hp = Math.max(1, Math.min(prevHp, hero.maxHp));
 
   const rootMobId = isBoss ? zoneCfg.boss!.mob_id : rollMob(zoneCfg).id;
@@ -175,10 +177,11 @@ const ENDLESS_DEPTH_CAP = 500;
 function runEndlessExpedition(equipment: Partial<Record<SlotType, ItemInstance>>, zoneCfg: ZoneConfig): ExpeditionResult {
   const cursePerFight = zoneCfg.endless!.curse_per_fight;
   let depth = 0;
+  const runState = buildRunState(equipment);
   let hp = CombatEngine.buildInitialHero(equipment).hp;
   while (depth < ENDLESS_DEPTH_CAP) {
     const curseMult = 1 + (cursePerFight / 100) * depth;
-    const result = runFight(equipment, hp, zoneCfg, depth, 0, false, curseMult);
+    const result = runFight(equipment, hp, zoneCfg, depth, 0, false, runState, curseMult);
     hp = result.hpEnd;
     if (result.outcome !== 'win') {
       return { outcome: result.outcome, fightsCompleted: depth, hpAtBossStart: null, hpAtEnd: hp };
@@ -202,11 +205,12 @@ export function runExpedition(equipment: Partial<Record<SlotType, ItemInstance>>
 
   let fightsCompleted = 0;
   let hpAtBossStart: number | null = null;
+  const runState = buildRunState(equipment);
   let hp = CombatEngine.buildInitialHero(equipment).hp;
   for (let i = 0; i < fightPlan.length; i++) {
     const isBoss = fightPlan[i] === 'boss';
     if (isBoss) hpAtBossStart = hp;
-    const result = runFight(equipment, hp, zoneCfg, i, fightPlan.length, isBoss);
+    const result = runFight(equipment, hp, zoneCfg, i, fightPlan.length, isBoss, runState);
     hp = result.hpEnd;
     if (result.outcome !== 'win') {
       return { outcome: result.outcome, fightsCompleted, hpAtBossStart, hpAtEnd: hp };

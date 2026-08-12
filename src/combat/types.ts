@@ -2,6 +2,7 @@ import type { ItemInstance, SlotType } from '../items/types';
 import type { EnemySpec, SummonTrigger, SummonPlacement, MobDefense } from '../zones/types';
 import type { ChannelSet } from './channels';
 import type { TriggerStateBag } from './triggers';
+import type { RunStateBag } from './runState';
 
 /** Число ячеек доски боя (один ряд). Это и есть жёсткий потолок числа врагов. */
 export const BOARD_SLOTS = 4;
@@ -52,12 +53,12 @@ export interface EnemyState {
   phaseIndex?: number;
 }
 
-/** Разовый порог аварийного лечения амулета (docs/content.items.amulet.md): не скейлится редкостью (R5).
- * healPercent — доля от heroMaxHp (0..1), не фиксированное число: хил считается от текущего maxHp
- * героя в момент срабатывания (applyDamage), а не один раз при сборке. */
+/** Разовый (за забег) порог аварийного лечения амулета (docs/content.items.amulet.md): сам порог
+ * не скейлится редкостью (R5), скейлится только величина хила. `healFlat` — плоские HP, а не доля
+ * от maxHp: величина предмета не должна ползти вслед за будущим ростом maxHp героя. */
 export interface EmergencyHealConfig {
   thresholdRatio: number;
-  healPercent: number;
+  healFlat: number;
 }
 
 export interface HeroState {
@@ -71,11 +72,14 @@ export interface HeroState {
   // Каналы героя, построенные один раз из экипировки (см. CombatEngine.buildInitialHero) —
   // единственный источник правды по числовым статам (крит/блок/броня/шипы/лайфстил/...).
   channels: ChannelSet;
-  // Per-fight стейт-бэг триггеров (docs/content.items.amulet.md): заряды неуязвимости, флаг
-  // «аварийный хил уже сработал», состояние любых будущих stateful-триггеров. Свежий на каждый
-  // buildInitialHero — тот же контракт сброса, что был у старых invulnHits/emergencyHealUsed,
-  // но теперь общий для ЛЮБОГО нового stateful-предмета, не только этих двух.
+  // Per-fight стейт-бэг триггеров (docs/combat-events.md §4): состояние stateful-триггеров
+  // (TriggerDef.initState). Свежий на каждый buildInitialHero — «за бой».
   triggerState: TriggerStateBag;
+  // Per-run стейт-бэг предметов (docs/content.items.amulet.md): лимиты, живущие весь забег —
+  // заряды неуязвимости, флаг «аварийный хил уже сработал», остаток лечений за убийство, счётчик
+  // проков лайфстила. Как и damageTakenMult, НЕ пересобирается каждым buildInitialHero: хранится
+  // по ссылке на бэг забега (ExpeditionScene/simulate.ts), траты движка текут обратно владельцу.
+  runState: RunStateBag;
   // Множитель входящего по герою урона («проклятие» endless-зон, docs/content.zones.format.md):
   // 1 = без штрафа. В отличие от triggerState НЕ сбрасывается каждый buildInitialHero — растёт с
   // числом пройденных боёв, вызывающая сторона (ExpeditionScene) сама переносит его между боями.

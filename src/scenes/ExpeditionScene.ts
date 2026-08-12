@@ -5,7 +5,7 @@ import { EventBus } from '../core/EventBus';
 import { getZoneConfig, zoneBgKey, ZONE_BG_VARIANTS, BG_LAYERS, type BgLayer, ZONE_BG_OBJECTS, zoneObjKey, type ScatterLayer } from '../zones/registry';
 import { CombatEngine } from '../combat/CombatEngine';
 import { rollLootTable, buildRewardOptions, type RewardOption } from '../combat/loot';
-import { getInvulnStatus } from '../combat/triggers';
+import { getInvulnStatus, syncRunState, type RunStateBag } from '../combat/runState';
 import { getItemBehavior } from '../items/registry';
 import { sumMeta } from '../items/meta';
 import { spawnFloater } from '../ui/Floater';
@@ -266,6 +266,11 @@ export class ExpeditionScene extends Phaser.Scene {
   // План боёв и номер текущего боя — иначе generateFightPlan заново бросит кубик на длину зоны.
   private carryoverPlan: ('mob' | 'boss')[] | null = null;
   private carryoverFightIdx: number | null = null;
+  private carryoverRunState: RunStateBag | null = null;
+  // Лимиты предметов, живущие весь забег (заряды неуязвимости, аварийный хил, лечения за
+  // убийство/удар) — docs/content.items.amulet.md. Владелец — сцена, а не бой: движок получает
+  // этот же объект по ссылке в HeroState.runState и тратит заряды прямо в нём.
+  private runState: RunStateBag = {};
   // true — сцена перезапущена внутри уже идущего похода (не новый заход в зону).
   private resumed = false;
   // Сид похода: из него выводятся моб, лут, драфт, фазы, длина зоны и фон (src/core/rng.ts).
@@ -278,6 +283,7 @@ export class ExpeditionScene extends Phaser.Scene {
     zoneId: string; standIndex?: number; speedMult?: number;
     carryoverBackpack?: ItemInstance[]; carryoverHp?: number;
     carryoverPlan?: ('mob' | 'boss')[]; carryoverFightIdx?: number; resumed?: boolean;
+    carryoverRunState?: RunStateBag;
     seed?: string;
   }) {
     this.zoneId = data.zoneId ?? 'dead-fields';
@@ -290,6 +296,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.carryoverHp = data.carryoverHp ?? null;
     this.carryoverPlan = data.carryoverPlan ?? null;
     this.carryoverFightIdx = data.carryoverFightIdx ?? null;
+    this.carryoverRunState = data.carryoverRunState ?? null;
     this.resumed = data.resumed ?? false;
     this.runSeed = data.seed ?? makeRunSeed();
     this.retreatDialogOpen = false;
@@ -298,6 +305,7 @@ export class ExpeditionScene extends Phaser.Scene {
   /**
    * Ресайз окна (чаще всего F11) сменил ширину холста — пересобираем сцену под новую раскладку,
    * не выбрасывая игрока из похода. Переживают рестарт: рюкзак, открытая модалка находки, HP героя,
+   * потраченные за забег лимиты предметов (иначе F11 бесплатно чинил бы заряды амулетов),
    * скорость, стойка, длина зоны, номер боя и сид. Текущий бой начинается заново, но противник,
    * его лут и фон зоны те же — они выводятся из сида (src/core/rng.ts), рероллить их нельзя.
    */
@@ -310,6 +318,7 @@ export class ExpeditionScene extends Phaser.Scene {
       carryoverHp: this.engine?.state.hero.hp,
       carryoverPlan: this.fightPlan,
       carryoverFightIdx: this.currentFightIdx,
+      carryoverRunState: this.runState,
       resumed: true,
       seed: this.runSeed,
     });
@@ -369,6 +378,10 @@ export class ExpeditionScene extends Phaser.Scene {
       });
     });
     this.initEquipmentFromStand();
+    // Лимиты за забег: свежие на вход в зону, перенесённые — при рестарте сцены внутри похода.
+    this.runState = this.carryoverRunState ?? {};
+    this.carryoverRunState = null;
+    this.syncRunStateToEquipment();
     this.generateFightPlan();
     this.buildUI();
     new VolumeControl(this);
@@ -388,6 +401,21 @@ export class ExpeditionScene extends Phaser.Scene {
     for (const slot of EQUIP_SLOTS) {
       this.equipment[slot] = stand[slot] ?? undefined;
     }
+  }
+
+  /** Текущая экипировка в форме, которую ждёт движок (без пустых слотов). */
+  private heroEquipment(): Partial<Record<SlotType, ItemInstance>> {
+    const out: Partial<Record<SlotType, ItemInstance>> = {};
+    for (const s of EQUIP_SLOTS) {
+      if (this.equipment[s]) out[s as SlotType] = this.equipment[s]!;
+    }
+    return out;
+  }
+
+  /** Досевает бэг забега под текущую экипировку: свежий предмет получает полный запас, уже
+   *  знакомый — сохраняет потраченное (снять и надеть амулет не восстанавливает заряды). */
+  private syncRunStateToEquipment() {
+    syncRunState(this.runState, this.heroEquipment());
   }
 
   private generateFightPlan() {
@@ -756,12 +784,13 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private updateHeroHpBar() {
     if (!this.engine) return;
-    const { hp, maxHp, triggerState } = this.engine.state.hero;
+    const { hp, maxHp, equipment, runState } = this.engine.state.hero;
     const ratio = hp / maxHp;
     this.heroHpFill.setSize(80 * ratio, 10);
     this.heroHpText.setText(`${hp}/${maxHp}`);
 
-    const { hits: invulnHits, max: invulnHitsMax } = getInvulnStatus(triggerState);
+    // Остаток зарядов — за забег: между боями одной экспедиции счётчик не восстанавливается.
+    const { hits: invulnHits, max: invulnHitsMax } = getInvulnStatus(equipment, runState);
     const hasInvuln = invulnHitsMax > 0 && invulnHits > 0;
     this.heroInvulnOverlay.setVisible(hasInvuln);
     if (hasInvuln) this.heroInvulnOverlay.setSize(this.heroHpFill.width, 10);
@@ -1373,30 +1402,13 @@ export class ExpeditionScene extends Phaser.Scene {
   // Пересобирает героя из текущего снаряжения (для идущего боя), сохраняя абсолютный HP.
   private applyEquipToHero() {
     if (!this.engine || this.engine.state.phase !== 'fighting') return;
-    const heroEquip: Partial<Record<SlotType, ItemInstance>> = {};
-    for (const s of EQUIP_SLOTS) {
-      if (this.equipment[s]) heroEquip[s as SlotType] = this.equipment[s]!;
-    }
+    const heroEquip = this.heroEquipment();
     const prevHero = this.engine.state.hero;
-    const fresh = CombatEngine.buildInitialHero(heroEquip, prevHero.damageTakenMult);
+    // Надетый впервые за забег предмет получает полный запас; уже знакомый — свой остаток
+    // (бэг ключирован по item_id, так что «снять и надеть» не чинит потраченные заряды).
+    this.syncRunStateToEquipment();
+    const fresh = CombatEngine.buildInitialHero(heroEquip, prevHero.damageTakenMult, this.runState);
     fresh.hp = Math.min(prevHero.hp, fresh.maxHp);
-
-    // Хот-свап среди боя: заряды с формой {charges,max} (сейчас — только неуязвимость) переносятся
-    // остатком (клампится к новому максимуму), а не сбрасываются в максимум нового предмета —
-    // раньше это было открытым багом (docs/content.items.amulet.md), generic-перенос по форме
-    // стейта чинит его для любого будущего триггера с зарядами, не только invuln.
-    for (const slot of Object.keys(fresh.triggerState) as SlotType[]) {
-      const freshBag = fresh.triggerState[slot];
-      const prevBag = prevHero.triggerState[slot];
-      if (!freshBag || !prevBag) continue;
-      for (const key of Object.keys(freshBag)) {
-        const freshVal = freshBag[key] as { charges?: number; max?: number };
-        const prevVal = prevBag[key] as { charges?: number; max?: number };
-        if (typeof freshVal?.max === 'number' && typeof prevVal?.charges === 'number') {
-          freshVal.charges = Math.min(prevVal.charges, freshVal.max);
-        }
-      }
-    }
 
     this.engine.state.hero = fresh;
     this.updateHeroHpBar();
@@ -1546,17 +1558,15 @@ export class ExpeditionScene extends Phaser.Scene {
     const fightType = this.fightPlan[this.currentFightIdx];
     const isBoss = fightType === 'boss';
 
-    const heroEquip: Partial<Record<SlotType, ItemInstance>> = {};
-    for (const s of EQUIP_SLOTS) {
-      if (this.equipment[s]) heroEquip[s as SlotType] = this.equipment[s]!;
-    }
+    const heroEquip = this.heroEquipment();
 
     // Проклятие endless-зоны (docs/content.zones.format.md): растёт с числом уже пройденных
     // боёв этой экспедиции (currentFightIdx) — свежий заход всегда начинает с 0%.
     const curseMult = this.zoneCfg.endless
       ? 1 + (this.zoneCfg.endless.curse_per_fight / 100) * this.currentFightIdx
       : 1;
-    const hero = CombatEngine.buildInitialHero(heroEquip, curseMult);
+    // runState — общий на весь забег: заряды амулетов НЕ восстанавливаются к новому бою.
+    const hero = CombatEngine.buildInitialHero(heroEquip, curseMult, this.runState);
     if (this.engine) {
       hero.hp = this.engine.state.hero.hp;
       hero.maxHp = this.engine.state.hero.maxHp;
