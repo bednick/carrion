@@ -4,7 +4,7 @@
   "description": "Военный лагерь под ветеранами-мародёрами. Строй и доспех. Порог перед Полем Битвы.",
   "faction": "Мародёры — Броня",
   "rarity": "rare",
-  "fights": { "min": 7, "max": 9 },
+  "fights": { "min": 5, "max": 6 },
   "mob_pool": [
     { "mob_id": "veteran", "weight": 100 },
     { "mob_id": "maceman", "weight": 100 },
