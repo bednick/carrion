@@ -8,7 +8,7 @@ import { HEAL_COLOR } from '../statColors';
 // maxHp: величина предмета не должна ползти вслед за будущим ростом maxHp героя.
 // legendary не крафтится, но шаг +5 продолжается ровно — таблица линейная (docs/content.items.amulet.md).
 const THRESHOLD_RATIO = 0.2;
-const HEAL_FLAT: Record<import('../types').Rarity, number> = { common: 10, uncommon: 15, rare: 20, epic: 25, legendary: 30 };
+const HEAL_FLAT: Record<import('../types').Rarity, number> = { common: 5, uncommon: 10, rare: 15, epic: 20, legendary: 25 };
 
 const behavior: ItemBehavior = {
   name: 'Оберег на волоске',

@@ -457,6 +457,9 @@ export class ExpeditionScene extends Phaser.Scene {
   private buildUI() {
     this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x111122).setDepth(-10);
     this.tooltip = new Tooltip(this);
+    // Тултипы предметов читают лимиты за забег (затухший шанс `leech_bead` и т.п.) — бэг отдаём
+    // геттером, ссылка на него меняется при переносе лимитов между боями похода.
+    this.tooltip.setRunStateProvider(() => this.runState);
     this.buildProgressBar();
     this.buildBattleArea();
     this.buildBottomPanel();

@@ -2,6 +2,7 @@ import type { Rarity, SlotType, ItemType, ItemInstance } from './types';
 import type { EmergencyHealConfig } from '../combat/types';
 import type { ChannelContribution } from '../combat/channels';
 import type { TriggerDef } from '../combat/triggers';
+import type { RunItemState } from '../combat/runState';
 
 /** Снимок боя «только для чтения», доступный каналам/триггерам для условных синергий. */
 export interface CombatView {
@@ -83,7 +84,10 @@ export interface ItemBehavior extends ItemIdentity {
   // `slot` — куда сейчас надет предмет (undefined для рюкзака/сундука — там показываем базовые
   // статы «как в hand_right»). Нужен предметам вроде `dagger`, чей эффективный DPS зависит от
   // слота (см. cross-slot `weapon_interval_mult` в src/combat/channels.ts).
-  stats?: (rarity: Rarity, slot?: SlotType) => StatLine[];
+  // `run` — состояние ЭТОГО предмета в текущем забеге (`RunStateBag[item_id]`, приезжает из
+  // Tooltip): позволяет показать не стартовое, а фактическое число — остаток зарядов, затухший
+  // шанс (`leech_bead`). Вне забега (лагерь, сундук, витрина крафта) — undefined, показываем базу.
+  stats?: (rarity: Rarity, slot?: SlotType, run?: RunItemState) => StatLine[];
   meta?: (rarity: Rarity) => MetaModifiers;
 }
 

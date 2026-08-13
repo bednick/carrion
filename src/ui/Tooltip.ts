@@ -4,6 +4,7 @@ import { getItemBehavior } from '../items/registry';
 import { RARITY_HEX } from '../items/rarity';
 import { NEUTRAL_PLATE_KEY } from './itemIcon';
 import type { ItemInstance, SlotType } from '../items/types';
+import type { RunStateBag } from '../combat/runState';
 
 // Метрики тултипа (x1.6 от исходных — читаемость).
 const FONT_SIZE = 21;
@@ -46,6 +47,11 @@ export class Tooltip {
   private currentX = 0;
   private currentY = 0;
 
+  // Доступ к лимитам за забег (RunStateBag) — геттер, а не сам бэг: ссылка на него в сцене
+  // переприсваивается (ExpeditionScene: перенос лимитов между боями похода). Ставит только
+  // ExpeditionScene; в лагере провайдера нет — тултип показывает базовые числа редкости.
+  private runStateProvider?: () => RunStateBag | undefined;
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.bg = scene.add.rectangle(0, 0, 200, 100, 0x000000, 0.85).setOrigin(0);
@@ -62,6 +68,11 @@ export class Tooltip {
 
   // `slot` — куда предмет сейчас надет (передаётся из петель по экипировке); undefined для
   // рюкзака/сундука, где актуального слота нет — тогда показываются базовые (hand_right) статы.
+  /** Подключает per-run состояние: `stats()` предметов получит запись из бэга по `item_id`. */
+  setRunStateProvider(fn: () => RunStateBag | undefined) {
+    this.runStateProvider = fn;
+  }
+
   showItem(item: ItemInstance, x: number, y: number, owner?: unknown, slot?: SlotType) {
     this.owner = owner ?? null;
     this.currentItem = item;
@@ -106,7 +117,9 @@ export class Tooltip {
     if (full) identity.push({ text: `Слоты: ${beh.slots.join(', ')}`, color: '#aaaaaa' });
 
     // Боевые статы — единый источник правды в behavior.ts (docs/combat-events.md §5).
-    const stats: Line[] = beh.stats ? beh.stats(item.rarity, slot) : [];
+    // Состояние забега (если сцена его дала) — чтобы показать фактические числа, а не стартовые.
+    const run = this.runStateProvider?.()?.[item.item_id];
+    const stats: Line[] = beh.stats ? beh.stats(item.rarity, slot, run) : [];
 
     return [identity, stats];
   }

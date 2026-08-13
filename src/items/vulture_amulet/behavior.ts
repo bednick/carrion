@@ -8,7 +8,7 @@ import { HEAL_COLOR } from '../statColors';
 // src/combat/runState.ts) и между боями экспедиции не восстанавливается — стадия движка
 // (CombatEngine.handleDamage) тратит по заряду на килл, пока они есть.
 const HEAL_AMOUNT = 5;
-const CHARGES: Record<Rarity, number> = { common: 2, uncommon: 3, rare: 4, epic: 5, legendary: 6 };
+const CHARGES: Record<Rarity, number> = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5 };
 
 const behavior: ItemBehavior = {
   name: 'Амулет грифа',
