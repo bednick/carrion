@@ -2,7 +2,7 @@
   "id": "rat_king",
   "name": "Крысиный король",
   "tier": "legendary",
-  "health": 40,
+  "health": 24,
   "position": 2,
   "attacks": [
     {

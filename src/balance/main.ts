@@ -89,6 +89,36 @@ function readEquipment(): Partial<Record<SlotType, ItemInstance>> {
   return equipment;
 }
 
+// ─── Query-параметры: билд переживает F5 (не только HMR) ──────────────────────────────────────
+
+function syncStateToQuery() {
+  const params = new URLSearchParams();
+  for (const slot of SLOTS) {
+    const itemId = itemSelects[slot.id]!.value;
+    if (!itemId) continue;
+    params.set(slot.id, `${itemId}:${raritySelects[slot.id]!.value}`);
+  }
+  params.set('trials', trialsInput.value);
+  history.replaceState(null, '', `?${params}${location.hash}`);
+}
+
+function applyStateFromQuery() {
+  const params = new URLSearchParams(location.search);
+  for (const slot of SLOTS) {
+    const raw = params.get(slot.id);
+    if (!raw) continue;
+    const [itemId, rarity] = raw.split(':');
+    const itemSelect = itemSelects[slot.id]!;
+    if (!itemId || ![...itemSelect.options].some((o) => o.value === itemId)) continue;
+    itemSelect.value = itemId;
+    if (rarity && (RARITIES as readonly string[]).includes(rarity)) {
+      raritySelects[slot.id]!.value = rarity;
+    }
+  }
+  const trials = Number(params.get('trials'));
+  if (trials > 0) trialsInput.value = String(trials);
+}
+
 // ─── Заготовка билда: применяет выбранный preset на select'ы слотов (остаются редактируемыми) ─
 
 {
@@ -115,15 +145,23 @@ function applyBuildPreset(id: string) {
     raritySelects[slot.id]!.value = entry?.rarity ?? 'common';
   }
   applyingPreset = false;
+  syncStateToQuery();
 }
+
+applyStateFromQuery();
 
 buildPresetSelect.addEventListener('change', () => applyBuildPreset(buildPresetSelect.value));
 
 for (const slot of SLOTS) {
-  const resetPreset = () => { if (!applyingPreset) buildPresetSelect.value = ''; };
+  const resetPreset = () => {
+    if (!applyingPreset) buildPresetSelect.value = '';
+    syncStateToQuery();
+  };
   itemSelects[slot.id]!.addEventListener('change', resetPreset);
   raritySelects[slot.id]!.addEventListener('change', resetPreset);
 }
+
+trialsInput.addEventListener('input', syncStateToQuery);
 
 // ─── Прогон с чанками (не морозит вкладку на больших trials) ──────────────────────────────
 

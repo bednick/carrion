@@ -6,8 +6,8 @@
   "position": 1,
   "attacks": [
     {
-      "damage": 5,
-      "interval": 1.47
+      "damage": 2,
+      "interval": 0.68
     }
   ],
   "defense": {
