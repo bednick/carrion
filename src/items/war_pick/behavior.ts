@@ -26,18 +26,18 @@ const CRIT_MULT_BY_RARITY: Record<import('../types').Rarity, number> = {
   legendary: 3.5,
 };
 const DAMAGE_BY_RARITY: Record<import('../types').Rarity, number> = {
-  common: 4,
-  uncommon: 5,
-  rare: 6,
-  epic: 7,
-  legendary: 9,
+  common: 6,
+  uncommon: 8,
+  rare: 10,
+  epic: 13,
+  legendary: 16,
 };
 const INTERVAL_BY_RARITY: Record<import('../types').Rarity, number> = {
-  common: 1.2,
-  uncommon: 1.25,
-  rare: 1.243,
-  epic: 1.195,
-  legendary: 1.182,
+  common: 1.8,
+  uncommon: 2.0,
+  rare: 2.072,
+  epic: 2.219,
+  legendary: 2.101,
 };
 
 const damage = (rarity: import('../types').Rarity) => DAMAGE_BY_RARITY[rarity];

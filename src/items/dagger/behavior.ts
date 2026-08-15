@@ -9,18 +9,18 @@ import { WEAPON_COLOR } from '../statColors';
 // замедлял бы ЛЮБОЕ другое оружие, оказавшееся в hand_left, что бессмысленно и неверно.
 // Тултип получает актуальный слот от Tooltip.showItem (undefined в рюкзаке/сундуке → hand_right-числа).
 const DAMAGE_BY_RARITY: Record<Rarity, number> = {
-  common: 2,
+  common: 3,
   uncommon: 3,
   rare: 3,
-  epic: 4,
-  legendary: 4,
+  epic: 3,
+  legendary: 3,
 };
 const INTERVAL_BY_RARITY: Record<Rarity, number> = {
-  common: 0.5,
-  uncommon: 0.577,
+  common: 0.75,
+  uncommon: 0.5775,
   rare: 0.444,
-  epic: 0.455,
-  legendary: 0.35,
+  epic: 0.34125,
+  legendary: 0.2625,
 };
 
 const damage = (rarity: Rarity) => DAMAGE_BY_RARITY[rarity];

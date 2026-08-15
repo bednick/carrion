@@ -2,22 +2,22 @@ import type { ItemBehavior } from '../behavior';
 import { OFFENSE_COLOR, WEAPON_COLOR } from '../statColors';
 
 // Мультихит: один клинок, два честных укола за взмах — оба в ту же цель. Каждый — свой `damage`,
-// лайфстил прокает дважды, каждый независимо катает общий крит-канал. damage — фиксированная
-// таблица по тиру (2/3/4/5/6), interval подогнан так, чтобы суммарный DPS двух ударов
+// лайфстил прокает дважды, каждый независимо катает общий крит-канал. damage фиксирован (2 на
+// удар для всех редкостей), interval подогнан так, чтобы суммарный DPS двух ударов
 // (`2·damage/interval`) рос ×1.3 за уровень редкости от анкора common (4.0).
 const DAMAGE_BY_RARITY: Record<import('../types').Rarity, number> = {
   common: 2,
-  uncommon: 3,
-  rare: 4,
-  epic: 5,
-  legendary: 6,
+  uncommon: 2,
+  rare: 2,
+  epic: 2,
+  legendary: 2,
 };
 const INTERVAL_BY_RARITY: Record<import('../types').Rarity, number> = {
   common: 1.0,
-  uncommon: 1.154,
-  rare: 1.183,
-  epic: 1.138,
-  legendary: 1.05,
+  uncommon: 0.769,
+  rare: 0.5915,
+  epic: 0.4552,
+  legendary: 0.35,
 };
 
 const damage = (rarity: import('../types').Rarity) => DAMAGE_BY_RARITY[rarity];
