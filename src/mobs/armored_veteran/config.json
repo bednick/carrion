@@ -2,16 +2,16 @@
   "id": "armored_veteran",
   "name": "Латник",
   "tier": "rare",
-  "health": 36,
+  "health": 21,
   "position": 1,
   "attacks": [
     {
-      "damage": 3,
-      "interval": 1.36
+      "damage": 6,
+      "interval": 2.0
     }
   ],
   "defense": {
-    "armor": 2
+    "armor": 3
   },
   "ui": {
     "move": {

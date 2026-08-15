@@ -2,16 +2,17 @@
   "id": "veteran",
   "name": "Ветеран",
   "tier": "uncommon",
-  "health": 36,
+  "health": 24,
   "position": 1,
   "attacks": [
     {
       "damage": 4,
-      "interval": 1.82
+      "interval": 1.5
     }
   ],
   "defense": {
-    "armor": 2
+    "armor": 2,
+    "thorns": 1
   },
   "ui": {
     "move": {

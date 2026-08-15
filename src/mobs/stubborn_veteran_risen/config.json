@@ -2,7 +2,7 @@
   "id": "stubborn_veteran_risen",
   "name": "Упрямец (поднялся)",
   "tier": "uncommon",
-  "health": 18,
+  "health": 10,
   "position": 1,
   "attacks": [
     {

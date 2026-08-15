@@ -2,12 +2,12 @@
   "id": "camp_commander_light",
   "name": "Командир налегке",
   "tier": "legendary",
-  "health": 30,
+  "health": 21,
   "position": 1,
   "attacks": [
     {
-      "damage": 6,
-      "interval": 2.1
+      "damage": 4,
+      "interval": 1.1
     }
   ],
    "defense": {

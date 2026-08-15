@@ -2,12 +2,12 @@
   "id": "camp_commander",
   "name": "Командир лагеря",
   "tier": "legendary",
-  "health": 60,
+  "health": 24,
   "position": 1,
   "attacks": [
     {
-      "damage": 9,
-      "interval": 3.4
+      "damage": 13,
+      "interval": 5.4
     }
   ],
   "defense": {

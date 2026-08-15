@@ -2,12 +2,12 @@
   "id": "cataphract",
   "name": "Панцирник",
   "tier": "epic",
-  "health": 30,
+  "health": 24,
   "position": 1,
   "attacks": [
     {
-      "damage": 10,
-      "interval": 4.55
+      "damage": 19,
+      "interval": 5.0
     }
   ],
   "defense": {

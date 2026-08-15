@@ -2,7 +2,7 @@
   "id": "stubborn_veteran",
   "name": "Упрямец",
   "tier": "uncommon",
-  "health": 36,
+  "health": 24,
   "position": 1,
   "attacks": [
     {
