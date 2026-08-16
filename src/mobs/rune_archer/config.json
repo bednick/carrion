@@ -1,13 +1,13 @@
 {
   "id": "rune_archer",
   "name": "Рунный лучник",
-  "tier": "rare",
-  "health": 10,
+  "tier": "uncommon",
+  "health": 9,
   "position": 3,
   "attacks": [
     {
       "damage": 4,
-      "interval": 1.8
+      "interval": 1.7
     }
   ],
   "summons": [

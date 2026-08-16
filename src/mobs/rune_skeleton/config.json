@@ -1,17 +1,31 @@
 {
   "id": "rune_skeleton",
   "name": "Рунный скелет",
-  "tier": "uncommon",
-  "health": 25,
+  "tier": "common",
+  "health": 9,
   "position": 1,
   "attacks": [
     {
-      "damage": 6,
+      "damage": 7,
       "interval": 2.73
     }
   ],
   "defense": {
-    "block": 0.15
+    "block": 0.5
   },
-  "summons": []
+  "phases": [
+    {
+      "id": "skeleton",
+      "health": 9,
+      "attacks": [
+        {
+          "damage": 7,
+          "interval": 2.73
+        }
+      ],
+      "defense": {
+        "block": 0.5
+      }
+    }
+  ]
 }

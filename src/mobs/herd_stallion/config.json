@@ -2,8 +2,8 @@
   "id": "herd_stallion",
   "name": "Вожак табуна",
   "tier": "legendary",
-  "health": 60,
-  "position": 1,
+  "health": 34,
+  "position": 3,
   "summon_placement": "front",
   "attacks": [
     {
@@ -14,7 +14,7 @@
   "summons": [
     {
       "mob_id": "wild_horse",
-      "count": 2,
+      "count": 1,
       "trigger": {
         "type": "start"
       }
@@ -23,7 +23,7 @@
       "mob_id": "wild_horse",
       "trigger": {
         "type": "interval",
-        "every": 5.0
+        "every": 8.0
       }
     }
   ]

@@ -2,7 +2,7 @@
   "id": "foal",
   "name": "Жеребёнок",
   "tier": "uncommon",
-  "health": 22,
+  "health": 14,
   "position": 1,
   "attacks": [
     {

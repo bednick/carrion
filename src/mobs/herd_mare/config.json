@@ -2,7 +2,7 @@
   "id": "herd_mare",
   "name": "Табунная кобыла",
   "tier": "epic",
-  "health": 50,
+  "health": 16,
   "position": 3,
   "attacks": [
     {
@@ -19,10 +19,10 @@
     },
     {
       "mob_id": "foal",
-      "count": 2,
+      "count": 1,
       "trigger": {
         "type": "interval",
-        "every": 8
+        "every": 2.8
       }
     }
   ],

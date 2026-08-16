@@ -2,16 +2,25 @@
   "id": "prowler",
   "name": "Рыскун",
   "tier": "rare",
-  "health": 38,
+  "health": 7,
   "position": 1,
   "attacks": [
     {
       "damage": 3,
-      "interval": 0.83
+      "interval": 1.5
     },
     {
-      "damage": 3,
-      "interval": 0.83
+      "damage": 4,
+      "interval": 1.5
+    }
+  ],
+  "summons": [
+    {
+      "mob_id": "prowler",
+      "count": 3,
+      "trigger": {
+        "type": "start"
+      }
     }
   ]
 }

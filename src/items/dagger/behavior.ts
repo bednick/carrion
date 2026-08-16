@@ -17,10 +17,10 @@ const DAMAGE_BY_RARITY: Record<Rarity, number> = {
 };
 const INTERVAL_BY_RARITY: Record<Rarity, number> = {
   common: 0.75,
-  uncommon: 0.5775,
-  rare: 0.444,
-  epic: 0.34125,
-  legendary: 0.2625,
+  uncommon: 0.58,
+  rare: 0.44,
+  epic: 0.34,
+  legendary: 0.26,
 };
 
 const damage = (rarity: Rarity) => DAMAGE_BY_RARITY[rarity];

@@ -1,21 +1,21 @@
 {
   "id": "rune_hound",
   "name": "Рунная гончая",
-  "tier": "uncommon",
-  "health": 15,
+  "tier": "common",
+  "health": 9,
   "position": 1,
   "attacks": [
     {
       "damage": 1,
-      "interval": 0.68
+      "interval": 1.05
     },
     {
       "damage": 1,
-      "interval": 0.9
+      "interval": 1.35
     }
   ],
   "defense": {
-    "block": 0.25
+    "dodge": 0.5
   },
   "summons": [
     {

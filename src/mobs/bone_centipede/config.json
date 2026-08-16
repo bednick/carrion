@@ -2,7 +2,7 @@
   "id": "bone_centipede",
   "name": "Костяная многоножка",
   "tier": "rare",
-  "health": 20,
+  "health": 18,
   "position": 1,
   "attacks": [
     {
@@ -16,6 +16,16 @@
       "count": 2,
       "trigger": {
         "type": "death"
+      },
+      "health": 9,
+      "attacks": [
+        {
+          "damage": 1,
+          "interval": 1.06
+        }
+      ],
+      "defense": {
+        "block": 0.5
       }
     }
   ]

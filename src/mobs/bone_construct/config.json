@@ -2,17 +2,32 @@
   "id": "bone_construct",
   "name": "Костяной конструкт",
   "tier": "rare",
-  "health": 30,
+  "health": 17,
   "position": 1,
   "attacks": [
     {
-      "damage": 10,
-      "interval": 4.55
+      "damage": 5,
+      "interval": 2.8
     }
   ],
   "defense": {
-    "block": 0.35
+    "block": 0.33
   },
+  "phases": [
+    {
+      "id": "bone_stub",
+      "health": 17,
+      "attacks": [
+        {
+          "damage": 5,
+          "interval": 2.8
+        }
+      ],
+      "defense": {
+        "block": 0.33
+      }
+    }
+  ],
   "ui": {
     "scale": 1.6
   }

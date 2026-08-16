@@ -2,18 +2,18 @@
   "id": "wild_horse",
   "name": "Одичавший конь",
   "tier": "uncommon",
-  "health": 40,
+  "health": 20,
   "position": 1,
   "attacks": [
     {
-      "damage": 7,
+      "damage": 11,
       "interval": 2.22
     }
   ],
   "summons": [
     {
       "mob_id": "foal",
-      "count": 2,
+      "count": 3,
       "trigger": {
         "type": "start"
       }

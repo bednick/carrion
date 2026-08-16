@@ -2,7 +2,7 @@
   "id": "bone_wall",
   "name": "Костяная стена",
   "tier": "rare",
-  "health": 40,
+  "health": 15,
   "position": 1,
   "attacks": [],
   "defense": {
