@@ -11,18 +11,18 @@ import { OFFENSE_COLOR, WEAPON_COLOR } from '../statColors';
 const SPLASH_RATIOS = [0.5, 0.35, 0.25];
 
 const DAMAGE_BY_RARITY: Record<import('../types').Rarity, number> = {
-  common: 6,
-  uncommon: 9,
-  rare: 12,
-  epic: 12,
-  legendary: 12,
+  common: 4,
+  uncommon: 5,
+  rare: 7,
+  epic: 9,
+  legendary: 11,
 };
 const INTERVAL_BY_RARITY: Record<import('../types').Rarity, number> = {
-  common: 2.0,
-  uncommon: 2.308,
-  rare: 2.367,
-  epic: 1.821,
-  legendary: 1.401,
+  common: 1.28,
+  uncommon: 1.28,
+  rare: 1.38,
+  epic: 1.38,
+  legendary: 1.28,
 };
 
 const damage = (rarity: import('../types').Rarity) => DAMAGE_BY_RARITY[rarity];

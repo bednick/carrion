@@ -12,11 +12,11 @@ const DAMAGE_BY_RARITY: Record<import('../types').Rarity, number> = {
   legendary: 11,
 };
 const INTERVAL_BY_RARITY: Record<import('../types').Rarity, number> = {
-  common: 1.333,
-  uncommon: 1.282,
-  rare: 1.381,
-  epic: 1.365,
-  legendary: 1.284,
+  common: 1.28,
+  uncommon: 1.28,
+  rare: 1.38,
+  epic: 1.38,
+  legendary: 1.28,
 };
 
 const damage = (rarity: import('../types').Rarity) => DAMAGE_BY_RARITY[rarity];
