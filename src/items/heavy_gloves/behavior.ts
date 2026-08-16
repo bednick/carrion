@@ -13,7 +13,7 @@ const CRIT_CHANCE: Record<Rarity, number> = {
   epic: 0.20,
   legendary: 0.25
 };
-const CRIT_MULT = 2;
+const CRIT_MULT_BONUS = 1;
 
 const behavior: ItemBehavior = {
   name: 'Тяжёлые перчатки',
@@ -22,11 +22,11 @@ const behavior: ItemBehavior = {
   tags: ['gloves', 'crit'],
   channels: (rarity) => [
     { channel: 'crit_chance', tier: 'flat', value: CRIT_CHANCE[rarity] },
-    { channel: 'crit_mult', tier: 'flat', value: CRIT_MULT - 1 },
+    { channel: 'crit_mult', tier: 'flat', value: CRIT_MULT_BONUS },
   ],
   stats: (rarity) => [
     { text: `Доп. крит-шанс: ${Math.round(CRIT_CHANCE[rarity] * 100)}%`, color: CRIT_COLOR },
-    { text: `Множитель крита: ×${CRIT_MULT}`, color: CRIT_COLOR },
+    { text: `Доп. крит-урон: ${Math.round(CRIT_MULT_BONUS * 100)}%`, color: CRIT_COLOR },
   ],
 };
 

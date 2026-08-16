@@ -8,11 +8,11 @@ const behavior: ItemBehavior = {
   type: 'weapon',
   tags: ['weapon', 'heavy', 'slow'],
   ...standardWeapon({
-    common: { damage: 8, interval: 1.818 },
-    uncommon: { damage: 10, interval: 1.748 },
-    rare: { damage: 13, interval: 1.748 },
-    epic: { damage: 16, interval: 1.655 },
-    legendary: { damage: 20, interval: 1.591 },
+    common: { damage: 8, interval: 1.82 },
+    uncommon: { damage: 10, interval: 1.75 },
+    rare: { damage: 13, interval: 1.75 },
+    epic: { damage: 16, interval: 1.66 },
+    legendary: { damage: 20, interval: 1.59 },
   }),
 };
 

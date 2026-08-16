@@ -2,12 +2,12 @@
   "id": "skinner",
   "name": "Свежеватель",
   "tier": "rare",
-  "health": 40,
+  "health": 39,
   "position": 1,
   "attacks": [
     {
-      "damage": 6,
-      "interval": 1.67
+      "damage": 4,
+      "interval": 2.0
     }
   ],
   "defense": {

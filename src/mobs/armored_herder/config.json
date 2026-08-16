@@ -2,12 +2,12 @@
   "id": "armored_herder",
   "name": "Загонщик в броне",
   "tier": "rare",
-  "health": 20,
+  "health": 21,
   "position": 1,
   "attacks": [
     {
       "damage": 1,
-      "interval": 0.28
+      "interval": 0.3
     }
   ],
   "defense": {

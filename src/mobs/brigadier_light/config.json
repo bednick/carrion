@@ -2,12 +2,12 @@
   "id": "brigadier_light",
   "name": "Бригадир налегке",
   "tier": "legendary",
-  "health": 30,
+  "health": 22,
   "position": 1,
   "attacks": [
     {
-      "damage": 9,
-      "interval": 1.9
+      "damage": 2,
+      "interval": 1.2
     }
   ],
   "defense": {

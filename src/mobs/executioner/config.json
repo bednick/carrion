@@ -2,16 +2,16 @@
   "id": "executioner",
   "name": "Палач",
   "tier": "uncommon",
-  "health": 40,
+  "health": 27,
   "position": 1,
   "attacks": [
     {
-      "damage": 10,
-      "interval": 2.78
+      "damage": 7,
+      "interval": 2.6
     }
   ],
   "defense": {
-    "armor": 2,
+    "armor": 4,
     "thorns": 1
   },
   "ui": {
