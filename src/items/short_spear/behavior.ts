@@ -22,9 +22,9 @@ const INTERVAL_BY_RARITY: Record<import('../types').Rarity, number> = {
 const damage = (rarity: import('../types').Rarity) => DAMAGE_BY_RARITY[rarity];
 const interval = (rarity: import('../types').Rarity) => INTERVAL_BY_RARITY[rarity];
 
-// Прошив: бьёт основную цель и живого врага в строго соседней ячейке позади неё (по board-слоту,
-// не по индексу массива). Пустая ячейка между целями блокирует прошив. Обе цели получают одинаковый
-// урон. Таргетинг — engine-owned (resolution.ts:authorAttack), предмет декларирует только форму.
+// Прошив: бьёт основную цель и живого врага в строго соседней ячейке позади неё (по board-слоту, не по индексу массива).
+// Пустая ячейка между целями блокирует прошив. Обе цели получают одинаковый урон.
+// Таргетинг — engine-owned (resolution.ts:authorAttack), предмет декларирует только форму.
 const behavior: ItemBehavior = {
   name: 'Короткое копьё',
   slots: ['hand_right'],

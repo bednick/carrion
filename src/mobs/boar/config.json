@@ -2,12 +2,12 @@
   "id": "boar",
   "name": "Кабан-секач",
   "tier": "rare",
-  "health": 75,
+  "health": 20,
   "position": 1,
   "summon_placement": "back",
   "attacks": [
     {
-      "damage": 6,
+      "damage": 7,
       "interval": 2.4
     }
   ],

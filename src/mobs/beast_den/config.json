@@ -4,7 +4,7 @@
   "tier": "legendary",
   "health": 20,
   "position": 3,
-  "summon_placement": "front",
+  "summon_placement": "nearest",
   "attacks": [],
   "summons": [
     {
@@ -23,7 +23,7 @@
       "mob_id": "dire_wolf",
       "trigger": {
         "type": "interval",
-        "every": 5.5
+        "every": 6.5
       }
     },
     {

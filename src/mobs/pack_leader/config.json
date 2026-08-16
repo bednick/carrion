@@ -2,13 +2,13 @@
   "id": "pack_leader",
   "name": "Вожак стаи",
   "tier": "epic",
-  "health": 35,
+  "health": 16,
   "position": 3,
-  "summon_placement": "front",
+  "summon_placement": "nearest",
   "attacks": [
     {
-      "damage": 1,
-      "interval": 1.3
+      "damage": 2,
+      "interval": 3.5
     }
   ],
   "summons": [
@@ -23,7 +23,7 @@
       "mob_id": "dire_wolf",
       "trigger": {
         "type": "interval",
-        "every": 12
+        "every": 5
       }
     }
   ],

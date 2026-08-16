@@ -2,12 +2,12 @@
   "id": "piglet",
   "name": "Поросёнок",
   "tier": "rare",
-  "health": 12,
+  "health": 8,
   "position": 1,
   "attacks": [
     {
       "damage": 1,
-      "interval": 1.3
+      "interval": 1.9
     }
   ],
   "ui": {

@@ -2,12 +2,12 @@
   "id": "dire_wolf",
   "name": "Лютоволк",
   "tier": "uncommon",
-  "health": 35,
+  "health": 16,
   "position": 1,
   "attacks": [
     {
       "damage": 3,
-      "interval": 1.6
+      "interval": 1.2
     }
   ],
   "summons": [
