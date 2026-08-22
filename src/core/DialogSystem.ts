@@ -2,7 +2,7 @@ import { MetaStore } from './MetaStore';
 import { getZoneFaction } from '../zones/registry';
 import { isEssenceExchangeUnlocked, isFuseUnlocked } from '../items/craft';
 import type { EssenceTier } from '../items/types';
-import { FACTION_INFO, FACTION_GIFT, FACTION_RECOMMEND, SMITH_UNLOCK_DIALOG, FUSE_UNLOCK_DIALOG, TUTORIAL_REWARD_DIALOG } from '../dialogs/definitions';
+import { FACTION_INFO, FACTION_GIFT, FACTION_RECOMMEND, SMITH_UNLOCK_DIALOG_RARE, SMITH_UNLOCK_DIALOG_EPIC, FUSE_UNLOCK_DIALOG, TUTORIAL_REWARD_DIALOG } from '../dialogs/definitions';
 import type { DialogEntry } from '../dialogs/definitions';
 
 /**
@@ -67,15 +67,25 @@ export function checkFuseUnlockDialog(): DialogEntry[] | null {
 // поэтому «новый обмен» осмысленно появляется только с rare/epic.
 const NON_BASE_TIERS: EssenceTier[] = ['rare', 'epic'];
 
-/** Первое открытие обмена эссенции у кузнеца выше базового тира — одноразовая реплика Кузнеца. */
+const SMITH_UNLOCK_DIALOGS: Record<'rare' | 'epic', DialogEntry> = {
+  rare: SMITH_UNLOCK_DIALOG_RARE,
+  epic: SMITH_UNLOCK_DIALOG_EPIC,
+};
+
+/**
+ * Первое открытие обмена эссенции у кузнеца выше базового тира — отдельная одноразовая реплика
+ * на каждый тир (rare→uncommon / epic→rare), с id `smith_unlock_<tier>`. Если между визитами в
+ * лагерь игрок разблокировал сразу оба — обе реплики попадают в очередь по порядку.
+ */
 export function checkSmithUnlockDialog(): DialogEntry[] | null {
-  const dialogId = 'smith_unlock';
-  if (MetaStore.hasSeenDialog(dialogId)) return null;
-
   const completed = MetaStore.get().completed_areas;
-  const unlocked = NON_BASE_TIERS.some((tier) => isEssenceExchangeUnlocked(tier, completed));
-  if (!unlocked) return null;
-
-  MetaStore.markDialogSeen(dialogId);
-  return [SMITH_UNLOCK_DIALOG];
+  const queue: DialogEntry[] = [];
+  for (const tier of NON_BASE_TIERS as ('rare' | 'epic')[]) {
+    const dialogId = `smith_unlock_${tier}`;
+    if (MetaStore.hasSeenDialog(dialogId)) continue;
+    if (!isEssenceExchangeUnlocked(tier, completed)) continue;
+    MetaStore.markDialogSeen(dialogId);
+    queue.push(SMITH_UNLOCK_DIALOGS[tier]);
+  }
+  return queue.length ? queue : null;
 }

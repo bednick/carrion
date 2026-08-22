@@ -212,7 +212,7 @@ export class CampScene extends Phaser.Scene {
     this.buildPanel();
 
     this.questTracker = new QuestTracker(this);
-    this.npcDialogBox = new NpcDialogBox(this);
+    this.npcDialogBox = new NpcDialogBox(this, this.tooltip);
     this.showPendingNpcDialogs();
 
     EventBus.on('quest_completed', this.onQuestCompleted, this);
