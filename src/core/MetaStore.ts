@@ -66,6 +66,11 @@ export interface MetaState {
   // Id разовых реплик НПС (см. src/core/DialogSystem.ts), уже показанных игроку — вставки
   // вроде «первая смерть на территории фракции» показываются ровно один раз за сейв.
   seen_npc_dialogs: string[];
+  // Механики мобов (MechanicId, см. src/ui/mobMechanics/index.ts), пояснение к которым игрок уже
+  // видел: при первой за сейв встрече бой встаёт на паузу и всплывает модалка (MobMechanicModal).
+  // Тип string[], а не MechanicId[] — чтобы core не импортировал ui (та же причина, что у
+  // seen_npc_dialogs выше).
+  seen_mob_mechanics: string[];
   // Пройдена обучающая зона (training-camp, см. docs/zones/training-camp.md). Пока false — карта
   // лагеря показывает только её плитку (CampScene.buildMapContent), «Мёртвые поля» не открыты и
   // их квесты не посажены (см. QuestSystem.grantTutorialUnlock). У сейвов до этого поля (создан
@@ -148,6 +153,7 @@ function createDefault(): MetaState {
     battlefield_best_depth: 0,
     stats: emptyStats(),
     seen_npc_dialogs: [],
+    seen_mob_mechanics: [],
     quests: {
       active: [],
       pending_reward: [],
@@ -182,6 +188,10 @@ export const MetaStore = {
       // (в старых сейвах) добираются из emptyStats(). Версионирование схемы не ведём.
       stats: { ...defaults.stats, ...(parsed.stats ?? {}) },
       seen_npc_dialogs: parsed.seen_npc_dialogs ?? defaults.seen_npc_dialogs,
+      // Поля нет у сейвов, созданных до пояснительных модалок механик — трактуем как «ничего не
+      // показывали»: игрок увидит пояснение при следующей встрече с каждой механикой. Это и есть
+      // желаемое поведение (в отличие от tutorial_completed ниже, где пустое поле нужно читать как true).
+      seen_mob_mechanics: parsed.seen_mob_mechanics ?? defaults.seen_mob_mechanics,
       quests: {
         active: parsed.quests?.active ?? defaults.quests.active,
         pending_reward: parsed.quests?.pending_reward ?? [],
@@ -525,6 +535,18 @@ export const MetaStore = {
   markDialogSeen(id: string) {
     if (state.seen_npc_dialogs.includes(id)) return;
     state.seen_npc_dialogs.push(id);
+    this.save();
+  },
+
+  // --- Пояснения механик мобов (src/ui/MobMechanicModal.ts) ---------------
+
+  hasSeenMechanic(id: string): boolean {
+    return state.seen_mob_mechanics.includes(id);
+  },
+
+  markMechanicSeen(id: string) {
+    if (state.seen_mob_mechanics.includes(id)) return;
+    state.seen_mob_mechanics.push(id);
     this.save();
   },
 

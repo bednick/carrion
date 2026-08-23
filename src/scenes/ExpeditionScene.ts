@@ -26,6 +26,7 @@ import { essenceTag } from '../ui/priceTag';
 import { newBadge } from '../ui/newBadge';
 import { ESSENCE_TIERS } from '../items/craft';
 import { LootPopupStack } from '../ui/LootPopup';
+import { MobMechanicModal } from '../ui/MobMechanicModal';
 import { QuestTracker } from '../ui/QuestTracker';
 import { ResourceHUD } from '../ui/ResourceHUD';
 import { SoundSettingsButton } from '../ui/SoundSettingsButton';
@@ -236,6 +237,9 @@ export class ExpeditionScene extends Phaser.Scene {
   // evade/block, приоритет — блоку), сбрасываются в onFightEnd/onHeroDeath.
   private mechanicSlots: { bg: Phaser.GameObjects.Rectangle; icon: Phaser.GameObjects.Image }[] = [];
   private discoveredMechanics: Set<MechanicId> = new Set();
+  // Пояснительное окно механики: очередь первых за сейв встреч (с паузой боя) + просмотр по клику
+  // на гнездо (без паузы). Флаг «показано» персистится, см. MetaStore.seen_mob_mechanics.
+  private mechanicModal!: MobMechanicModal;
 
   private equipSlotObjs: { bg: Phaser.GameObjects.Rectangle; icon: ItemIconView }[] = [];
   // Заливка перезарядки оружия снизу вверх поверх иконки руки. Child внутри ItemIconView —
@@ -364,8 +368,12 @@ export class ExpeditionScene extends Phaser.Scene {
       EventBus.off('quest_completed', this.onQuestCompleted, this);
       this.resourceHUD.destroy();
       this.lootPopups.destroy();
+      this.mechanicModal.destroy();
     });
     this.input.keyboard!.on('keydown-SPACE', () => {
+      // Под модалкой первой встречи пауза держит бой — иначе SPACE снял бы её из-под окна.
+      // Кнопку паузы и «В лагерь» гвардить не нужно: их физически накрывает оверлей модалки.
+      if (this.mechanicModal.isOpen()) return;
       if (this.isPaused) this.resume(); else this.pause();
     });
     const speeds = [1, 2, 4];
@@ -460,6 +468,14 @@ export class ExpeditionScene extends Phaser.Scene {
     // Тултипы предметов читают лимиты за забег (затухший шанс `leech_bead` и т.п.) — бэг отдаём
     // геттером, ссылка на него меняется при переносе лимитов между боями похода.
     this.tooltip.setRunStateProvider(() => this.runState);
+    // До buildBottomPanel: гнёзда механик вешают на модалку обработчик клика, а первая встреча с
+    // механикой может выстрелить уже на первом бою (startNextFight в конце create).
+    this.mechanicModal = new MobMechanicModal(this, {
+      pause: () => this.pause(),
+      resume: () => this.resume(),
+      isPaused: () => this.isPaused,
+      hideTooltip: () => this.tooltip.hide(),
+    });
     this.buildProgressBar();
     this.buildBattleArea();
     this.buildBottomPanel();
@@ -1097,7 +1113,13 @@ export class ExpeditionScene extends Phaser.Scene {
       const iconSize = Math.round(SIZE * 0.78);
       const icon = this.add.image(x, y, mobMechanicIconKey(nestIds[0]))
         .setDisplaySize(iconSize, iconSize).setVisible(false);
-      bg.setInteractive({ useHandCursor: false });
+      bg.setInteractive({ useHandCursor: true });
+      // Клик по загоревшемуся гнезду — пояснение к механике, бой при этом не останавливается.
+      // Пустое гнездо молчит: activeNestId вернёт undefined (не спойлерим невстреченные механики).
+      bg.on('pointerdown', () => {
+        const id = this.activeNestId(i);
+        if (id) this.mechanicModal.showOnDemand(id);
+      });
       bg.on('pointerover', () => {
         const id = this.activeNestId(i);
         if (!id) return;
@@ -1140,6 +1162,12 @@ export class ExpeditionScene extends Phaser.Scene {
   /** Открывает механики моба `e` на их постоянных местах (см. `MOB_MECHANIC_NEST_ORDER`). */
   private registerMobMechanics(e: EnemyState) {
     const found = getMobMechanics(e);
+    // «Впервые за сейв» и «впервые в этом бою» — независимые множества (гнёзда сбрасываются каждый
+    // бой, мета — никогда), поэтому очередь пояснений считается от found, а не от fresh, и до
+    // раннего выхода ниже.
+    const unseen = found.filter(id => !MetaStore.hasSeenMechanic(id));
+    if (unseen.length > 0) this.mechanicModal.queueFirstTime(unseen);
+
     const fresh = found.filter(id => !this.discoveredMechanics.has(id));
     if (fresh.length === 0) return;
     fresh.forEach(id => this.discoveredMechanics.add(id));
