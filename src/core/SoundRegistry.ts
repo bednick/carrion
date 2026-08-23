@@ -58,3 +58,41 @@ export function musicVariants(key: MusicKey): readonly string[] {
 export function musicAssetKey(key: MusicKey, index: number): string {
   return index === 0 ? key : `${key}#${index}`;
 }
+
+// ── Микс громкости ───────────────────────────────────────────────────────────
+// Итоговая громкость источника = мастер (движок Phaser) × громкость категории × base.
+// base — постоянная микса: во сколько раз источник громче/тише своей категории.
+// Значения подобраны так, чтобы при дефолтных ползунках (общая 50%, окружение 50%,
+// музыка 25%, эффекты 25%) звучало примерно как до появления категорий.
+export type SoundCategory = 'ambient' | 'music' | 'sfx';
+
+// Все SOUND_FILES относятся к категории 'sfx'. База разная для боя и лагеря: в бою звуки
+// сыплются пачками (удары, блоки, шаги) и на одном уровне с лагерными забивают всё остальное,
+// поэтому боевая база вдвое тише. Отдельный звук можно подкрутить прямо в SOUND_MIX.
+export const SFX_BASE_COMBAT = 0.15;
+export const SFX_BASE_CAMP = 0.5;
+
+export const SOUND_MIX: Record<SoundKey, number> = {
+  // Бой и поход (ExpeditionScene)
+  hero_attack:  SFX_BASE_COMBAT,
+  hero_hurt:    SFX_BASE_COMBAT,
+  walking:      SFX_BASE_COMBAT,
+  block:        SFX_BASE_COMBAT,
+  enemy_death:  SFX_BASE_COMBAT,
+  boss_victory: SFX_BASE_COMBAT,
+
+  // Лагерь и UI
+  loot_pickup:  SFX_BASE_CAMP,
+  craft:        SFX_BASE_CAMP,
+  equip:        SFX_BASE_CAMP,
+  anvil:        SFX_BASE_CAMP,
+  chest_add:    SFX_BASE_CAMP,
+  quest_reward: SFX_BASE_CAMP,
+  fire_click:   SFX_BASE_CAMP,
+};
+
+export const MUSIC_MIX: Record<MusicKey, { category: SoundCategory; base: number }> = {
+  amb_campfire: { category: 'ambient', base: 0.4 },
+  amb_draft:    { category: 'ambient', base: 0.5 },
+  amb_flute:    { category: 'music',   base: 0.2 },
+};

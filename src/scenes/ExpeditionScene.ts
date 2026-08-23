@@ -28,7 +28,7 @@ import { ESSENCE_TIERS } from '../items/craft';
 import { LootPopupStack } from '../ui/LootPopup';
 import { QuestTracker } from '../ui/QuestTracker';
 import { ResourceHUD } from '../ui/ResourceHUD';
-import { VolumeControl } from '../ui/VolumeControl';
+import { SoundSettingsButton } from '../ui/SoundSettingsButton';
 import { CX, DX, GAME_W, GAME_H, rightX, panelScale } from '../ui/layout';
 import { makeRunSeed, rngFor, type Rng } from '../core/rng';
 
@@ -355,7 +355,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     // Фоновый эмбиент похода (один и тот же для всех зон). Заменяет лагерные слои;
     // при возврате в лагерь CampScene перебьёт его своим набором.
-    SoundManager.playMusicLayers([{ key: 'amb_draft', volume: 0.2 }]);
+    SoundManager.playMusicLayers(['amb_draft']);
 
     this.events.once('shutdown', () => {
       // На случай выхода из сцены в состоянии паузы — не оставляем глобальный
@@ -384,7 +384,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.syncRunStateToEquipment();
     this.generateFightPlan();
     this.buildUI();
-    new VolumeControl(this);
+    new SoundSettingsButton(this);
     this.resourceHUD = new ResourceHUD(this, this.tooltip);
     this.questTracker = new QuestTracker(this);
     EventBus.on('quest_completed', this.onQuestCompleted, this);

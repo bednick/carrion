@@ -29,7 +29,7 @@ import type { ZoneConfig } from '../zones/types';
 import { QuestTracker } from '../ui/QuestTracker';
 import { claimQuestReward } from '../core/QuestSystem';
 import { ResourceHUD } from '../ui/ResourceHUD';
-import { VolumeControl } from '../ui/VolumeControl';
+import { SoundSettingsButton } from '../ui/SoundSettingsButton';
 import { SoundManager } from '../core/SoundManager';
 import { SliderPopup } from '../ui/SliderPopup';
 import { spawnIconFloater } from '../ui/Floater';
@@ -313,13 +313,11 @@ export class CampScene extends Phaser.Scene {
       coordText.setText(`x:${Math.round(ptr.x)} y:${Math.round(ptr.y)}`);
     });
 
-    new VolumeControl(this);
+    new SoundSettingsButton(this);
 
-    // Слоистая фоновая атмосфера лагеря: костёр (тихо) + флейта (громкость — у флейтиста).
-    SoundManager.playMusicLayers([
-      { key: 'amb_campfire', volume: 0.1 },
-      { key: 'amb_flute', volume: SoundManager.getLayerVolume('amb_flute', 0.25) },
-    ]);
+    // Слоистая фоновая атмосфера лагеря: костёр (категория «окружение») + флейта
+    // (категория «музыка» — её же двигает флейтист). Громкости считает SoundManager по MUSIC_MIX.
+    SoundManager.playMusicLayers(['amb_campfire', 'amb_flute']);
 
     const resetBtn = this.add.rectangle(rightX(52), 785, 90, 22, 0x1a0000)
       .setStrokeStyle(1, 0x551111).setInteractive({ useHandCursor: true });
@@ -697,16 +695,16 @@ export class CampScene extends Phaser.Scene {
     this.addNPCWithSprite(
       x, y, w, h, 'npc-flutist',
       x, y, 66, 118,
-      'Флейтист — громкость флейты', () => this.openFluteSlider(x, y - 110),
+      'Флейтист — громкость музыки', () => this.openFluteSlider(x, y - 110),
     );
   }
 
   private openFluteSlider(x: number, y: number) {
     if (this.fluteSlider) return; // уже открыт; повторный клик ловит оверлей и закрывает
     this.fluteSlider = new SliderPopup(this, x, y, {
-      label: 'Флейта',
-      value: SoundManager.getLayerVolume('amb_flute', 0.25),
-      onChange: (v) => SoundManager.setLayerVolume('amb_flute', v),
+      label: 'Музыка',
+      value: SoundManager.getCategoryVolume('music'),
+      onChange: (v) => SoundManager.setCategoryVolume('music', v),
       onClose: () => { this.fluteSlider = null; },
     });
   }
