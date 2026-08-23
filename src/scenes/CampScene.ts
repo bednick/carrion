@@ -134,6 +134,59 @@ function wrapText(text: string, maxChars = 42): string[] {
 // Единственный герой — Силач. Выбора персонажа больше нет (см. docs/concept.md).
 const HERO_SPRITE = 'char-strongman';
 
+/**
+ * Множители размеров объектов мира лагеря. 1 = исходный размер — единственное место,
+ * где эти размеры крутятся руками.
+ *
+ * Объект растёт «от ног»: нижняя граница спрайта (линия земли на фоне) остаётся на месте,
+ * спрайт растёт вверх. Тень под ногами, hover-обводка, мигающая подсказка и хит-зона
+ * масштабируются вместе с ним. Позиции объектов здесь НЕ меняются.
+ *
+ * Скалируются только объекты мира. Фон (bg-camp), меню НПС (panelScale в src/ui/layout.ts),
+ * ResourceHUD и трекер квестов живут своей жизнью и на эти множители не смотрят.
+ */
+export const CAMP_SCALE = {
+  /** Общий множитель поверх всех остальных — тянет сразу весь лагерь. */
+  all: 1,
+  /** Силач у костра (спрайт, отсвет костра на нём, хит-зона «В поход»). */
+  hero: 1.1,
+  /** Костёр: пламя, свечение, искры, клик-зона. Тени под ногами у него нет. */
+  fire: 1,
+  /** Кузнец. */
+  smith: 1.2,
+  /** Информатор — вместе со знаком «!» над головой. */
+  dealer: 1.2,
+  /** Флейтист. */
+  flutist: 1.3,
+  /** Сундук и стойки. */
+  chest: 1,
+};
+
+type CampObject = Exclude<keyof typeof CAMP_SCALE, 'all'>;
+
+/** Итоговый множитель объекта: собственный × общий. */
+function campScale(o: CampObject): number {
+  return CAMP_SCALE.all * CAMP_SCALE[o];
+}
+
+// Базовая (при масштабе 1) геометрия силача: исходник 300×600, рисуется в 80×120, как у НПС.
+const HERO_BASE_W = 80, HERO_BASE_H = 120;
+/** Линия ног силача — инвариант: не зависит от масштаба, спрайт растёт вверх от неё. */
+const HERO_FOOT_Y = 540 + HERO_BASE_H / 2;
+
+/**
+ * Геометрия силача — один источник для его спрайта (buildCampfire) и отсвета костра на нём
+ * (buildFireLightOnStrongman). Функция, а не константа: DX пересчитывается при ресайзе окна
+ * (см. комментарий в src/ui/layout.ts), поэтому x обязан вычисляться в момент вызова.
+ */
+function heroGeom() {
+  const s = campScale('hero');
+  const w = HERO_BASE_W * s, h = HERO_BASE_H * s;
+  // Объекты лагеря выверены по фону в дизайновых 1280 — сдвигаем их вместе с фоном на DX,
+  // иначе на широком холсте силач съедет с поленьев.
+  return { s, w, h, x: 560 + DX, y: HERO_FOOT_Y - h / 2, footY: HERO_FOOT_Y };
+}
+
 export class CampScene extends Phaser.Scene {
   // Стойка-пресет (0..ARMOR_STAND_COUNT-1), которую редактируем на стенде и с которой уходим
   // в поход. Хранится в мете (getActiveStand): выбор запоминается между заходами и боями.
@@ -389,19 +442,16 @@ export class CampScene extends Phaser.Scene {
 
   private buildCampfire() {
     // Единственный герой — Силач у костра. Клик открывает карту (выбор зоны + стойки).
-    // Исходник 300×600, отображается в 80×120 (как у НПС). Позиция — как раньше (индекс силача).
-    const CAMP_CHAR_W = 80;
-    const CAMP_CHAR_H = 120;
-    // Объекты лагеря выверены по фону в дизайновых 1280 — сдвигаем их вместе с фоном на DX
-    // (src/ui/layout.ts), иначе на широком холсте силач съедет с поленьев.
-    const x = 560 + DX, y = 540;
+    // Размер крутится CAMP_SCALE.hero; вся геометрия — из heroGeom() (общая с отсветом костра).
+    const { s, w, h, x, y, footY } = heroGeom();
 
     // Двухслойная тень (псевдоградиент) — та же схема, что в бою (ExpeditionScene).
-    const heroShW = CAMP_CHAR_W * 0.9 * 1.1, heroShH = 20 * 1.1, heroShY = y + CAMP_CHAR_H / 2 - 4;
+    // Растёт вместе со спрайтом, но остаётся на той же линии ног.
+    const heroShW = w * 0.9 * 1.1, heroShH = 20 * 1.1 * s, heroShY = footY - 4 * s;
     this.add.ellipse(x, heroShY, heroShW * 1.1, heroShH * 1.1, 0x000000, 0.22);
     this.add.ellipse(x, heroShY, heroShW * 0.9, heroShH * 0.9, 0x000000, 0.45);
     const outlineImg = this.add.image(x, y, HERO_SPRITE)
-      .setDisplaySize(CAMP_CHAR_W + 6, CAMP_CHAR_H + 6).setTintFill(0xffffff).setVisible(false);
+      .setDisplaySize(w + 6 * s, h + 6 * s).setTintFill(0xffffff).setVisible(false);
 
     // Подсказка для игрока, который ещё ни разу не заходил в поход (zones_entered пуст):
     // тот же слой, что и hover-обводка (тот же размер/тинт, под обычным спрайтом — так
@@ -410,7 +460,7 @@ export class CampScene extends Phaser.Scene {
     // zones_entered уже не пуст, и подсказка не создаётся) — наведение/клик её не гасят.
     if (Object.keys(MetaStore.get().stats.zones_entered).length === 0) {
       this.firstExpeditionHint = this.add.image(x, y, HERO_SPRITE)
-        .setDisplaySize(CAMP_CHAR_W + 6, CAMP_CHAR_H + 6).setTintFill(0xffffff);
+        .setDisplaySize(w + 6 * s, h + 6 * s).setTintFill(0xffffff);
       this.tweens.add({
         targets: this.firstExpeditionHint,
         alpha: { from: 1, to: 0 },
@@ -418,9 +468,9 @@ export class CampScene extends Phaser.Scene {
       });
     }
 
-    this.add.image(x, y, HERO_SPRITE).setDisplaySize(CAMP_CHAR_W, CAMP_CHAR_H);
+    this.add.image(x, y, HERO_SPRITE).setDisplaySize(w, h);
 
-    const hit = this.add.ellipse(x, y, CAMP_CHAR_W, CAMP_CHAR_H, 0x000000, 0)
+    const hit = this.add.ellipse(x, y, w, h, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
     hit.on('pointerover', () => { outlineImg.setVisible(true); this.hoverLabel.setText('В поход'); });
     hit.on('pointerout',  () => { outlineImg.setVisible(false); this.hoverLabel.setText(''); });
@@ -449,8 +499,10 @@ export class CampScene extends Phaser.Scene {
       this.anims.create({ key: 'camp-fire-slow', frames: this.anims.generateFrameNumbers('camp-fire', {}), frameRate: 7, repeat: -1 });
     }
 
-    // Параметры размещения — основание пламени на поленьях.
-    const FX = 656 + DX, FY = 638, W = 150, H = 120;
+    // Параметры размещения — основание пламени на поленьях. Размер крутится CAMP_SCALE.fire;
+    // FY — линия основания, у всех слоёв пламени origin (0.5, 1), так что они растут вверх от неё.
+    const sf = campScale('fire');
+    const FX = 656 + DX, FY = 638, W = 150 * sf, H = 120 * sf;
 
     // --- свечение: радиальный градиент с ADD, медленно пульсирует ---
     this.ensureFireGlowTexture();
@@ -487,25 +539,27 @@ export class CampScene extends Phaser.Scene {
     // Два потока: высокий (летит до полной высоты) и низкий (гаснет вдвое раньше) —
     // общая скорость одна и та же, разница только в lifespan.
     this.ensureFireSparkTexture();
-    const sparkEmitter = this.add.particles(FX, FY - 10, 'fire-spark', {
+    // Разлёт и калибр искр едут за размером костра, скорости — нет: иначе крупный костёр
+    // начал бы стрелять искрами на пол-экрана.
+    const sparkEmitter = this.add.particles(FX, FY - 10 * sf, 'fire-spark', {
       blendMode: Phaser.BlendModes.ADD,
-      x: { min: -16, max: 16 },
+      x: { min: -16 * sf, max: 16 * sf },
       lifespan: { min: 1800, max: 3600 },
       speedY: { min: -110, max: -200 },
       speedX: { min: -11, max: 11 },
-      scale: { start: 1, end: 0 },
+      scale: { start: sf, end: 0 },
       alpha: { start: 0.9, end: 0 },
       frequency: 260,
       quantity: 1,
       tint: [0xffcf6b, 0xff9a3c],
     });
-    const sparkEmitterLow = this.add.particles(FX, FY - 10, 'fire-spark', {
+    const sparkEmitterLow = this.add.particles(FX, FY - 10 * sf, 'fire-spark', {
       blendMode: Phaser.BlendModes.ADD,
-      x: { min: -16, max: 16 },
+      x: { min: -16 * sf, max: 16 * sf },
       lifespan: { min: 900, max: 1800 },
       speedY: { min: -110, max: -200 },
       speedX: { min: -11, max: 11 },
-      scale: { start: 1, end: 0 },
+      scale: { start: sf, end: 0 },
       alpha: { start: 0.9, end: 0 },
       frequency: 260,
       quantity: 1,
@@ -531,17 +585,18 @@ export class CampScene extends Phaser.Scene {
 
   // Отсвет костра на силаче: он стоит ПОЗАДИ костра, без подсветки выглядит «вырезанным».
   // Поверх его спрайта кладём тёплую копию с ADD-смешиванием и пульсируем в такт пламени.
-  // Координаты/размер силача — из buildCampfire (индекс 1: 560,540, 80×120).
+  // Координаты/размер силача — из heroGeom(), общего с buildCampfire: иначе при CAMP_SCALE.hero != 1
+  // отсвет разъехался бы со спрайтом.
   private buildFireLightOnStrongman(fx: number, fy: number) {
     if (!this.textures.exists('char-strongman')) return;
-    const SM_X = 560 + DX, SM_Y = 540, SM_W = 80, SM_H = 120;
+    const { s, w, h, x: SM_X, y: SM_Y } = heroGeom();
 
     // Свет идёт со стороны костра (справа-снизу от силача) — сдвигаем отсвет к этому краю.
-    const dx = Math.sign(fx - SM_X) * 4;
-    const dy = Math.sign(fy - SM_Y) * 4;
+    const dx = Math.sign(fx - SM_X) * 4 * s;
+    const dy = Math.sign(fy - SM_Y) * 4 * s;
 
     const light = this.add.image(SM_X + dx, SM_Y + dy, 'char-strongman')
-      .setDisplaySize(SM_W, SM_H)
+      .setDisplaySize(w, h)
       .setTint(0xffaa55)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setAlpha(0.38)
@@ -582,14 +637,17 @@ export class CampScene extends Phaser.Scene {
       224 + DX, 604, 80, 120, 'npc-smith',
       200 + DX, 522, 340, 285,
       'Кузнец', () => this.openSmithPanel(),
+      false, campScale('smith'),
     );
+    const sDealer = campScale('dealer');
     this.dealerBlinkHint = this.addNPCWithSprite(
       1090 + DX, 604, 80, 120, 'npc-dealer',
       1125 + DX, 540, 250, 240,
       'Информатор', () => this.openDealerPanel(),
-      true,
+      true, sDealer,
     ) ?? null;
-    this.buildDealerAlert(1090 + DX, 604 - 120 / 2 - 18);
+    // «!» держим над головой: от линии ног вверх на высоту спрайта плюс отступ — оба едут за масштабом.
+    this.buildDealerAlert(1090 + DX, (604 + 120 / 2) - (120 + 18) * sDealer);
   }
 
   // Восклицательный знак над Информатором — привлекает внимание, когда есть готовый
@@ -641,15 +699,24 @@ export class CampScene extends Phaser.Scene {
     zoneX: number, zoneY: number, zoneW: number, zoneH: number,
     name: string, onClick: () => void,
     withBlinkHint = false,
+    scale = 1,
   ): Phaser.GameObjects.Image | undefined {
+    // Размеры приходят базовыми (при масштабе 1); scale — множитель из CAMP_SCALE.
+    // Якорь — линия ног: она не двигается, спрайт растёт вверх от неё.
+    const s = scale;
+    const w = spriteW * s, h = spriteH * s;
+    const footY = spriteY + spriteH / 2;
+    const y = footY - h / 2;
+
     // Тень под ногами — двухслойная (псевдоградиент), как в бою (ExpeditionScene).
-    const npcShW = spriteW * 0.9 * 1.1, npcShH = 14 * 1.1, npcShY = spriteY + spriteH / 2 - 4;
+    // Обе оси едут за размером спрайта, линия ног остаётся прежней.
+    const npcShW = w * 0.9 * 1.1, npcShH = 14 * 1.1 * s, npcShY = footY - 4 * s;
     this.add.ellipse(spriteX, npcShY, npcShW * 1.1, npcShH * 1.1, 0x000000, 0.22);
     this.add.ellipse(spriteX, npcShY, npcShW * 0.9, npcShH * 0.9, 0x000000, 0.45);
 
     // Белый силуэт чуть крупнее — показывается при hover позади спрайта
-    const outline = this.add.image(spriteX, spriteY, textureKey)
-      .setDisplaySize(spriteW + 6, spriteH + 6)
+    const outline = this.add.image(spriteX, y, textureKey)
+      .setDisplaySize(w + 6 * s, h + 6 * s)
       .setTintFill(0xffffff)
       .setVisible(false);
 
@@ -657,8 +724,8 @@ export class CampScene extends Phaser.Scene {
     // у героя) — привлекает внимание к НПС независимо от наведения. Видимость снаружи.
     let blinkHint: Phaser.GameObjects.Image | undefined;
     if (withBlinkHint) {
-      blinkHint = this.add.image(spriteX, spriteY, textureKey)
-        .setDisplaySize(spriteW + 6, spriteH + 6)
+      blinkHint = this.add.image(spriteX, y, textureKey)
+        .setDisplaySize(w + 6 * s, h + 6 * s)
         .setTintFill(0xffffff)
         .setVisible(false);
       this.tweens.add({
@@ -668,9 +735,13 @@ export class CampScene extends Phaser.Scene {
       });
     }
 
-    this.add.image(spriteX, spriteY, textureKey).setDisplaySize(spriteW, spriteH);
+    this.add.image(spriteX, y, textureKey).setDisplaySize(w, h);
 
-    const zone = this.add.rectangle(zoneX, zoneY, zoneW, zoneH, 0x000000, 0)
+    // Хит-зона выверена по фону, но обязана накрывать спрайт — тянем её тем же масштабом
+    // и тоже от нижнего края, иначе у крупного НПС голова перестанет кликаться.
+    const zoneBottom = zoneY + zoneH / 2;
+    const zone = this.add
+      .rectangle(zoneX, zoneBottom - (zoneH * s) / 2, zoneW * s, zoneH * s, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
 
     zone.on('pointerover', () => {
@@ -689,13 +760,15 @@ export class CampScene extends Phaser.Scene {
   // НПС-флейтист. По клику открывает ползунок громкости слоя флейты.
   // Спрайт 353×600 — рисуем с сохранением пропорций (~0.59).
   private buildFlutist() {
-    // (960, 740) — нижняя центральная точка; addNPCWithSprite ждёт центр, поднимаем на h/2.
+    // (960, 740) — нижняя центральная точка; addNPCWithSprite ждёт центр при масштабе 1,
+    // дальше он сам якорит спрайт по этой же линии ног.
     const x = 960 + DX, bottomY = 740, w = 72, h = 122;
     const y = bottomY - h / 2;
     this.addNPCWithSprite(
       x, y, w, h, 'npc-flutist',
       x, y, 66, 118,
       'Флейтист — громкость музыки', () => this.openFluteSlider(x, y - 110),
+      false, campScale('flutist'),
     );
   }
 
@@ -714,6 +787,7 @@ export class CampScene extends Phaser.Scene {
       855 + DX, 490, 96, 96, 'chest-stand',
       855 + DX, 490, 120, 100,
       'Сундук и стойки', () => this.openChestPanel(),
+      false, campScale('chest'),
     );
   }
 
