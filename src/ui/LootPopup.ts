@@ -57,7 +57,7 @@ export class LootPopupStack {
 
     const textX = iconX + iconSize / 2 + 8;
     c.add(this.scene.add.text(textX, 0, getItemBehavior(item.item_id).name, {
-      fontSize: '13px', fontFamily: FONT_FAMILY, color: RARITY_TEXT_COLORS[item.rarity],
+      fontSize: '14px', fontFamily: FONT_FAMILY, color: RARITY_TEXT_COLORS[item.rarity],
       wordWrap: { width: W - (textX + W / 2) - 10 },
     }).setOrigin(0, 0.5));
 

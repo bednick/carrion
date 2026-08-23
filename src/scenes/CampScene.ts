@@ -1254,7 +1254,7 @@ export class CampScene extends Phaser.Scene {
     const toAdd: Phaser.GameObjects.GameObject[] = [];
 
     toAdd.push(this.add.text(cx, labelY, `Слияние: ${FUSE_COUNT} предмета одной редкости → 1 следующей`, {
-      fontSize: '11px', fontFamily: FONT_FAMILY, color: '#888888', align: 'center', wordWrap: { width: 320 },
+      fontSize: '12px', fontFamily: FONT_FAMILY, color: '#888888', align: 'center', wordWrap: { width: 320 },
     }).setOrigin(0.5));
 
     const inputViews: (ItemIconView | null)[] = [];
@@ -1374,7 +1374,7 @@ export class CampScene extends Phaser.Scene {
     const btn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, canFuse ? 0x335533 : 0x222233);
     if (canFuse) btn.setInteractive({ useHandCursor: true });
     const btnLbl = this.add.text(cx, btnY, 'Слить', {
-      fontSize: '13px', fontFamily: FONT_FAMILY, color: canFuse ? '#aaffaa' : '#555566', align: 'center',
+      fontSize: '14px', fontFamily: FONT_FAMILY, color: canFuse ? '#aaffaa' : '#555566', align: 'center',
     }).setOrigin(0.5);
     toAdd.push(btn, btnLbl);
 
@@ -1448,6 +1448,7 @@ export class CampScene extends Phaser.Scene {
     MetaStore.spendEssence(cost);
     const output = ESSENCE_EXCHANGE_RATE;
     MetaStore.addEssence(to, output);
+    SoundManager.play('quest_reward');
     spawnIconFloater(this, essenceIconKey(from), '-1', x ?? this.panelX(379), y ?? this.panelY(300), RARITY_HEX[from]);
     spawnIconFloater(this, essenceIconKey(to), `+${output}`, x ?? this.panelX(379), y ?? this.panelY(300), RARITY_HEX[to]);
     this.refreshHUD();

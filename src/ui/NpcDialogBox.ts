@@ -25,9 +25,9 @@ const ICON_H = 216;
 const ICON_LEFT_PAD = 22; // отступ левого края иконки от левого края бокса
 const ICON_TEXT_GAP = 32; // зазор между иконкой и текстом
 const TEXT_X_PAD = ICON_LEFT_PAD + ICON_W + ICON_TEXT_GAP; // от левого края бокса до текста
-const NAME_FONT_SIZE = 23; // 15px ×1.5
-const BODY_FONT_SIZE = 21; // 14px ×1.5
-const HINT_FONT_SIZE = 17; // 11px ×1.5
+const NAME_FONT_SIZE = 24; // 15px ×1.5
+const BODY_FONT_SIZE = 22; // 14px ×1.5
+const HINT_FONT_SIZE = 18; // 11px ×1.5
 const TYPE_DELAY_MS = 18;
 const DEPTH = 250;
 
