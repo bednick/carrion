@@ -251,7 +251,12 @@ export class ExpeditionScene extends Phaser.Scene {
   // Иконки занятых ячеек по индексу предмета в рюкзаке — по ним подсвечивается свежая находка.
   private backpackIconViews: ItemIconView[] = [];
   // Табы смены стойки прямо в походе (1/2/3): выбор активной стойки на лету.
-  private standTabs: { bg: Phaser.GameObjects.Rectangle; lbl: Phaser.GameObjects.Text }[] = [];
+  private standTabs: {
+    bg: Phaser.GameObjects.Rectangle;
+    lbl: Phaser.GameObjects.Text;
+    // Пустая стойка в походе заблокирована: замочек поверх номера, клика нет.
+    lock?: Phaser.GameObjects.Image;
+  }[] = [];
   private tooltip!: Tooltip;
   private statusText!: Phaser.GameObjects.Text;
   private victoryContainer!: Phaser.GameObjects.Container;
@@ -282,6 +287,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private runSeed = '';
   // Индекс стойки-пресета, с которой герой ушёл в поход (0..2).
   private standIndex = 0;
+  // На входе в зону не нашлось ни одного оружия — выдан стартовый меч, сообщаем игроку в create().
+  private grantedStarterWeapon = false;
 
   init(data: {
     zoneId: string; standIndex?: number; speedMult?: number;
@@ -291,8 +298,11 @@ export class ExpeditionScene extends Phaser.Scene {
     seed?: string;
   }) {
     this.zoneId = data.zoneId ?? 'dead-fields';
+    // Безоружным в зону не выпускаем: если оружия нет нигде (стойки + сундук), выдаём стартовый
+    // меч на первую стойку — до выбора стойки, чтобы resolveStartStand увидел её снаряжённой.
+    this.grantedStarterWeapon = MetaStore.ensureStarterWeapon();
     // Заходим с последней выбранной стойкой (на стенде или в прошлом бою); её можно сменить в бою.
-    this.standIndex = data.standIndex ?? MetaStore.getActiveStand();
+    this.standIndex = this.resolveStartStand(data.standIndex ?? MetaStore.getActiveStand());
     // Свежий поход стартует с ускорением прошлого забега; на переходе между зонами
     // приходит явный speedMult (carryover) и имеет приоритет.
     this.speedMult = data.speedMult ?? MetaStore.getRunSpeed();
@@ -304,6 +314,20 @@ export class ExpeditionScene extends Phaser.Scene {
     this.resumed = data.resumed ?? false;
     this.runSeed = data.seed ?? makeRunSeed();
     this.retreatDialogOpen = false;
+  }
+
+  /**
+   * Уходить в поход голым нельзя даже по забывчивости: если выбранная стойка пуста, берём первую
+   * снаряжённую. Если снаряжённых нет вовсе — первую (герой всё равно гол, но табы остаются
+   * согласованными: активная стойка — та же, что показана заблокированной).
+   * Выбор не пишем в мету — стенд в лагере должен остаться на той стойке, которую игрок собирал.
+   */
+  private resolveStartStand(index: number): number {
+    if (!this.isStandEmpty(index)) return index;
+    for (let i = 0; i < ARMOR_STAND_COUNT; i++) {
+      if (!this.isStandEmpty(i)) return i;
+    }
+    return 0;
   }
 
   /**
@@ -400,6 +424,12 @@ export class ExpeditionScene extends Phaser.Scene {
     this.backpack = [...this.carryoverBackpack];
     this.carryoverBackpack = [];
     this.refreshBackpackGrid();
+
+    // Меч выдан молча ещё в init — объясняем игроку, откуда он взялся.
+    if (this.grantedStarterWeapon) {
+      this.grantedStarterWeapon = false;
+      this.showStatus('Оружия не осталось — выдан короткий меч', 2500);
+    }
 
     this.startNextFight();
   }
@@ -1304,8 +1334,16 @@ export class ExpeditionScene extends Phaser.Scene {
     this.flashBackpackCell(this.backpack.length - 1);
   }
 
+  /** Стойка без единого собственного предмета. Фиксации не в счёт: призраки чужих стоек
+   *  есть на всех стойках сразу и ничего не говорят о том, снаряжена ли эта. */
+  private isStandEmpty(i: number): boolean {
+    return Object.values(MetaStore.getArmorStand(i)).every((it) => !it);
+  }
+
   // Табы смены активной стойки в походе (1/2/3). Клик — мгновенная замена снаряжения:
   // this.equipment пересобирается, а в идущем бою — и герой (HP переносится).
+  // Пустая стойка заблокирована: раздеться догола посреди похода — не осмысленный выбор.
+  // Состав стоек за поход не меняется (находки уходят только в рюкзак), считаем один раз здесь.
   private buildStandTabs(cx: number, y: number) {
     this.standTabs = [];
     // Ширина таба = ширине ячейки экипировки, шаг = шагу колонок креста (|dx| = 54 в ANATOMY):
@@ -1316,12 +1354,28 @@ export class ExpeditionScene extends Phaser.Scene {
     const startX = cx - ((ARMOR_STAND_COUNT - 1) / 2) * step;
     for (let i = 0; i < ARMOR_STAND_COUNT; i++) {
       const x = startX + i * step;
+      const empty = this.isStandEmpty(i);
       const bg = this.add.rectangle(x, y, W, H, 0x222233)
         .setStrokeStyle(1, 0x444455)
-        .setInteractive({ useHandCursor: true });
+        .setInteractive({ useHandCursor: !empty });
       const lbl = this.add.text(x, y, `${i + 1}`, {
         fontSize: `${Math.round(10 * S)}px`, fontFamily: FONT_FAMILY, color: '#8899aa',
       }).setOrigin(0.5);
+      if (empty) {
+        // Тот же язык, что у заблокированной строки обмена в лагере: приглушение, замок,
+        // объясняющий тултип и молчаливый no-op вместо обработчика клика.
+        const lockSize = Math.round(14 * S);
+        lbl.setAlpha(0.35);
+        const lock = this.add.image(x, y, slotSilhouetteKey('lock'))
+          .setDisplaySize(lockSize, lockSize)
+          .setAlpha(0.7);
+        bg.on('pointerover', () => {
+          this.tooltip.showLines([{ text: 'Стойка пуста', color: '#aaaaaa' }], x + W, y, bg);
+        });
+        bg.on('pointerout', () => this.tooltip.hideFor(bg));
+        this.standTabs.push({ bg, lbl, lock });
+        continue;
+      }
       bg.on('pointerover', () => { if (i !== this.standIndex) bg.setFillStyle(0x2a2a3a); });
       bg.on('pointerout',  () => { if (i !== this.standIndex) bg.setFillStyle(0x222233); });
       bg.on('pointerdown', () => this.switchStand(i));
@@ -1331,7 +1385,10 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private refreshStandTabs() {
-    this.standTabs.forEach(({ bg, lbl }, i) => {
+    this.standTabs.forEach(({ bg, lbl, lock }, i) => {
+      // Пустая стойка остаётся приглушённой даже когда активна (поход начат на ней) — замок
+      // объясняет, почему герой гол.
+      if (lock) return;
       const active = i === this.standIndex;
       bg.setFillStyle(active ? 0x3a4a6a : 0x222233).setStrokeStyle(1, active ? 0x88aaff : 0x444455);
       lbl.setColor(active ? '#cfe0ff' : '#8899aa');
@@ -1349,7 +1406,7 @@ export class ExpeditionScene extends Phaser.Scene {
   // Смена стойки на лету: обновляет мету (запоминаем выбор), снаряжение и — в идущем бою —
   // самого героя. Длина забега уже зафиксирована при входе, её ботинки новой стойки не меняют.
   private switchStand(i: number) {
-    if (i === this.standIndex) return;
+    if (i === this.standIndex || this.isStandEmpty(i)) return;
     this.standIndex = i;
     MetaStore.setActiveStand(i);
     this.initEquipmentFromStand();

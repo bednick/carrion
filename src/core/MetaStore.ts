@@ -1,5 +1,5 @@
 import type { QuestRecord } from '../quests/definitions';
-import { hasItemBehavior } from '../items/registry';
+import { getItemBehavior, hasItemBehavior } from '../items/registry';
 import type { EssenceTier, EssencePool, Rarity } from '../items/types';
 import { rarityIndex } from '../items/rarity';
 import { EventBus } from './EventBus';
@@ -321,6 +321,24 @@ export const MetaStore = {
     });
     if (removed.length) this.save();
     return removed;
+  },
+
+  /**
+   * Страховка от безоружного забега: если оружия (предмета, влезающего в правую руку) нет ни в одном
+   * слоте любой стойки, ни в сундуке — кладём стартовый `short_sword` в правую руку первой стойки.
+   * Та же гарантия, что даёт defaultStands() новому сейву, но восстановленная задним числом:
+   * оружие можно потерять слиянием или разбором. Возвращает true, если меч был выдан.
+   */
+  ensureStarterWeapon(): boolean {
+    const isWeapon = (it: ItemInstance) =>
+      hasItemBehavior(it.item_id) && getItemBehavior(it.item_id).slots.includes('hand_right');
+    const onStands = state.armor_stands.some(
+      (stand) => Object.values(stand).some((it) => it && isWeapon(it)),
+    );
+    if (onStands || state.chest.some(isWeapon)) return false;
+    // Слот правой руки первой стойки пуст по построению: будь там предмет, он был бы оружием.
+    this.setArmorStandSlot(0, 'hand_right', { item_id: 'short_sword', rarity: 'common' });
+    return true;
   },
 
   /** Всё надетое на всех стойках одним списком (пустые слоты отброшены). */
