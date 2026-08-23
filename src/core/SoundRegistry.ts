@@ -92,7 +92,7 @@ export const SOUND_MIX: Record<SoundKey, number> = {
 };
 
 export const MUSIC_MIX: Record<MusicKey, { category: SoundCategory; base: number }> = {
-  amb_campfire: { category: 'ambient', base: 0.4 },
+  amb_campfire: { category: 'ambient', base: 0.3 },
   amb_draft:    { category: 'ambient', base: 0.5 },
   amb_flute:    { category: 'music',   base: 0.2 },
 };
