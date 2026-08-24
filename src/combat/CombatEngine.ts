@@ -539,10 +539,13 @@ export class CombatEngine {
   }
 
   /** Лечение за убийство: фиксированная величина, конечный запас срабатываний на забег.
-   *  Возвращает 0, когда запас исчерпан — до конца забега киллы больше не лечат. */
+   *  Возвращает 0, когда запас исчерпан — до конца забега киллы больше не лечат. Заряд не тратится,
+   *  если хил всё равно обрежется клэмпом (`hp + amount > maxHp`) — иначе полное HP тихо сжигало бы
+   *  дефицитный ресурс без всякого эффекта. */
   private consumeKillHeal(): number {
+    const hero = this.state.hero;
     for (const s of this.runStates()) {
-      if (s.killHeal && s.killHeal.charges > 0) {
+      if (s.killHeal && s.killHeal.charges > 0 && hero.hp + s.killHeal.amount <= hero.maxHp) {
         s.killHeal.charges--;
         return s.killHeal.amount;
       }
@@ -551,11 +554,15 @@ export class CombatEngine {
   }
 
   /** Лайфстил за удар: шанс редеет с каждым проком до конца забега (`baseChance * decay^procs`),
-   *  нуля не достигает — предмет не выключается совсем, а только слабеет. Возвращает 0 без прока. */
+   *  нуля не достигает — предмет не выключается совсем, а только слабеет. Возвращает 0 без прока.
+   *  Бросок не совершается вовсе (`procs` не растёт, шанс не затухает), если хил всё равно обрежется
+   *  клэмпом (`hp + amount > maxHp`) — иначе полное HP жгло бы будущие шансы впустую. */
   private rollHitLeech(rng: () => number): number {
+    const hero = this.state.hero;
     for (const s of this.runStates()) {
       const hl = s.hitLeech;
       if (!hl) continue;
+      if (hero.hp + hl.amount > hero.maxHp) continue;
       if (rng() >= hl.baseChance * Math.pow(hl.decay, hl.procs)) continue;
       hl.procs++;
       return hl.amount;
