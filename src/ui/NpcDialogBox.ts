@@ -104,6 +104,9 @@ export class NpcDialogBox {
   constructor(scene: Phaser.Scene, tooltip: Tooltip) {
     this.scene = scene;
     this.tooltip = tooltip;
+    this.scene.input.keyboard?.on('keydown-ESC', () => {
+      if (this.isOpen()) this.close();
+    });
   }
 
   isOpen(): boolean {

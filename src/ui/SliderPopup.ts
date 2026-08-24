@@ -30,6 +30,7 @@ export class SliderPopup {
   private opts: SliderPopupOpts;
   private moveHandler: (p: Phaser.Input.Pointer) => void;
   private upHandler: () => void;
+  private escHandler: () => void;
 
   constructor(scene: Phaser.Scene, x: number, y: number, opts: SliderPopupOpts) {
     this.scene = scene;
@@ -60,8 +61,10 @@ export class SliderPopup {
     hit.on('pointerdown', (p: Phaser.Input.Pointer) => { this.dragging = true; this.setFromPointer(p.x); });
     this.moveHandler = (p) => { if (this.dragging) this.setFromPointer(p.x); };
     this.upHandler = () => { this.dragging = false; };
+    this.escHandler = () => this.close();
     scene.input.on('pointermove', this.moveHandler);
     scene.input.on('pointerup', this.upHandler);
+    scene.input.keyboard?.on('keydown-ESC', this.escHandler);
 
     this.refresh();
   }
@@ -81,6 +84,7 @@ export class SliderPopup {
   close(): void {
     this.scene.input.off('pointermove', this.moveHandler);
     this.scene.input.off('pointerup', this.upHandler);
+    this.scene.input.keyboard?.off('keydown-ESC', this.escHandler);
     this.overlay.destroy();
     this.container.destroy();
     this.opts.onClose?.();
