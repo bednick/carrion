@@ -264,11 +264,6 @@ export class CampScene extends Phaser.Scene {
     this.buildPanel();
 
     this.questTracker = new QuestTracker(this);
-    this.npcDialogBox = new NpcDialogBox(this, this.tooltip);
-    // Первая загрузка игры вообще (язык ни разу не выбирался явно) — сперва выбор языка, диалоги
-    // НПС на этом же заходе всё равно пустые (нет ни diedInZone, ни tutorial_completed).
-    if (!hasExplicitLocale()) this.showLanguageChooser();
-    else this.showPendingNpcDialogs();
 
     EventBus.on('quest_completed', this.onQuestCompleted, this);
     EventBus.on('quest_reward_claimed', this.onRewardClaimed, this);
@@ -294,6 +289,17 @@ export class CampScene extends Phaser.Scene {
     kb.on('keydown-I',     () => this.togglePanel('chest',  () => this.openChestPanel()));
     kb.on('keydown-S',     () => this.togglePanel('smith',  () => this.openSmithPanel()));
     kb.on('keydown-D',     () => this.togglePanel('dealer', () => this.openDealerPanel()));
+
+    // NpcDialogBox регистрирует свои ESC/SPACE-хэндлеры закрытия — важно создать его ПОСЛЕ
+    // хоткеев выше: Phaser зовёт слушатели одного события в порядке регистрации, а хэндлеры
+    // выше гвардятся флагом blockingModal, который снимает как раз close() диалога. Если бы
+    // диалог слушал раньше сцены, один и тот же пробел в одном тике закрывал бы диалог и тут же
+    // открывал карту (blockingModal успевал бы стать false до проверки в хэндлере сцены).
+    this.npcDialogBox = new NpcDialogBox(this, this.tooltip);
+    // Первая загрузка игры вообще (язык ни разу не выбирался явно) — сперва выбор языка, диалоги
+    // НПС на этом же заходе всё равно пустые (нет ни diedInZone, ни tutorial_completed).
+    if (!hasExplicitLocale()) this.showLanguageChooser();
+    else this.showPendingNpcDialogs();
 
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
       if (!this.pendingDrag || !this.dragDrop || !ptr.isDown) return;

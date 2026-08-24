@@ -33,8 +33,9 @@ const BOX_CY = 400; // центр арены, как у диалога отст�
  *    пересоберутся и триггер сработает заново.
  *  - `showOnDemand` — игрок сам кликнул по загоревшемуся гнезду механики: бой НЕ останавливается.
  *
- * Закрытие — клик по любому месту экрана: интерактивен только полноэкранный оверлей, коробка и
- * тексты не перехватывают ввод, поэтому клик по ним доходит до оверлея. Отдельной кнопки нет.
+ * Закрытие — клик по любому месту экрана, а также ESC/SPACE (см. конструктор): интерактивен
+ * только полноэкранный оверлей, коробка и тексты не перехватывают ввод, поэтому клик по ним
+ * доходит до оверлея. Отдельной кнопки нет.
  *
  * Без твинов и без `this.time`: при паузе часы сцены заморожены (ExpeditionScene.pause), а
  * анимировать появление незачем.
@@ -45,8 +46,17 @@ export class MobMechanicModal {
   // Ставили ли паузу мы сами. Если игрок нажал паузу до окна — не снимаем её при закрытии
   // (тот же приём, что в ExpeditionScene.confirmRetreat).
   private pausedByUs = false;
+  private currentId: MechanicId | null = null;
+  private currentFromQueue = false;
 
-  constructor(private scene: Phaser.Scene, private hooks: MobMechanicModalHooks) {}
+  constructor(private scene: Phaser.Scene, private hooks: MobMechanicModalHooks) {
+    // Регистрируется после ExpeditionScene.keydown-SPACE (тот создаётся в create() раньше, чем
+    // this.mechanicModal в buildUI()) — сцена успевает проверить isOpen() ещё до того, как этот
+    // хэндлер закроет окно, и не переключит паузу поверх закрывающегося окна.
+    const closeIfOpen = () => { if (this.isOpen()) this.closeCurrent(); };
+    this.scene.input.keyboard?.on('keydown-ESC', closeIfOpen);
+    this.scene.input.keyboard?.on('keydown-SPACE', closeIfOpen);
+  }
 
   isOpen(): boolean {
     return this.container !== null;
@@ -71,6 +81,7 @@ export class MobMechanicModal {
   destroy() {
     this.container?.destroy(true);
     this.container = null;
+    this.currentId = null;
     this.queue = [];
     this.pausedByUs = false;
   }
@@ -127,12 +138,18 @@ export class MobMechanicModal {
 
     c.add([overlay, box, icon, title, desc, numbersHint, hint]);
     this.container = c;
+    this.currentId = id;
+    this.currentFromQueue = fromQueue;
 
-    overlay.on('pointerdown', () => {
-      if (fromQueue) MetaStore.markMechanicSeen(id);
-      c.destroy(true);
-      this.container = null;
-      this.openNextFromQueue();
-    });
+    overlay.on('pointerdown', () => this.closeCurrent());
+  }
+
+  private closeCurrent() {
+    if (!this.container) return;
+    if (this.currentFromQueue && this.currentId !== null) MetaStore.markMechanicSeen(this.currentId);
+    this.container.destroy(true);
+    this.container = null;
+    this.currentId = null;
+    this.openNextFromQueue();
   }
 }
