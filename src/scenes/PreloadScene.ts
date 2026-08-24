@@ -10,6 +10,7 @@ import { SOUND_FILES, MUSIC_FILES, soundVariants, soundAssetKey, musicVariants, 
 import { SoundManager } from '../core/SoundManager';
 import { CX, GAME_H } from '../ui/layout';
 import { FONT_FAMILY } from '../ui/theme';
+import { t } from '../i18n/t';
 
 function isSvgUrl(url: string): boolean {
   return url.split('?')[0].endsWith('.svg');
@@ -30,7 +31,7 @@ export class PreloadScene extends Phaser.Scene {
     const x = CX - barW / 2;
     const y = GAME_H / 2 - barH / 2;
 
-    const label = this.add.text(CX, y - 34, 'Загрузка...', {
+    const label = this.add.text(CX, y - 34, t('preload_loading'), {
       fontFamily: FONT_FAMILY,
       fontSize: '20px',
       color: '#e8d9b0',

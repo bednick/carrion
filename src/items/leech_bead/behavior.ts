@@ -1,6 +1,7 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { HEAL_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Лайфстил за удар: на каждый нанесённый героем урон — шанс вылечить фиксированную величину.
 // Каждый прок множит шанс на DECAY до конца забега (RunStateBag.hitLeech, src/combat/runState.ts):
@@ -27,7 +28,6 @@ const HEAL_AMOUNT: Record<Rarity, number> = { common: 1, uncommon: 2, rare: 3, e
 const DECAY = 0.75;
 
 const behavior: ItemBehavior = {
-  name: 'Пиявочная бусина',
   slots: ['amulet'],
   type: 'accessory',
   tags: ['accessory', 'lifesteal', 'on_hit'],
@@ -38,7 +38,7 @@ const behavior: ItemBehavior = {
     const hl = run?.hitLeech;
     const chance = hl ? hl.baseChance * Math.pow(hl.decay, hl.procs) : PROC_CHANCE[rarity];
     return [
-      { text: `Шанс лечения за удар: ${Math.round(chance * 100)}% (+${HEAL_AMOUNT[rarity]} HP)`, color: HEAL_COLOR },
+      { text: t('stat_heal_chance_per_hit', { chance: Math.round(chance * 100), amount: HEAL_AMOUNT[rarity] }), color: HEAL_COLOR },
     ];
   },
 };

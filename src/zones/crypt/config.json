@@ -1,8 +1,6 @@
 {
   "id": "crypt",
-  "name": "Склеп",
-  "description": "Прерванный погребальный ритуал. Мертвецы поднялись сами — голодные и многорукие.",
-  "faction": "Магия — Нежить",
+  "faction": "undead",
   "rarity": "epic",
   "fights": { "min": 5, "max": 6 },
   "mob_pool": [

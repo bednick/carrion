@@ -1,5 +1,6 @@
 import type { ItemBehavior } from '../behavior';
 import { OFFENSE_COLOR, WEAPON_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Cleave: полный урон основной цели, сплеш затухает по дальности от неё (по board-слоту, не по
 // индексу массива — те расходятся после призывов) — ближайший прочий живой враг получает 50%,
@@ -29,7 +30,6 @@ const damage = (rarity: import('../types').Rarity) => DAMAGE_BY_RARITY[rarity];
 const interval = (rarity: import('../types').Rarity) => INTERVAL_BY_RARITY[rarity];
 
 const behavior: ItemBehavior = {
-  name: 'Секира',
   slots: ['hand_right'],
   type: 'weapon',
   tags: ['weapon', 'cleave', 'slow'],
@@ -42,9 +42,9 @@ const behavior: ItemBehavior = {
   stats: (rarity) => {
     const dmg = damage(rarity);
     return [
-      { text: `Урон: ${dmg}`, color: WEAPON_COLOR },
-      { text: `Перезарядка: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
-      { text: `Сплеш урон до ${Math.round(SPLASH_RATIOS[0] * 100)}%`, color: OFFENSE_COLOR },
+      { text: `${t('stat_damage')}: ${dmg}`, color: WEAPON_COLOR },
+      { text: `${t('stat_interval')}: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
+      { text: t('stat_splash_damage_up_to', { pct: Math.round(SPLASH_RATIOS[0] * 100) }), color: OFFENSE_COLOR },
     ];
   },
 };

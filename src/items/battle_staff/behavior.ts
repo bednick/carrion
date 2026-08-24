@@ -3,7 +3,6 @@ import { standardWeapon } from '../factories';
 
 // Тяжёлое: урон растёт с редкостью, интервал подобран под DPS ×1.3 за уровень (анкор common = 4.4 DPS).
 const behavior: ItemBehavior = {
-  name: 'Боевой посох',
   slots: ['hand_right'],
   type: 'weapon',
   tags: ['weapon', 'heavy', 'slow'],

@@ -4,6 +4,7 @@ import { EventBus } from '../core/EventBus';
 import type { SoundCategory } from '../core/SoundRegistry';
 import { FONT_FAMILY } from './theme';
 import { rightX, GAME_W, GAME_H } from './layout';
+import { t } from '../i18n/t';
 
 // Геометрия: виджет прижат к правому верхнему углу экрана. Отступы от правого края — константы, но сам
 // правый край (GAME_W) меняется при ресайзе окна, поэтому x-координаты считаются в конструкторе/при
@@ -152,10 +153,10 @@ export class SoundSettingsButton {
   private open(): void {
     const scene = this.scene;
     const specs: RowSpec[] = [
-      { label: 'Общая', get: () => SoundManager.getVolume(), set: (v) => this.setMaster(v) },
-      { label: 'Окружение', get: () => SoundManager.getCategoryVolume('ambient'), set: (v) => this.setCat('ambient', v) },
-      { label: 'Музыка', get: () => SoundManager.getCategoryVolume('music'), set: (v) => this.setCat('music', v) },
-      { label: 'Эффекты', get: () => SoundManager.getCategoryVolume('sfx'), set: (v) => this.setCat('sfx', v), sample: true },
+      { label: t('sound_master'), get: () => SoundManager.getVolume(), set: (v) => this.setMaster(v) },
+      { label: t('sound_ambient'), get: () => SoundManager.getCategoryVolume('ambient'), set: (v) => this.setCat('ambient', v) },
+      { label: t('camp_music_label'), get: () => SoundManager.getCategoryVolume('music'), set: (v) => this.setCat('music', v) },
+      { label: t('sound_sfx'), get: () => SoundManager.getCategoryVolume('sfx'), set: (v) => this.setCat('sfx', v), sample: true },
     ];
 
     const panelH = 34 + ROW_H * (specs.length + 1) + 6;
@@ -171,7 +172,7 @@ export class SoundSettingsButton {
 
     const bg = scene.add.rectangle(PANEL_W / 2, panelH / 2, PANEL_W, panelH, 0x1e1e2e, 0.97)
       .setStrokeStyle(2, 0x555577).setInteractive();
-    const title = scene.add.text(10, 8, 'Звук', {
+    const title = scene.add.text(10, 8, t('sound_panel_title'), {
       fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddee',
     }).setOrigin(0, 0);
     this.panel.add([bg, title]);
@@ -181,7 +182,7 @@ export class SoundSettingsButton {
     this.muteMark = scene.add.text(10, muteY, '', {
       fontSize: '12px', fontFamily: FONT_FAMILY, color: TEXT_OFF,
     }).setOrigin(0, 0.5);
-    const muteLabel = scene.add.text(34, muteY, 'Без звука', {
+    const muteLabel = scene.add.text(34, muteY, t('sound_mute'), {
       fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddee',
     }).setOrigin(0, 0.5);
     const muteHit = scene.add.rectangle(PANEL_W / 2, muteY, PANEL_W - 12, ROW_H - 4, 0xffffff, 0)

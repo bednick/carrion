@@ -1,0 +1,25 @@
+/** Имена предметов на обоих языках. Ключ — item_id (см. `src/items/<id>/behavior.ts`, поля `name`
+ *  там больше нет — переехало сюда, см. docs/content.items.md). */
+export const ITEM_NAMES: Record<string, { ru: string; en: string }> = {
+  barrier_amulet: { ru: 'Амулет барьера', en: 'Barrier Amulet' },
+  battle_staff: { ru: 'Боевой посох', en: 'Battle Staff' },
+  broadaxe: { ru: 'Секира', en: 'Broadaxe' },
+  buckler: { ru: 'Баклер', en: 'Buckler' },
+  comfortable_gloves: { ru: 'Удобные перчатки', en: 'Comfortable Gloves' },
+  dagger: { ru: 'Кинжал', en: 'Dagger' },
+  desperate_plate: { ru: 'Латы отчаяния', en: 'Plate of Desperation' },
+  gleaming_plate: { ru: 'Блестящие латы', en: 'Gleaming Plate' },
+  heavy_gloves: { ru: 'Тяжёлые перчатки', en: 'Heavy Gloves' },
+  heavy_plate: { ru: 'Тяжёлые латы', en: 'Heavy Plate' },
+  heavy_shield: { ru: 'Тяжёлый щит', en: 'Heavy Shield' },
+  leech_bead: { ru: 'Пиявочная бусина', en: 'Leech Bead' },
+  light_gloves: { ru: 'Лёгкие перчатки', en: 'Light Gloves' },
+  rapier: { ru: 'Рапира', en: 'Rapier' },
+  short_spear: { ru: 'Короткое копьё', en: 'Short Spear' },
+  short_sword: { ru: 'Короткий меч', en: 'Short Sword' },
+  spiked_cuirass: { ru: 'Шипастый нагрудник', en: 'Spiked Cuirass' },
+  spiked_shield: { ru: 'Шипастый щит', en: 'Spiked Shield' },
+  thread_charm: { ru: 'Оберег на волоске', en: 'Charm on a Thread' },
+  vulture_amulet: { ru: 'Амулет грифа', en: 'Vulture Amulet' },
+  war_pick: { ru: 'Клевец', en: 'War Pick' },
+};

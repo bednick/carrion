@@ -1,6 +1,7 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { UTILITY_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Лёгкие перчатки: сокращают интервал всего надетого оружия весь бой — кросс-slot канал
 // weapon_interval_mult без scope (тир 'more' — независимый множитель, см. src/combat/channels.ts,
@@ -9,7 +10,6 @@ import { UTILITY_COLOR } from '../statColors';
 const INTERVAL_REDUCTION: Record<Rarity, number> = { common: 0.05, uncommon: 0.07, rare: 0.10, epic: 0.15, legendary: 0.15 };
 
 const behavior: ItemBehavior = {
-  name: 'Лёгкие перчатки',
   slots: ['hand_left'],
   type: 'gloves',
   tags: ['gloves', 'fast'],
@@ -19,7 +19,7 @@ const behavior: ItemBehavior = {
     value: 1 - INTERVAL_REDUCTION[rarity],
   }],
   stats: (rarity) => [
-    { text: `Скорость атаки: +${Math.round(INTERVAL_REDUCTION[rarity] * 100)}%`, color: UTILITY_COLOR },
+    { text: `${t('stat_attack_speed')}: +${Math.round(INTERVAL_REDUCTION[rarity] * 100)}%`, color: UTILITY_COLOR },
   ],
 };
 

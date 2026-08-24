@@ -2,7 +2,7 @@ import { MetaStore } from './MetaStore';
 import { getZoneFaction } from '../zones/registry';
 import { isEssenceExchangeUnlocked, isFuseUnlocked } from '../items/craft';
 import type { EssenceTier } from '../items/types';
-import { FACTION_INFO, FACTION_GIFT, FACTION_RECOMMEND, SMITH_UNLOCK_DIALOG_RARE, SMITH_UNLOCK_DIALOG_EPIC, FUSE_UNLOCK_DIALOG, TUTORIAL_REWARD_DIALOG } from '../dialogs/definitions';
+import { factionInfo, factionGift, factionRecommend, smithUnlockDialog, fuseUnlockDialog, tutorialRewardDialog } from '../i18n/content/dialogs';
 import type { DialogEntry } from '../dialogs/definitions';
 
 /**
@@ -26,13 +26,13 @@ export function checkFactionDeathDialogs(zoneId: string | undefined): DialogEntr
   if (MetaStore.hasSeenDialog(dialogId)) return null;
   MetaStore.markDialogSeen(dialogId);
 
-  const queue: DialogEntry[] = [FACTION_INFO[faction]];
-  const gift = FACTION_GIFT[faction];
+  const queue: DialogEntry[] = [factionInfo(faction)];
+  const gift = factionGift(faction);
   if (!MetaStore.hasItemAnywhere(gift.itemId)) {
     MetaStore.addToChest({ item_id: gift.itemId, rarity: gift.rarity });
     queue.push(gift.dialog);
   } else {
-    queue.push(FACTION_RECOMMEND[faction]);
+    queue.push(factionRecommend(faction));
   }
   return queue;
 }
@@ -50,7 +50,7 @@ export function checkTutorialRewardDialog(): DialogEntry[] | null {
 
   MetaStore.markDialogSeen(dialogId);
   MetaStore.addToChest({ item_id: 'desperate_plate', rarity: 'common' });
-  return TUTORIAL_REWARD_DIALOG;
+  return tutorialRewardDialog();
 }
 
 /** Первое открытие слияния у кузнеца (после трёх стартовых зон) — одноразовая реплика Кузнеца. */
@@ -60,17 +60,12 @@ export function checkFuseUnlockDialog(): DialogEntry[] | null {
   if (!isFuseUnlocked(MetaStore.get().completed_areas)) return null;
 
   MetaStore.markDialogSeen(dialogId);
-  return [FUSE_UNLOCK_DIALOG];
+  return [fuseUnlockDialog()];
 }
 
 // Тиры выше базового (uncommon) — у него обмена вниз нет (ESSENCE_EXCHANGE_TARGET.uncommon === null),
 // поэтому «новый обмен» осмысленно появляется только с rare/epic.
 const NON_BASE_TIERS: EssenceTier[] = ['rare', 'epic'];
-
-const SMITH_UNLOCK_DIALOGS: Record<'rare' | 'epic', DialogEntry> = {
-  rare: SMITH_UNLOCK_DIALOG_RARE,
-  epic: SMITH_UNLOCK_DIALOG_EPIC,
-};
 
 /**
  * Первое открытие обмена эссенции у кузнеца выше базового тира — отдельная одноразовая реплика
@@ -85,7 +80,7 @@ export function checkSmithUnlockDialog(): DialogEntry[] | null {
     if (MetaStore.hasSeenDialog(dialogId)) continue;
     if (!isEssenceExchangeUnlocked(tier, completed)) continue;
     MetaStore.markDialogSeen(dialogId);
-    queue.push(SMITH_UNLOCK_DIALOGS[tier]);
+    queue.push(smithUnlockDialog(tier));
   }
   return queue.length ? queue : null;
 }

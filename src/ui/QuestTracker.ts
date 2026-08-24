@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { MetaStore } from '../core/MetaStore';
 import { QUEST_DEFS } from '../quests/definitions';
 import { FONT_FAMILY } from './theme';
+import { questTitle } from '../i18n/content';
+import { t as tr } from '../i18n/t';
 
 const X = 10;
 const Y_START = 78; // ниже таблицы ресурсов ResourceHUD (1 строка — эссенция)
@@ -70,7 +72,7 @@ export class QuestTracker {
 
     if (pending.length > 0) {
       rows.push({
-        text: `★ Заберите награду у Информатора (${pending.length})`,
+        text: tr('quest_tracker_pending_reward', { count: pending.length }),
         color: '#ffdd44',
         bold: true,
       });
@@ -82,7 +84,7 @@ export class QuestTracker {
       if (!def) continue;
       const done = q.progress >= q.target;
       rows.push({
-        text: `${def.title}  ${q.progress}/${q.target}`,
+        text: `${questTitle(q.id)}  ${q.progress}/${q.target}`,
         color: done ? '#88ff88' : '#888888',
         bold: false,
       });

@@ -41,9 +41,10 @@ export interface WeaponAuthoring {
 }
 
 /** Идентичность предмета (бывший config.json) — обязательны для любого предмета. Цена продажи
- *  считается от редкости (`itemSellPrice` в craft.ts), не хранится на предмете. */
+ *  считается от редкости (`itemSellPrice` в craft.ts), не хранится на предмете. Имя — не тут,
+ *  см. `src/i18n/content/items.ts` (`itemDisplayName`, ключ — item_id, он же ключ реестра
+ *  `ITEM_BEHAVIORS`). */
 export interface ItemIdentity {
-  name: string;
   slots: SlotType[];
   type: ItemType;
   tags?: string[];

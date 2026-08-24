@@ -1,8 +1,6 @@
 {
   "id": "mage-ruins",
-  "name": "Руины магов",
-  "description": "Развалины лагеря мага-командира. Здесь нежить — оружие, а не случайность.",
-  "faction": "Магия — Нежить",
+  "faction": "undead",
   "rarity": "rare",
   "fights": { "min": 5, "max": 5 },
   "mob_pool": [

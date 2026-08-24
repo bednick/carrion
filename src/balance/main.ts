@@ -8,6 +8,9 @@ import { emptySummary, mergeResult, runExpedition, HIST_BUCKETS, HIST_BUCKET_SIZ
 import { RARITY_ORDER as RARITIES, RARITY_LABEL } from '../items/rarity';
 import type { ItemInstance, SlotType, Rarity } from '../items/types';
 import type { ZoneConfig } from '../zones/types';
+import { ITEM_NAMES } from '../i18n/content/items';
+import { ZONE_TEXT } from '../i18n/content/zones';
+import { ZONE_FACTION_LABELS } from '../i18n/content/factions';
 
 const SLOTS: { id: SlotType; label: string }[] = [
   { id: 'hand_right', label: 'Правая рука' },
@@ -59,7 +62,7 @@ for (const slot of SLOTS) {
     if (!beh.slots.includes(slot.id)) continue;
     const opt = document.createElement('option');
     opt.value = id;
-    opt.textContent = `${beh.name} (${beh.type})`;
+    opt.textContent = `${ITEM_NAMES[id].ru} (${beh.type})`;
     itemSelect.appendChild(opt);
   }
   row.appendChild(itemSelect);
@@ -260,7 +263,7 @@ function renderDetails(zoneCfg: ZoneConfig, s: SimSummary) {
   const winrate = (s.wins / s.trials * 100);
   const avgBossStartHp = s.bossStartHpCount > 0 ? s.bossStartHpSum / s.bossStartHpCount : null;
   const avgBossEndHp = s.bossEndHpCount > 0 ? s.bossEndHpSum / s.bossEndHpCount : null;
-  let html = `<h3 class="details-title">${zoneCfg.name} (${zoneStarLabel(zoneCfg)}) — ${zoneCfg.faction}</h3>`;
+  let html = `<h3 class="details-title">${ZONE_TEXT[zoneCfg.id].name.ru} (${zoneStarLabel(zoneCfg)}) — ${ZONE_FACTION_LABELS[zoneCfg.faction].ru}</h3>`;
   html += `<div class="stat-grid">
     ${statTile(`${winrate.toFixed(1)}%`, 'Winrate')}
     ${statTile(`${(s.deaths / s.trials * 100).toFixed(1)}%`, 'Смерть до босса')}
@@ -288,12 +291,12 @@ function renderDetails(zoneCfg: ZoneConfig, s: SimSummary) {
 // Фиксированный порядок фракций (см. docs/factions.md) + цвет для визуального разделения секций.
 // Слоты категориальной палитры (dataviz-скилл, references/palette.md, dark-режим), проверены
 // validate_palette.js на поверхности #1a1a2e — все чек-и PASS, худшая соседняя ΔE 15.7.
-const FACTION_ORDER = ['Магия — Нежить', 'Конница — Дикие звери', 'Мародёры — Броня', 'Все три фракции'];
+const FACTION_ORDER = ['undead', 'beasts', 'marauders', 'all'];
 const FACTION_COLOR: Record<string, string> = {
-  'Магия — Нежить': '#3987e5',        // slot 1 blue
-  'Конница — Дикие звери': '#199e70', // slot 2 aqua
-  'Мародёры — Броня': '#c98500',      // slot 3 yellow
-  'Все три фракции': '#9085e9',       // slot 5 violet — сборная финальная зона, не отдельная фракция
+  undead: '#3987e5',    // slot 1 blue
+  beasts: '#199e70',    // slot 2 aqua
+  marauders: '#c98500', // slot 3 yellow
+  all: '#9085e9',       // slot 5 violet — сборная финальная зона, не отдельная фракция
 };
 const FALLBACK_FACTION_COLOR = '#667788';
 
@@ -335,7 +338,7 @@ function renderZoneTable(rows: { zoneCfg: ZoneConfig; s: SimSummary }[], selecte
       ? (s.fightsSum / s.trials).toFixed(1)
       : `${(s.fightsSum / s.trials).toFixed(1)} / ${zoneCfg.fights ? ((zoneCfg.fights.min + zoneCfg.fights.max) / 2).toFixed(1) : '0'}`;
     html += `<tr data-zone-id="${zoneCfg.id}"${selected}>
-      <td>${zoneCfg.name}</td>
+      <td>${ZONE_TEXT[zoneCfg.id].name.ru}</td>
       <td>${zoneStarLabel(zoneCfg)}</td>
       <td>${winrateCell}</td>
       <td>${avgBossStartHp}</td>
@@ -353,7 +356,7 @@ function renderSummaryTable(rows: { zoneCfg: ZoneConfig; s: SimSummary }[], sele
   for (const group of groups) {
     const color = FACTION_COLOR[group.faction] ?? FALLBACK_FACTION_COLOR;
     html += `<div class="faction-group" style="--faction-color: ${color}">
-      <div class="faction-title"><span class="dot"></span>${group.faction}</div>
+      <div class="faction-title"><span class="dot"></span>${ZONE_FACTION_LABELS[group.faction as keyof typeof ZONE_FACTION_LABELS]?.ru ?? group.faction}</div>
       ${renderZoneTable(group.rows, selectedId)}
     </div>`;
   }
@@ -380,7 +383,7 @@ async function onRun() {
   for (const id of ALL_ZONE_IDS) {
     const zoneCfg = getZoneConfig(id);
     const s = await runBatched(equipment, zoneCfg, trials, (done) => {
-      progressEl.textContent = `${zoneCfg.name}: ${done} / ${trials}...`;
+      progressEl.textContent = `${ZONE_TEXT[zoneCfg.id].name.ru}: ${done} / ${trials}...`;
     });
     rows.push({ zoneCfg, s });
   }

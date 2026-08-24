@@ -1,8 +1,6 @@
 {
   "id": "predator-pasture",
-  "name": "Пастбище хищников",
-  "description": "Одичавшие боевые кони сбились в яростные табуны. Раненый зверь тут не отступает.",
-  "faction": "Конница — Дикие звери",
+  "faction": "beasts",
   "rarity": "epic",
   "fights": { "min": 5, "max": 5 },
   "mob_pool": [

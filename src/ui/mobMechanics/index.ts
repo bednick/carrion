@@ -26,13 +26,14 @@ export function mobMechanicIconKey(id: MechanicId): string {
  * оранжевые. У призыва/фазы своего цвета в тултипе не было (эти механики там вообще не показывались) —
  * здесь заведены новые: фиолетовый (как у полосок призыва рядом с мобом) и бирюзовый.
  */
-export const MOB_MECHANIC_DEFS: Record<MechanicId, { title: string; description: string; color: string }> = {
-  evade: { title: 'Уворот', description: 'Шанс полностью избежать урона от удара.', color: '#44aaff' },
-  block: { title: 'Блок', description: 'Шанс полностью заблокировать удар.', color: '#44aaff' },
-  armor: { title: 'Защита', description: 'Снижает получаемый урон на фиксированное число очков.', color: '#44aaff' },
-  thorns: { title: 'Шипы', description: 'Отражает часть полученного урона обратно атакующему.', color: '#ff8844' },
-  summon: { title: 'Призыв', description: 'Вызывает на поле дополнительных противников.', color: '#cc55ff' },
-  phase: { title: 'Смена фазы', description: 'После гибели переходит в новую форму и продолжает бой.', color: '#44ddaa' },
+/** Заголовок/описание — см. `src/i18n/content/mobMechanics.ts` (`mechanicTitle`/`mechanicDescription`). */
+export const MOB_MECHANIC_DEFS: Record<MechanicId, { color: string }> = {
+  evade: { color: '#44aaff' },
+  block: { color: '#44aaff' },
+  armor: { color: '#44aaff' },
+  thorns: { color: '#ff8844' },
+  summon: { color: '#cc55ff' },
+  phase: { color: '#44ddaa' },
 };
 
 /**

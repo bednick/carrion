@@ -2,10 +2,10 @@ import Phaser from 'phaser';
 import { FONT_FAMILY } from './theme';
 import { MetaStore } from '../core/MetaStore';
 import { essenceIconKey } from './rewards';
-import { ESSENCE_TIERS, ESSENCE_NAMES } from '../items/craft';
-import { RARITY_HEX, RARITY_GENITIVE } from '../items/rarity';
-import type { Rarity } from '../items/types';
+import { ESSENCE_TIERS } from '../items/craft';
+import { RARITY_HEX } from '../items/rarity';
 import { Tooltip } from './Tooltip';
+import { t } from '../i18n/t';
 
 const ICON = 29;      // сторона иконки, px
 const GAP = 9;        // зазор иконка↔число, px
@@ -68,11 +68,11 @@ export class ResourceHUD {
       col: i,
       row: 0,
       store: (c: Cell) => (this.essenceCells[tier] = c),
-      title: `${capitalize(ESSENCE_NAMES[tier])} эссенция`, titleColor: '#cbe6ff',
+      title: t('essence_title', { tier: capitalize(t(`essence_${tier}`)) }), titleColor: '#cbe6ff',
       descLines: buildDescLines(
-        `Позволяет улучшить предмет до ${RARITY_GENITIVE[tier as Rarity]} уровня редкости`,
+        t('essence_upgrade_desc', { tier: t(`rarity_genitive_${tier}`) }),
         DESC_COLOR,
-        [{ word: RARITY_GENITIVE[tier as Rarity], color: RARITY_HEX[tier as Rarity] }],
+        [{ word: t(`rarity_genitive_${tier}`), color: RARITY_HEX[tier] }],
       ),
     }));
 

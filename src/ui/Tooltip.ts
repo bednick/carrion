@@ -3,6 +3,8 @@ import { FONT_FAMILY } from './theme';
 import { getItemBehavior } from '../items/registry';
 import { RARITY_HEX } from '../items/rarity';
 import { NEUTRAL_PLATE_KEY } from './itemIcon';
+import { itemDisplayName } from '../i18n/content';
+import { t } from '../i18n/t';
 import type { ItemInstance, SlotType } from '../items/types';
 import type { RunStateBag } from '../combat/runState';
 
@@ -112,9 +114,9 @@ export class Tooltip {
     const beh = getItemBehavior(item.item_id);
     const full = !!this.ctrlKey?.isDown;
 
-    const identity: Line[] = [{ text: beh.name, color: RARITY_HEX[item.rarity] }];
+    const identity: Line[] = [{ text: itemDisplayName(item.item_id), color: RARITY_HEX[item.rarity] }];
     // Слоты несёт цвет имени и рамка слота — раскрываем только под Ctrl.
-    if (full) identity.push({ text: `Слоты: ${beh.slots.join(', ')}`, color: '#aaaaaa' });
+    if (full) identity.push({ text: `${t('tooltip_slots')}: ${beh.slots.join(', ')}`, color: '#aaaaaa' });
 
     // Боевые статы — единый источник правды в behavior.ts (docs/combat-events.md §5).
     // Состояние забега (если сцена его дала) — чтобы показать фактические числа, а не стартовые.

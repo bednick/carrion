@@ -1,6 +1,7 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { DEFENSE_COLOR, REACTIVE_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Шипастый нагрудник: броня ниже «чистой» (gleaming_plate).
 const REDUCTION: Record<Rarity, number> = {
@@ -23,7 +24,6 @@ const THORNS: Record<Rarity, number> = {
 // «второй хук on.block», ловивший блок ЧУЖОГО слота раньше по HANDLER_ORDER, больше не нужен
 // (порядок слотов на исход не влияет, см. docs/combat-events.md).
 const behavior: ItemBehavior = {
-  name: 'Шипастый нагрудник',
   slots: ['body'],
   type: 'armor',
   tags: ['armor', 'thorns'],
@@ -32,8 +32,8 @@ const behavior: ItemBehavior = {
     { channel: 'thorns_flat', tier: 'flat', value: THORNS[rarity] },
   ],
   stats: (rarity) => [
-    { text: `Защита: ${Math.round(REDUCTION[rarity] * 100)}%`, color: DEFENSE_COLOR },
-    { text: `Шипы: ${THORNS[rarity]}`, color: REACTIVE_COLOR },
+    { text: `${t('stat_defense')}: ${Math.round(REDUCTION[rarity] * 100)}%`, color: DEFENSE_COLOR },
+    { text: `${t('stat_thorns')}: ${THORNS[rarity]}`, color: REACTIVE_COLOR },
   ],
 };
 

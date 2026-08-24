@@ -3,6 +3,7 @@ import type { Rarity } from '../types';
 import type { TriggerDef } from '../../combat/triggers';
 import { UNARMED_DAMAGE } from '../../combat/events';
 import { DEFENSE_COLOR, REACTIVE_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 const BLOCK_CHANCE: Record<Rarity, number> = {
   common: 0.04,
@@ -44,15 +45,14 @@ const counterTrigger = (rarity: Rarity): TriggerDef<'damage'> => ({
 });
 
 const behavior: ItemBehavior = {
-  name: 'Баклер',
   slots: ['hand_left'],
   type: 'shield',
   tags: ['shield', 'counter', 'block'],
   channels: (rarity) => [{ channel: 'block_chance', tier: 'flat', value: BLOCK_CHANCE[rarity] }],
   triggers: (rarity) => [counterTrigger(rarity)],
   stats: (rarity) => [
-    { text: `Блок: ${Math.round(BLOCK_CHANCE[rarity] * 100)}%`, color: DEFENSE_COLOR },
-    { text: `Контрудар: ${Math.round(COUNTER_CHANCE[rarity] * 100)}%`, color: REACTIVE_COLOR },
+    { text: `${t('stat_block')}: ${Math.round(BLOCK_CHANCE[rarity] * 100)}%`, color: DEFENSE_COLOR },
+    { text: `${t('stat_counter')}: ${Math.round(COUNTER_CHANCE[rarity] * 100)}%`, color: REACTIVE_COLOR },
   ],
 };
 

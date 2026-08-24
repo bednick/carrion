@@ -38,11 +38,6 @@ export const RARITY_LABEL: Record<Rarity, string> = RARITY_ORDER.reduce((acc, r)
   return acc;
 }, {} as Record<Rarity, string>);
 
-/** Род. падеж, муж. род — согласуется с сущ. «уровень» («до необычного уровня»). */
-export const RARITY_GENITIVE: Record<Rarity, string> = {
-  common: 'обычного', uncommon: 'необычного', rare: 'редкого', epic: 'эпического', legendary: 'легендарного',
-};
-
 /** Цвет редкости строкой — для текста Phaser и HTML балансных страниц. */
 export const RARITY_HEX: Record<Rarity, string> = {
   common: '#ffffff',

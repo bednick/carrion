@@ -2,6 +2,7 @@ import type { Rarity } from './types';
 import type { ItemCombatBehavior } from './behavior';
 import { scaleByRarity } from './rarity';
 import { DEFENSE_COLOR, WEAPON_COLOR } from './statColors';
+import { t } from '../i18n/t';
 
 export interface WeaponRarityStats {
   damage: number;
@@ -22,8 +23,8 @@ export function standardWeapon(opts: WeaponOpts): ItemCombatBehavior {
   return {
     weapon: (rarity) => ({ interval: interval(rarity), baseDamage: damage(rarity), shape: 'single' }),
     stats: (rarity) => [
-      { text: `Урон: ${damage(rarity)}`, color: WEAPON_COLOR },
-      { text: `Перезарядка: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
+      { text: `${t('stat_damage')}: ${damage(rarity)}`, color: WEAPON_COLOR },
+      { text: `${t('stat_interval')}: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
     ],
   };
 }
@@ -54,6 +55,6 @@ export function standardArmor(opts: ArmorOpts): ItemCombatBehavior {
 
   return {
     channels: (rarity) => [{ channel: 'armor_pct', tier: 'more', value: 1 - pct(rarity) }],
-    stats: (rarity) => [{ text: `Защита: ${Math.round(pct(rarity) * 100)}%`, color: DEFENSE_COLOR }],
+    stats: (rarity) => [{ text: `${t('stat_defense')}: ${Math.round(pct(rarity) * 100)}%`, color: DEFENSE_COLOR }],
   };
 }

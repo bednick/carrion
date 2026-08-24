@@ -1,5 +1,5 @@
 # Carrion
 
-Рогалик-автобатлер о жизни после большой войны.
+Simple autobattler
 
 https://bednick.github.io/carrion/

@@ -13,12 +13,15 @@ import type { CombatView } from '../items/behavior';
 import type { Side } from '../combat/events';
 import { aggregateChannels } from '../combat/channels';
 import { authorAttack } from '../combat/resolution';
+import { ITEM_NAMES } from '../i18n/content/items';
 
 const SAMPLES = 2000;
 
 // Строки stats(), которые уже вынесены в отдельные колонки таблицы (урон/интервал) — остальное
-// идёт в колонку «доп. эффекты».
-const OWN_COLUMN_PREFIXES = [/^Урон:/, /^Перезарядка:/];
+// идёт в колонку «доп. эффекты». Dev-тул всегда на русском (см. план локализации), но stats()
+// предмета берёт лейблы через t() и следует ЖИВОМУ языку игры (последний выбор в CampScene) — на
+// случай, если он окажется английским, матчим оба варианта префикса.
+const OWN_COLUMN_PREFIXES = [/^Урон:/, /^Перезарядка:/, /^Damage:/, /^Recharge:/];
 
 function mockView(targetCount: number): CombatView {
   const enemies = Array.from({ length: targetCount }, (_, i) => ({
@@ -71,7 +74,7 @@ export function getWeaponRows(rarity: Rarity): WeaponRow[] {
 
     rows.push({
       id,
-      name: behavior.name,
+      name: ITEM_NAMES[id].ru,
       tags: (behavior.tags ?? []).filter((t) => t !== 'weapon'),
       damage,
       interval,

@@ -12,6 +12,7 @@ import type { CombatState, EnemyState } from '../combat/types';
 import { buildRunState, type RunStateBag } from '../combat/runState';
 import { getMobConfig } from '../mobs/registry';
 import { sumMeta } from '../items/meta';
+import { mobName } from '../i18n/content';
 import type { EnemySpec, PhaseOverride, SummonRef, MobConfig, ZoneConfig } from '../zones/types';
 import type { ItemInstance, SlotType } from '../items/types';
 
@@ -21,7 +22,7 @@ function resolveSpec(ref: PhaseOverride, isBoss: boolean): EnemySpec {
   const base: MobConfig = getMobConfig(ref.id);
   return {
     id: ref.id,
-    name: ref.name ?? base.name,
+    name: ref.name ?? mobName(ref.id),
     health: ref.health ?? base.health,
     attacks: ref.attacks ?? base.attacks,
     defense: ref.defense ?? base.defense,
@@ -44,7 +45,7 @@ function resolveSummonSpec(ref: SummonRef): EnemySpec {
   const base: MobConfig = getMobConfig(ref.mob_id);
   return {
     id: ref.mob_id,
-    name: ref.name ?? base.name,
+    name: ref.name ?? mobName(ref.mob_id),
     health: ref.health ?? base.health,
     attacks: ref.attacks ?? base.attacks,
     defense: ref.defense ?? base.defense,

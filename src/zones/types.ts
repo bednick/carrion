@@ -1,4 +1,5 @@
 import type { Rarity, EssenceTier } from '../items/types';
+import type { ZoneFactionKey } from '../i18n/content/factions';
 
 export interface LootEntry {
   item_id: string;
@@ -119,7 +120,6 @@ export interface MobUi {
 
 export interface MobConfig {
   id: string;
-  name: string;
   health: number;
   attacks: AttackDef[];
   defense?: MobDefense;
@@ -187,10 +187,8 @@ export interface EndlessConfig {
  */
 export interface ZoneConfig {
   id: string;
-  name: string;
-  faction: string;
-  /** Краткое лор-описание области — показывается в тултипе карты. */
-  description?: string;
+  /** Название/описание зоны — см. `src/i18n/content/zones.ts` (текст выведен в локализацию). */
+  faction: ZoneFactionKey;
   /**
    * Редкость области = тир награды её босса (эссенция + центральная карточка драфта).
    * Единственный источник правды по «уровню» зоны: цвет названия на карте, гейт обмена эссенции

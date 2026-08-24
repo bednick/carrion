@@ -6,7 +6,6 @@ import { getZoneConfig, zoneBgKey, ZONE_BG_VARIANTS, BG_LAYERS, type BgLayer, ZO
 import { CombatEngine } from '../combat/CombatEngine';
 import { rollLootTable, buildRewardOptions, type RewardOption } from '../combat/loot';
 import { getInvulnStatus, syncRunState, type RunStateBag } from '../combat/runState';
-import { getItemBehavior } from '../items/registry';
 import { sumMeta } from '../items/meta';
 import { spawnFloater } from '../ui/Floater';
 import { SoundManager } from '../core/SoundManager';
@@ -19,6 +18,8 @@ import { ARMOR_STAND_COUNT } from '../core/MetaStore';
 import type { SlotType, EssenceTier } from '../items/types';
 import type { ZoneConfig, MobConfig, EnemySpec, PhaseOverride, SummonRef } from '../zones/types';
 import { getMobConfig } from '../mobs/registry';
+import { mobName, zoneName, itemDisplayName, mechanicTitle, mechanicDescription } from '../i18n/content';
+import { t } from '../i18n/t';
 import { slotSilhouetteKey, zoneDecorKey } from '../ui/silhouettes';
 import { MOB_MECHANIC_DEFS, MOB_MECHANIC_NEST_ORDER, MOB_MECHANIC_COLOR_NUM, mobMechanicIconKey, type MechanicId } from '../ui/mobMechanics';
 import { addItemIcon, ItemIconView } from '../ui/itemIcon';
@@ -53,7 +54,7 @@ function resolveSpec(ref: PhaseOverride, isBoss: boolean): EnemySpec {
   const base = getMobConfig(ref.id);
   return {
     id: ref.id,
-    name: ref.name ?? base.name,
+    name: ref.name ?? mobName(ref.id),
     health: ref.health ?? base.health,
     attacks: ref.attacks ?? base.attacks,
     defense: ref.defense ?? base.defense,
@@ -78,7 +79,7 @@ function resolveSummonSpec(ref: SummonRef): EnemySpec {
   const base = getMobConfig(ref.mob_id);
   return {
     id: ref.mob_id,
-    name: ref.name ?? base.name,
+    name: ref.name ?? mobName(ref.mob_id),
     health: ref.health ?? base.health,
     attacks: ref.attacks ?? base.attacks,
     defense: ref.defense ?? base.defense,
@@ -428,7 +429,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // Меч выдан молча ещё в init — объясняем игроку, откуда он взялся.
     if (this.grantedStarterWeapon) {
       this.grantedStarterWeapon = false;
-      this.showStatus('Оружия не осталось — выдан короткий меч', 2500);
+      this.showStatus(t('expedition_starter_weapon_granted', { item: itemDisplayName('short_sword') }), 2500);
     }
 
     this.startNextFight();
@@ -515,7 +516,7 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private buildProgressBar() {
-    this.add.text(CX, 10, this.zoneCfg.name, {
+    this.add.text(CX, 10, zoneName(this.zoneCfg.id), {
       fontSize: '16px', fontFamily: FONT_FAMILY, color: '#cccccc',
     }).setOrigin(0.5, 0).setDepth(2);
 
@@ -539,8 +540,8 @@ export class ExpeditionScene extends Phaser.Scene {
       this.curseText.on('pointerover', () => {
         const pct = Math.round(this.zoneCfg.endless!.curse_per_fight * this.currentFightIdx);
         this.tooltip.showLines([
-          { text: 'Уровень проклятья зоны', color: '#cc88ff' },
-          { text: `Входящий по персонажу урон увеличен на ${pct}%`, color: '#bbbbbb' },
+          { text: t('expedition_zone_curse_title'), color: '#cc88ff' },
+          { text: t('expedition_zone_curse_desc', { pct }), color: '#bbbbbb' },
         ], CX - 110, curseY + 10);
       });
       this.curseText.on('pointerout', () => this.tooltip.hide());
@@ -552,7 +553,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.zoneCfg.endless) {
       // Нет предела длины — заливку прогресса скрываем (делить не на что), только счётчик боёв.
       this.progressFill.setVisible(false);
-      this.progressText.setText(`Бой ${this.currentFightIdx} из ???`);
+      this.progressText.setText(t('expedition_fight_counter_unknown', { cur: this.currentFightIdx }));
       return;
     }
     const maxW = 864;
@@ -560,13 +561,13 @@ export class ExpeditionScene extends Phaser.Scene {
     const isBossFight = this.fightPlan[this.currentFightIdx] !== 'mob';
     if (isBossFight) {
       this.progressFill.setSize(maxW, 14);
-      this.progressText.setText('Босс локации!');
+      this.progressText.setText(t('expedition_boss_fight'));
       return;
     }
     const mobTotal = this.totalFights - 1;
     const progress = this.currentFightIdx / mobTotal;
     this.progressFill.setSize(Math.max(4, progress * maxW), 14);
-    this.progressText.setText(`Бой ${this.currentFightIdx} / ${mobTotal}`);
+    this.progressText.setText(t('expedition_fight_counter', { cur: this.currentFightIdx, total: mobTotal }));
   }
 
   private buildBattleArea() {
@@ -613,7 +614,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.heroAnimPrefix = animPrefix;
     } else {
       this.heroSprite = this.add.rectangle(hx, 219, 64, 90, 0x4488aa).setDepth(5);
-      this.add.text(hx, 219, 'С', {
+      this.add.text(hx, 219, t('expedition_hero_placeholder_letter'), {
         fontSize: '28px', fontFamily: FONT_FAMILY, color: '#ffffff',
       }).setOrigin(0.5).setDepth(6);
     }
@@ -1014,17 +1015,17 @@ export class ExpeditionScene extends Phaser.Scene {
         const def = eCapture.defense;
         const stats: { text: string; color: string }[] = [];
         const multi = eCapture.attackTimers.length > 1;
-        eCapture.attackTimers.forEach((t, i) => {
+        eCapture.attackTimers.forEach((timer, i) => {
           const suf = multi ? ` ${i + 1}` : '';
-          stats.push({ text: `Урон${suf}: ${t.damage}`, color: DMG_COLOR });
-          stats.push({ text: `Перезарядка${suf}: ${(t.interval / 1000).toFixed(1)}s`, color: DMG_COLOR });
+          stats.push({ text: `${t('stat_damage')}${suf}: ${timer.damage}`, color: DMG_COLOR });
+          stats.push({ text: `${t('stat_interval')}${suf}: ${(timer.interval / 1000).toFixed(1)}s`, color: DMG_COLOR });
         });
         // «Броня: N» (очки), а не «Защита: N%» — броня мобов числовая, в отличие от процентной брони
         // героя в статах нагрудников (`src/items/factories.ts`), чтобы тултипы не путались.
-        if (def?.armor) stats.push({ text: `Броня: ${def.armor}`, color: DEF_COLOR });
-        if (def?.dodge) stats.push({ text: `Уклон: ${Math.round(def.dodge * 100)}%`, color: DEF_COLOR });
-        if (def?.block) stats.push({ text: `Блок: ${Math.round(def.block * 100)}%`, color: DEF_COLOR });
-        if (def?.thorns) stats.push({ text: `Шипы: ${def.thorns}`, color: THORNS_COLOR });
+        if (def?.armor) stats.push({ text: `${t('stat_armor')}: ${def.armor}`, color: DEF_COLOR });
+        if (def?.dodge) stats.push({ text: `${t('stat_dodge')}: ${Math.round(def.dodge * 100)}%`, color: DEF_COLOR });
+        if (def?.block) stats.push({ text: `${t('stat_block')}: ${Math.round(def.block * 100)}%`, color: DEF_COLOR });
+        if (def?.thorns) stats.push({ text: `${t('stat_thorns')}: ${def.thorns}`, color: THORNS_COLOR });
 
         const nameColor = RARITY_TEXT_COLORS[getMobConfig(eCapture.id).tier ?? 'common'];
         this.tooltip.showMob({ name: eCapture.name, nameColor, isBoss: eCapture.isBoss, stats }, x + 50, 140, sprite);
@@ -1092,9 +1093,9 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '12px', fontFamily: FONT_FAMILY, color: '#a06030',
     }).setOrigin(0.5, 0);
 
-    header(this.panelColumn(0).cx, 'Рюкзак');
-    header(CX, 'Экипировка');
-    header(this.panelColumn(2).cx, 'Механики');
+    header(this.panelColumn(0).cx, t('expedition_panel_backpack'));
+    header(CX, t('expedition_panel_equipment'));
+    header(this.panelColumn(2).cx, t('expedition_panel_mechanics'));
 
     this.add.image(this.panelColumn(0).cx, 600, zoneDecorKey('backpack')).setTint(0xa06030).setAlpha(0.16);
     this.add.image(CX, 600, zoneDecorKey('warrior')).setTint(0xa06030).setAlpha(0.16);
@@ -1155,8 +1156,8 @@ export class ExpeditionScene extends Phaser.Scene {
         if (!id) return;
         const def = MOB_MECHANIC_DEFS[id];
         this.tooltip.showLines([
-          { text: def.title, color: def.color },
-          { text: def.description, color: '#aaaaaa' },
+          { text: mechanicTitle(id), color: def.color },
+          { text: mechanicDescription(id), color: '#aaaaaa' },
         ], x + SIZE, y, bg);
       });
       bg.on('pointerout', () => this.tooltip.hideFor(bg));
@@ -1370,7 +1371,7 @@ export class ExpeditionScene extends Phaser.Scene {
           .setDisplaySize(lockSize, lockSize)
           .setAlpha(0.7);
         bg.on('pointerover', () => {
-          this.tooltip.showLines([{ text: 'Стойка пуста', color: '#aaaaaa' }], x + W, y, bg);
+          this.tooltip.showLines([{ text: t('expedition_stand_empty'), color: '#aaaaaa' }], x + W, y, bg);
         });
         bg.on('pointerout', () => this.tooltip.hideFor(bg));
         this.standTabs.push({ bg, lbl, lock });
@@ -1417,7 +1418,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     // HP переносим по абсолюту (maxHp не зависит от брони) — смена стойки не лечит и не ранит.
     this.applyEquipToHero();
-    this.showStatus(`Стойка ${i + 1}`, 800);
+    this.showStatus(t('expedition_stand_switched', { n: i + 1 }), 800);
   }
 
   // Экипировка героя — только просмотр выбранной стойки (без drag, без ячеек рюкзака/крафта).
@@ -1550,7 +1551,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const retreatBtn = this.add.rectangle(rowLeft + totalW / 2, retreatY, totalW, 26, 0x332222)
       .setStrokeStyle(1, 0x664444)
       .setInteractive({ useHandCursor: true });
-    const retreatLbl = this.add.text(rowLeft + totalW / 2, retreatY, 'В лагерь', {
+    const retreatLbl = this.add.text(rowLeft + totalW / 2, retreatY, t('expedition_retreat_to_camp'), {
       fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddaaaa',
     }).setOrigin(0.5);
     retreatBtn.on('pointerover', () => retreatBtn.setFillStyle(0x442a2a));
@@ -1563,7 +1564,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private updateCurseReadout() {
     if (!this.zoneCfg.endless || !this.curseText) return;
     const pct = Math.round(this.zoneCfg.endless.curse_per_fight * this.currentFightIdx);
-    this.curseText.setText(`Проклятие: ${pct}%`);
+    this.curseText.setText(t('expedition_curse_readout', { pct }));
   }
 
   // Подтверждение отступления: рюкзак сохраняется, зона НЕ засчитывается.
@@ -1576,23 +1577,23 @@ export class ExpeditionScene extends Phaser.Scene {
     const c = this.add.container(0, 0).setDepth(200);
     const overlay = this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0.7).setInteractive();
     const box = this.add.rectangle(CX, 400, 420, 190, 0x1a1a2a).setStrokeStyle(2, 0x664444);
-    const title = this.add.text(CX, 340, 'Вернуться в лагерь?', {
+    const title = this.add.text(CX, 340, t('expedition_retreat_confirm_title'), {
       fontSize: '20px', fontFamily: FONT_FAMILY, color: '#ffcc88',
     }).setOrigin(0.5);
     // В endless-зоне «зачёта зоны» не существует — вместо него игроку важен рекорд глубины.
     const subText = this.zoneCfg.endless
-      ? 'Собранный лут сохранится.\nРекорд глубины засчитается.'
-      : 'Собранный лут сохранится.\nЗона не будет зачтена.';
+      ? t('expedition_retreat_confirm_sub_endless')
+      : t('expedition_retreat_confirm_sub_normal');
     const sub = this.add.text(CX, 378, subText, {
       fontSize: '14px', fontFamily: FONT_FAMILY, color: '#bbbbbb', align: 'center',
     }).setOrigin(0.5);
 
     const yesBtn = this.add.rectangle(CX - 88, 445, 150, 40, 0x332222).setStrokeStyle(1, 0x885555)
       .setInteractive({ useHandCursor: true });
-    const yesLbl = this.add.text(CX - 88, 445, 'В лагерь', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#ddaaaa' }).setOrigin(0.5);
+    const yesLbl = this.add.text(CX - 88, 445, t('expedition_retreat_to_camp'), { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#ddaaaa' }).setOrigin(0.5);
     const noBtn = this.add.rectangle(CX + 88, 445, 150, 40, 0x222233).setStrokeStyle(1, 0x445588)
       .setInteractive({ useHandCursor: true });
-    const noLbl = this.add.text(CX + 88, 445, 'Остаться', { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaccff' }).setOrigin(0.5);
+    const noLbl = this.add.text(CX + 88, 445, t('expedition_stay'), { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#aaccff' }).setOrigin(0.5);
 
     yesBtn.on('pointerover', () => yesBtn.setFillStyle(0x442a2a));
     yesBtn.on('pointerout',  () => yesBtn.setFillStyle(0x332222));
@@ -1639,7 +1640,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     // Ходьба проигрывается перед каждым боем, включая первый при входе в зону.
     this.startWalking();
-    this.showStatus('Персонаж идёт к следующему врагу...', 1500);
+    this.showStatus(t('expedition_walking_status'), 1500);
   }
 
   private beginFight() {
@@ -1899,7 +1900,7 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
-    this.showStatus('Герой пал! Лут сохранён.', 3000);
+    this.showStatus(t('expedition_hero_died_status'), 3000);
     this.scheduleDelayed(2000, () => {
       this.scene.start('CampScene', { diedInZone: this.zoneId });
     });
@@ -1912,19 +1913,19 @@ export class ExpeditionScene extends Phaser.Scene {
     this.victoryContainer.removeAll(true);
 
     const overlay = this.add.rectangle(CX, 400, GAME_W, GAME_H, 0x000000, 0.85).setInteractive();
-    const title = this.add.text(CX, 260, 'Ты пал', {
+    const title = this.add.text(CX, 260, t('expedition_you_died'), {
       fontSize: '30px', fontFamily: FONT_FAMILY, color: '#ff6666',
     }).setOrigin(0.5);
-    const depthLine = this.add.text(CX, 316, `Убито мобов: ${depth}`, {
+    const depthLine = this.add.text(CX, 316, t('expedition_mobs_killed', { n: depth }), {
       fontSize: '18px', fontFamily: FONT_FAMILY, color: '#dddddd',
     }).setOrigin(0.5);
-    const recordLine = this.add.text(CX, 348, isRecord ? 'Новый рекорд!' : `Рекорд зоны: ${best}`, {
+    const recordLine = this.add.text(CX, 348, isRecord ? t('expedition_new_record') : t('expedition_zone_record', { n: best }), {
       fontSize: '16px', fontFamily: FONT_FAMILY, color: isRecord ? '#ffdd44' : '#999999',
     }).setOrigin(0.5);
 
     const btn = this.add.rectangle(CX, 420, 200, 44, 0x332222).setStrokeStyle(1, 0x885555)
       .setInteractive({ useHandCursor: true });
-    const btnLbl = this.add.text(CX, 420, 'В лагерь', {
+    const btnLbl = this.add.text(CX, 420, t('expedition_retreat_to_camp'), {
       fontSize: '16px', fontFamily: FONT_FAMILY, color: '#ddaaaa',
     }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(0x442a2a));
@@ -1963,7 +1964,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     // Затемнение точно по дно арены (PANEL_TOP=360), иначе снизу остаётся полоска неприкрытого фона.
     const overlay = this.add.rectangle(CX, 196, GAME_W, 328, 0x000000, 0.82).setInteractive();
-    const title = this.add.text(CX, 78, 'Победа! Выбери награду', {
+    const title = this.add.text(CX, 78, t('expedition_victory_choose_reward'), {
       fontSize: '26px', fontFamily: FONT_FAMILY, color: '#ffdd44',
     }).setOrigin(0.5);
     this.victoryContainer.add([overlay, title]);
@@ -1990,14 +1991,14 @@ export class ExpeditionScene extends Phaser.Scene {
           this.victoryContainer.add(essenceTag(this, t, opt.essence[t] ?? 0, { iconSize: 32, fontSize: 22, originX: 0.5 })
             .setPosition(x, startY + ti * rowH));
         });
-        this.victoryContainer.add(this.add.text(x, cardY + 44, 'Эссенция', {
+        this.victoryContainer.add(this.add.text(x, cardY + 44, t('expedition_essence'), {
           fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
         }).setOrigin(0.5, 0));
       } else {
         this.victoryContainer.add(addItemIcon(this, x, cardY - 28, {
           itemId: opt.item.item_id, rarity: opt.item.rarity, size: 72,
         }));
-        this.victoryContainer.add(this.add.text(x, cardY + 34, getItemBehavior(opt.item.item_id).name, {
+        this.victoryContainer.add(this.add.text(x, cardY + 34, itemDisplayName(opt.item.item_id), {
           fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',
           align: 'center', wordWrap: { width: CARD_W - 16 },
         }).setOrigin(0.5, 0));

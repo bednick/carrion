@@ -1,6 +1,5 @@
 {
   "id": "bound_corpse",
-  "name": "Скованный мертвец",
   "tier": "common",
   "health": 15,
   "attacks": [

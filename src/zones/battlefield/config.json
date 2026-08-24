@@ -1,8 +1,6 @@
 {
   "id": "battlefield",
-  "name": "Поле Битвы",
-  "description": "Эпицентр трёх армий. Каждый павший командир поднимается снова — и поле не отпускает, пока не падёшь ты.",
-  "faction": "Все три фракции",
+  "faction": "all",
   "rarity": "legendary",
   "mob_pool": [
     { "mob_id": "overseer", "weight": 100 },

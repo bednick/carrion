@@ -1,8 +1,6 @@
 {
   "id": "trampled-meadows",
-  "name": "Растоптанные луга",
-  "description": "Поле разгона конницы. Взрытая земля, сломанные копья, полчища крыс.",
-  "faction": "Конница — Дикие звери",
+  "faction": "beasts",
   "rarity": "uncommon",
   "fights": { "min": 5, "max": 5 },
   "mob_pool": [

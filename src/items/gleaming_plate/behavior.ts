@@ -12,7 +12,6 @@ const REDUCTION: Record<Rarity, number> = {
 };
 
 const behavior: ItemBehavior = {
-  name: 'Блестящие латы',
   slots: ['body'],
   type: 'armor',
   tags: ['armor'],

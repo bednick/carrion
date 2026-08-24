@@ -1,6 +1,7 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { DEFENSE_COLOR, REACTIVE_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 const BLOCK_CHANCE: Record<Rarity, number> = {
   common: 0.04,
@@ -23,7 +24,6 @@ const THORNS: Record<Rarity, number> = {
 // — движок сам гарантирует это одной стадией, без нужды во втором хуке «поймать блок другого
 // слота», как было раньше (docs/combat-events.md).
 const behavior: ItemBehavior = {
-  name: 'Шипастый щит',
   slots: ['hand_left'],
   type: 'shield',
   tags: ['shield', 'thorns', 'block'],
@@ -32,8 +32,8 @@ const behavior: ItemBehavior = {
     { channel: 'thorns_flat', tier: 'flat', value: THORNS[rarity] },
   ],
   stats: (rarity) => [
-    { text: `Блок: ${Math.round(BLOCK_CHANCE[rarity] * 100)}%`, color: DEFENSE_COLOR },
-    { text: `Шипы: ${THORNS[rarity]}`, color: REACTIVE_COLOR },
+    { text: `${t('stat_block')}: ${Math.round(BLOCK_CHANCE[rarity] * 100)}%`, color: DEFENSE_COLOR },
+    { text: `${t('stat_thorns')}: ${THORNS[rarity]}`, color: REACTIVE_COLOR },
   ],
 };
 

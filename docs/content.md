@@ -211,10 +211,12 @@ endless-зона, см. `docs/zones/battlefield.md`) с 2026-07 использу
 ### Конфиг предмета
 
 Каждый предмет = `src/items/{item_id}/behavior.ts` + `icon.svg`. Отдельного `config.json` нет —
-идентичность (`name`, `slots`, `type`, `tags`) объявлена прямо на объекте
+идентичность (`slots`, `type`, `tags`) объявлена прямо на объекте
 `ItemBehavior` в `behavior.ts`, вместе с боевыми статами и их скейлом по редкости (единый источник
 правды, см. [`combat-events.md`](combat-events.md) §5). Для простых предметов идентичность
 дописывается поверх фабрики (`standardWeapon`/`standardArmor`/`standardShield`) через спред.
+Имя предмета в `behavior.ts` не хранится — оно локализовано (RU/EN) в `src/i18n/content/items.ts`
+(`ITEM_NAMES`, ключ — тот же `item_id`, что и в реестре `ITEM_BEHAVIORS`).
 Цена продажи предмету не принадлежит — считается от редкости (`itemSellPrice` в `items/craft.ts`,
 см. [`meta-progression.md`](meta-progression.md)).
 
@@ -225,7 +227,6 @@ import type { ItemBehavior } from '../behavior';
 import { standardWeapon } from '../factories';
 
 const behavior: ItemBehavior = {
-  name: 'Боевой посох',
   slots: ['hand_right'],
   type: 'weapon',
   tags: ['weapon', 'heavy', 'slow'],
@@ -242,7 +243,6 @@ import type { ItemBehavior } from '../behavior';
 import { standardArmor } from '../factories';
 
 const behavior: ItemBehavior = {
-  name: 'Блестящие латы',
   slots: ['body'],
   type: 'armor',
   tags: ['armor'],
@@ -252,7 +252,7 @@ const behavior: ItemBehavior = {
 export default behavior;
 ```
 
-**Щит и аксессуар** — та же форма: `ItemBehavior`-объект с идентичностью (`name`/`slots`/`type`/
+**Щит и аксессуар** — та же форма: `ItemBehavior`-объект с идентичностью (`slots`/`type`/
 `tags`) и боевыми хуками (`on`, `stats`, …), которые для нестандартной механики пишутся
 руками поверх фабрики или вместо неё — см. `src/items/heavy_shield/behavior.ts`,
 `src/items/vulture_amulet/behavior.ts`.

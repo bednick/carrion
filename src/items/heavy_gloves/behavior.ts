@@ -1,6 +1,7 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { CRIT_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Тяжёлые перчатки: доп. вклад в общий крит-канал движка (не свой собственный бросок) — работает
 // на ЛЮБОМ оружии hand_right, даже без своего крита (сами дают крит-шанс с нуля). С war_pick
@@ -16,7 +17,6 @@ const CRIT_CHANCE: Record<Rarity, number> = {
 const CRIT_MULT_BONUS = 1;
 
 const behavior: ItemBehavior = {
-  name: 'Тяжёлые перчатки',
   slots: ['hand_left'],
   type: 'gloves',
   tags: ['gloves', 'crit'],
@@ -25,8 +25,8 @@ const behavior: ItemBehavior = {
     { channel: 'crit_mult', tier: 'flat', value: CRIT_MULT_BONUS },
   ],
   stats: (rarity) => [
-    { text: `Доп. крит-шанс: ${Math.round(CRIT_CHANCE[rarity] * 100)}%`, color: CRIT_COLOR },
-    { text: `Доп. крит-урон: ${Math.round(CRIT_MULT_BONUS * 100)}%`, color: CRIT_COLOR },
+    { text: `${t('stat_bonus_crit_chance')}: ${Math.round(CRIT_CHANCE[rarity] * 100)}%`, color: CRIT_COLOR },
+    { text: `${t('stat_bonus_crit_damage')}: ${Math.round(CRIT_MULT_BONUS * 100)}%`, color: CRIT_COLOR },
   ],
 };
 

@@ -1,6 +1,7 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { WEAPON_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Лёгкое: интервал подобран под DPS ×1.3 за уровень (анкор common = 4.0 DPS), урон фиксирован по
 // тиру. В hand_left (офф-хенд) кинжал вдвое медленнее — вклад в канал `weapon_interval_mult`
@@ -29,7 +30,6 @@ const interval = (rarity: Rarity) => INTERVAL_BY_RARITY[rarity];
 const OFFHAND_INTERVAL_MULT = 2;
 
 const behavior: ItemBehavior = {
-  name: 'Кинжал',
   slots: ['hand_right', 'hand_left'],
   type: 'weapon',
   tags: ['weapon', 'light', 'fast'],
@@ -45,8 +45,8 @@ const behavior: ItemBehavior = {
   stats: (rarity, slot) => {
     const effInterval = interval(rarity) * (slot === 'hand_left' ? OFFHAND_INTERVAL_MULT : 1);
     return [
-      { text: `Урон: ${damage(rarity)}`, color: WEAPON_COLOR },
-      { text: `Перезарядка: ${effInterval.toFixed(1)}`, color: WEAPON_COLOR },
+      { text: `${t('stat_damage')}: ${damage(rarity)}`, color: WEAPON_COLOR },
+      { text: `${t('stat_interval')}: ${effInterval.toFixed(1)}`, color: WEAPON_COLOR },
     ];
   },
 };

@@ -4,14 +4,19 @@ import { CX, GAME_W, GAME_H } from './layout';
 import { essenceIconKey } from './rewards';
 import { addItemIcon, ItemIconView } from './itemIcon';
 import { RARITY_HEX, RARITY_COLORS } from '../items/rarity';
-import { getItemBehavior } from '../items/registry';
+import { itemDisplayName } from '../i18n/content';
+import { t } from '../i18n/t';
 import type { EssenceTier, Rarity } from '../items/types';
 import type { DialogEntry, DialogNpc, DialogSegment } from '../dialogs/definitions';
 import type { Tooltip } from './Tooltip';
 
 // Портрет и подпись — по существующим НПС лагеря (см. CampScene.buildNPCs), без нового арта.
 const NPC_TEXTURE: Record<DialogNpc, string> = { dealer: 'npc-dealer', smith: 'npc-smith' };
-const NPC_NAME: Record<DialogNpc, string> = { dealer: 'Информатор', smith: 'Кузнец' };
+// Функция, а не module-level Record: должна резолвиться заново при каждом показе (не на импорте
+// модуля) — иначе имя НПС замёрзло бы на языке, который был активен при первой загрузке страницы.
+function npcName(npc: DialogNpc): string {
+  return npc === 'dealer' ? t('npc_dealer') : t('npc_smith');
+}
 
 const BOX_W = 900;
 // Высота бокса под текст на +50% (см. NAME_FONT_SIZE/BODY_FONT_SIZE) — иначе длинные реплики
@@ -137,7 +142,7 @@ export class NpcDialogBox {
       fontSize: `${BODY_FONT_SIZE}px`, fontFamily: FONT_FAMILY, color: '#dddddd', lineSpacing: 8,
       wordWrap: { width: this.wrapWidth },
     });
-    const hint = this.scene.add.text(CX + BOX_W / 2 - 14, boxY + BOX_H / 2 - 12, '(клик)', {
+    const hint = this.scene.add.text(CX + BOX_W / 2 - 14, boxY + BOX_H / 2 - 12, t('dialog_click_hint'), {
       fontSize: `${HINT_FONT_SIZE}px`, fontFamily: FONT_FAMILY, color: '#888888',
     }).setOrigin(1, 1);
 
@@ -196,8 +201,7 @@ export class NpcDialogBox {
         // Предмет: плашка редкости + иконка (как в инвентаре/тултипе), слово окрашено в цвет
         // редкости. Наведение на иконку+слово — тултип предмета (см. Tooltip.showItem).
         const { itemId, rarity } = tok;
-        const beh = getItemBehavior(itemId);
-        const label = this.scene.add.text(0, 0, beh.name, {
+        const label = this.scene.add.text(0, 0, itemDisplayName(itemId), {
           fontSize: `${BODY_FONT_SIZE}px`, fontFamily: FONT_FAMILY, color: RARITY_HEX[rarity],
         }).setAlpha(0);
         const unitW = RICH_ICON + RICH_ICON_GAP + label.width;
@@ -252,7 +256,7 @@ export class NpcDialogBox {
       return;
     }
     this.icon!.setTexture(NPC_TEXTURE[entry.npc]);
-    this.nameText!.setText(NPC_NAME[entry.npc]);
+    this.nameText!.setText(npcName(entry.npc));
     this.typeEvent?.remove();
     this.clearRich();
 

@@ -3,7 +3,6 @@ import { standardWeapon } from '../factories';
 
 // Сбалансированное: интервал подобран под DPS ×1.3 за уровень (анкор common = 4.0 DPS), урон фиксирован по тиру.
 const behavior: ItemBehavior = {
-  name: 'Короткий меч',
   slots: ['hand_right'],
   type: 'weapon',
   tags: ['weapon', 'balanced'],

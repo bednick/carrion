@@ -1,6 +1,5 @@
 {
   "id": "rat",
-  "name": "Крыса",
   "tier": "common",
   "health": 11,
   "position": 1,

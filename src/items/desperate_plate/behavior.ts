@@ -1,6 +1,7 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { DEFENSE_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Латы отчаяния: защита включается только на грани смерти — динамический вклад в armor_pct
 // (значение читается в момент резолюции урона, не при сборке героя): выше порога вклад нейтрален
@@ -15,7 +16,6 @@ const REDUCTION: Record<Rarity, number> = {
 };
 
 const behavior: ItemBehavior = {
-  name: 'Латы отчаяния',
   slots: ['body'],
   type: 'armor',
   tags: ['armor', 'last_stand'],
@@ -27,7 +27,7 @@ const behavior: ItemBehavior = {
       : 1,
   }],
   stats: (rarity) => [
-    { text: `Защита при HP < ${Math.round(HP_THRESHOLD * 100)}%: ${Math.round(REDUCTION[rarity] * 100)}%`, color: DEFENSE_COLOR },
+    { text: t('stat_conditional_defense', { threshold: Math.round(HP_THRESHOLD * 100), pct: Math.round(REDUCTION[rarity] * 100) }), color: DEFENSE_COLOR },
   ],
 };
 

@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import type { ItemInstance } from '../core/MetaStore';
-import { getItemBehavior } from '../items/registry';
 import { addItemIcon } from './itemIcon';
 import { RARITY_COLORS, RARITY_HEX as RARITY_TEXT_COLORS } from '../items/rarity';
 import { newBadge } from './newBadge';
 import { FONT_FAMILY } from './theme';
+import { itemDisplayName } from '../i18n/content';
 
 /** Якорь стека: центр по X, нижний край стека по Y, ширина карточки. Живые координаты. */
 export type LootPopupAnchor = () => { x: number; y: number; width: number };
@@ -56,7 +56,7 @@ export class LootPopupStack {
     }));
 
     const textX = iconX + iconSize / 2 + 8;
-    c.add(this.scene.add.text(textX, 0, getItemBehavior(item.item_id).name, {
+    c.add(this.scene.add.text(textX, 0, itemDisplayName(item.item_id), {
       fontSize: '14px', fontFamily: FONT_FAMILY, color: RARITY_TEXT_COLORS[item.rarity],
       wordWrap: { width: W - (textX + W / 2) - 10 },
     }).setOrigin(0, 0.5));

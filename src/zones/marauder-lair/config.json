@@ -1,8 +1,6 @@
 {
   "id": "marauder-lair",
-  "name": "Логово мародёров",
-  "description": "Организованный лагерь банды. Броню снимают не с павших, а с тех, кого свалили.",
-  "faction": "Мародёры — Броня",
+  "faction": "marauders",
   "rarity": "epic",
   "fights": { "min": 7, "max": 7 },
   "mob_pool": [

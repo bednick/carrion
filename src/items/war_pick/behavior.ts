@@ -1,5 +1,6 @@
 import type { ItemBehavior } from '../behavior';
 import { CRIT_COLOR, WEAPON_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Крит: профильный стат — множитель крита (растёт с редкостью), шанс крита фиксирован (R5 — ровно
 // один профильный стат).
@@ -40,7 +41,6 @@ const interval = (rarity: import('../types').Rarity) => INTERVAL_BY_RARITY[rarit
 const critMult = (rarity: import('../types').Rarity) => CRIT_MULT_BY_RARITY[rarity];
 
 const behavior: ItemBehavior = {
-  name: 'Клевец',
   slots: ['hand_right'],
   type: 'weapon',
   tags: ['weapon', 'heavy', 'slow', 'crit'],
@@ -50,10 +50,10 @@ const behavior: ItemBehavior = {
     { channel: 'crit_mult', tier: 'flat', value: critMult(rarity) - 1 },
   ],
   stats: (rarity) => [
-    { text: `Урон: ${damage(rarity)}`, color: WEAPON_COLOR },
-    { text: `Перезарядка: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
-    { text: `Шанс крита: ${Math.round(CRIT_CHANCE * 100)}%`, color: CRIT_COLOR },
-    { text: `Множитель крита: ×${critMult(rarity)}`, color: CRIT_COLOR },
+    { text: `${t('stat_damage')}: ${damage(rarity)}`, color: WEAPON_COLOR },
+    { text: `${t('stat_interval')}: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
+    { text: `${t('stat_crit_chance')}: ${Math.round(CRIT_CHANCE * 100)}%`, color: CRIT_COLOR },
+    { text: `${t('stat_crit_mult')}: ×${critMult(rarity)}`, color: CRIT_COLOR },
   ],
 };
 

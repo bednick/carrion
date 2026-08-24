@@ -34,10 +34,9 @@ export type QuestCondition =
   | { kind: 'zone_items'; itemIds: string[] }
   | { kind: 'battlefield_depth'; depth: number };
 
+/** Заголовок/описание — см. `src/i18n/content/quests.ts` (`questTitle`/`questDescription`, ключ id). */
 export interface QuestDef {
   id: string;
-  title: string;
-  description: string;
   target: number;
   rewards: QuestReward[];
   next?: string[];
@@ -49,8 +48,6 @@ export interface QuestDef {
 export const QUEST_DEFS: Record<string, QuestDef> = {
   tutorial_equip: {
     id: 'tutorial_equip',
-    title: 'Снаряжение',
-    description: 'Наденьте любой предмет',
     target: 1,
     rewards: [],
   },
@@ -88,8 +85,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   // Маршрут 1: Мёртвые поля → Руины магов → Склеп
   dead_fields_clear: {
     id: 'dead_fields_clear',
-    title: 'Исследовать: Мёртвые поля',
-    description: 'Победите босса локации',
     target: 1,
     // Открывает сразу оба других стартовых маршрута — в отличие от обычной пары зон
     // одного маршрута (где следующая зона ждёт полного сбора предметов), старты 2-го
@@ -109,8 +104,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   collect_dead_fields_items: {
     id: 'collect_dead_fields_items',
-    title: 'Собрать: Мёртвые поля',
-    description: 'Вынесите из экспедиции все предметы этой области',
     target: 3,
     rewards: [
       { type: 'unlock_area', areaId: 'mage-ruins' },
@@ -122,8 +115,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   mage_ruins_clear: {
     id: 'mage_ruins_clear',
-    title: 'Исследовать: Руины магов',
-    description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'essence', tier: 'rare', amount: 10 }],
     next: ['collect_mage_ruins_items'],
@@ -132,8 +123,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   collect_mage_ruins_items: {
     id: 'collect_mage_ruins_items',
-    title: 'Собрать: Руины магов',
-    description: 'Вынесите из экспедиции все предметы этой области',
     target: 3,
     rewards: [
       { type: 'unlock_area', areaId: 'crypt' },
@@ -145,8 +134,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   crypt_clear: {
     id: 'crypt_clear',
-    title: 'Исследовать: Склеп',
-    description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'essence', tier: 'epic', amount: 10 }], // конечная зона маршрута — дальше только Поле битвы (гейт не меняется)
     condition: { kind: 'stat', stat: 'zones_returned', id: 'crypt' },
@@ -156,8 +143,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   // Маршрут 2: Растоптанные луга → Логово зверей → Пастбище хищников
   trampled_meadows_clear: {
     id: 'trampled_meadows_clear',
-    title: 'Исследовать: Растоптанные луга',
-    description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'essence', tier: 'uncommon', amount: 10 }],
     next: ['collect_trampled_meadows_items'],
@@ -166,8 +151,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   collect_trampled_meadows_items: {
     id: 'collect_trampled_meadows_items',
-    title: 'Собрать: Растоптанные луга',
-    description: 'Вынесите из экспедиции все предметы этой области',
     target: 3,
     rewards: [
       { type: 'unlock_area', areaId: 'beast-lair' },
@@ -179,8 +162,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   beast_lair_clear: {
     id: 'beast_lair_clear',
-    title: 'Исследовать: Логово зверей',
-    description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'essence', tier: 'rare', amount: 10 }],
     next: ['collect_beast_lair_items'],
@@ -189,8 +170,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   collect_beast_lair_items: {
     id: 'collect_beast_lair_items',
-    title: 'Собрать: Логово зверей',
-    description: 'Вынесите из экспедиции все предметы этой области',
     target: 3,
     rewards: [
       { type: 'unlock_area', areaId: 'predator-pasture' },
@@ -202,8 +181,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   predator_pasture_clear: {
     id: 'predator_pasture_clear',
-    title: 'Исследовать: Пастбище хищников',
-    description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'essence', tier: 'epic', amount: 10 }], // конечная зона маршрута
     condition: { kind: 'stat', stat: 'zones_returned', id: 'predator-pasture' },
@@ -213,8 +190,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   // Маршрут 3: Свалка доспехов → Брошенный лагерь → Логово мародёров
   armor_dump_clear: {
     id: 'armor_dump_clear',
-    title: 'Исследовать: Свалка доспехов',
-    description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'essence', tier: 'uncommon', amount: 10 }],
     next: ['collect_armor_dump_items'],
@@ -223,8 +198,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   collect_armor_dump_items: {
     id: 'collect_armor_dump_items',
-    title: 'Собрать: Свалка доспехов',
-    description: 'Вынесите из экспедиции все предметы этой области',
     target: 2,
     rewards: [
       { type: 'unlock_area', areaId: 'abandoned-camp' },
@@ -236,8 +209,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   abandoned_camp_clear: {
     id: 'abandoned_camp_clear',
-    title: 'Исследовать: Брошенный лагерь',
-    description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'essence', tier: 'rare', amount: 10 }],
     next: ['collect_abandoned_camp_items'],
@@ -246,8 +217,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   collect_abandoned_camp_items: {
     id: 'collect_abandoned_camp_items',
-    title: 'Собрать: Брошенный лагерь',
-    description: 'Вынесите из экспедиции все предметы этой области',
     target: 3,
     rewards: [
       { type: 'unlock_area', areaId: 'marauder-lair' },
@@ -259,8 +228,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   marauder_lair_clear: {
     id: 'marauder_lair_clear',
-    title: 'Исследовать: Логово мародёров',
-    description: 'Победите босса локации',
     target: 1,
     rewards: [{ type: 'essence', tier: 'epic', amount: 10 }], // конечная зона маршрута
     condition: { kind: 'stat', stat: 'zones_returned', id: 'marauder-lair' },
@@ -284,8 +251,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   // unlock_area в наградах нет: открывать после Поля битвы нечего.
   battlefield_survive_10: {
     id: 'battlefield_survive_10',
-    title: 'Поле битвы: 10 боёв',
-    description: 'Продержитесь 10 боёв за один забег',
     target: 10,
     rewards: [
       { type: 'essence', tier: 'uncommon', amount: 50 },
@@ -298,8 +263,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   battlefield_survive_20: {
     id: 'battlefield_survive_20',
-    title: 'Поле битвы: 20 боёв',
-    description: 'Продержитесь 20 боёв за один забег',
     target: 20,
     rewards: [
       { type: 'essence', tier: 'uncommon', amount: 50 },
@@ -312,8 +275,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   battlefield_survive_30: {
     id: 'battlefield_survive_30',
-    title: 'Поле битвы: 30 боёв',
-    description: 'Продержитесь 30 боёв за один забег',
     target: 30,
     rewards: [
       { type: 'essence', tier: 'uncommon', amount: 50 },
@@ -326,8 +287,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   battlefield_survive_40: {
     id: 'battlefield_survive_40',
-    title: 'Поле битвы: 40 боёв',
-    description: 'Продержитесь 40 боёв за один забег',
     target: 40,
     rewards: [
       { type: 'essence', tier: 'uncommon', amount: 50 },
@@ -340,8 +299,6 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
   },
   battlefield_survive_50: {
     id: 'battlefield_survive_50',
-    title: 'Поле битвы: 50 боёв',
-    description: 'Продержитесь 50 боёв за один забег',
     target: 50,
     rewards: [
       { type: 'essence', tier: 'uncommon', amount: 50 },

@@ -1,6 +1,7 @@
 import type { ItemBehavior } from '../behavior';
 import type { Rarity } from '../types';
 import { DEFENSE_COLOR, PENALTY_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Тяжёлые латы: максимум защиты в семействе body ценой замедления всего надетого оружия — кросс-slot
 // канал weapon_interval_mult без scope (та же idea, что раньше давал weaponTimerMod), участвует в
@@ -21,7 +22,6 @@ const INTERVAL_PENALTY: Record<Rarity, number> = {
 };
 
 const behavior: ItemBehavior = {
-  name: 'Тяжёлые латы',
   slots: ['body'],
   type: 'armor',
   tags: ['armor', 'slow'],
@@ -34,8 +34,8 @@ const behavior: ItemBehavior = {
     },
   ],
   stats: (rarity) => [
-    { text: `Защита: ${Math.round(REDUCTION[rarity] * 100)}%`, color: DEFENSE_COLOR },
-    { text: `Скорость атаки: −${Math.round(INTERVAL_PENALTY[rarity] * 100)}%`, color: PENALTY_COLOR },
+    { text: `${t('stat_defense')}: ${Math.round(REDUCTION[rarity] * 100)}%`, color: DEFENSE_COLOR },
+    { text: `${t('stat_attack_speed')}: −${Math.round(INTERVAL_PENALTY[rarity] * 100)}%`, color: PENALTY_COLOR },
   ],
 };
 

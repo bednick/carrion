@@ -3,6 +3,8 @@ import { FONT_FAMILY } from './theme';
 import { CX, GAME_W, GAME_H } from './layout';
 import { MetaStore } from '../core/MetaStore';
 import { MOB_MECHANIC_DEFS, MOB_MECHANIC_COLOR_NUM, mobMechanicIconKey, type MechanicId } from './mobMechanics';
+import { mechanicTitle, mechanicDescription } from '../i18n/content';
+import { t } from '../i18n/t';
 
 /** Управление боем со стороны владельца окна — чтобы модалка не знала про ExpeditionScene. */
 export interface MobMechanicModalHooks {
@@ -106,20 +108,20 @@ export class MobMechanicModal {
     const box = this.scene.add.rectangle(CX, BOX_CY, BOX_W, BOX_H, 0x1a1a2a).setStrokeStyle(2, colorNum);
 
     const icon = this.scene.add.image(CX, BOX_CY - 86, mobMechanicIconKey(id)).setDisplaySize(96, 96);
-    const title = this.scene.add.text(CX, BOX_CY - 18, def.title, {
+    const title = this.scene.add.text(CX, BOX_CY - 18, mechanicTitle(id), {
       fontSize: '22px', fontFamily: FONT_FAMILY, color: def.color,
     }).setOrigin(0.5);
-    const desc = this.scene.add.text(CX, BOX_CY + 30, def.description, {
+    const desc = this.scene.add.text(CX, BOX_CY + 30, mechanicDescription(id), {
       fontSize: '15px', fontFamily: FONT_FAMILY, color: '#cccccc', align: 'center',
       wordWrap: { width: BOX_W - 80 },
     }).setOrigin(0.5);
     // Окно даёт только правило; числа (сколько именно брони, какой шанс блока) — в тултипе
     // конкретного моба, см. docs/ui.md «Тултипы».
-    const numbersHint = this.scene.add.text(CX, BOX_CY + BOX_H / 2 - 50, 'Для точных значений наведись на противника', {
+    const numbersHint = this.scene.add.text(CX, BOX_CY + BOX_H / 2 - 50, t('mob_mechanic_hover_hint'), {
       fontSize: '14px', fontFamily: FONT_FAMILY, color: '#999999', align: 'center',
       wordWrap: { width: BOX_W - 60 },
     }).setOrigin(0.5);
-    const hint = this.scene.add.text(CX, BOX_CY + BOX_H / 2 - 24, 'клик — продолжить', {
+    const hint = this.scene.add.text(CX, BOX_CY + BOX_H / 2 - 24, t('mob_mechanic_continue_hint'), {
       fontSize: '12px', fontFamily: FONT_FAMILY, color: '#777777',
     }).setOrigin(0.5);
 

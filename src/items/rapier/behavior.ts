@@ -1,5 +1,6 @@
 import type { ItemBehavior } from '../behavior';
 import { OFFENSE_COLOR, WEAPON_COLOR } from '../statColors';
+import { t } from '../../i18n/t';
 
 // Мультихит: один клинок, два честных укола за взмах — оба в ту же цель. Каждый — свой `damage`,
 // лайфстил прокает дважды, каждый независимо катает общий крит-канал. damage фиксирован (2 на
@@ -26,7 +27,6 @@ const interval = (rarity: import('../types').Rarity) => INTERVAL_BY_RARITY[rarit
 const HITS = 2;
 
 const behavior: ItemBehavior = {
-  name: 'Рапира',
   slots: ['hand_right'],
   type: 'weapon',
   tags: ['weapon', 'light', 'fast', 'multihit'],
@@ -37,9 +37,9 @@ const behavior: ItemBehavior = {
     shapeParams: { hits: HITS },
   }),
   stats: (rarity) => [
-    { text: `Урон: ${damage(rarity)}`, color: WEAPON_COLOR },
-    { text: `Перезарядка: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
-    { text: `Ударов за атаку: ${HITS}`, color: OFFENSE_COLOR },
+    { text: `${t('stat_damage')}: ${damage(rarity)}`, color: WEAPON_COLOR },
+    { text: `${t('stat_interval')}: ${interval(rarity).toFixed(1)}`, color: WEAPON_COLOR },
+    { text: `${t('stat_hits_per_attack')}: ${HITS}`, color: OFFENSE_COLOR },
   ],
 };
 

@@ -1,8 +1,6 @@
 {
   "id": "beast-lair",
-  "name": "Логово зверей",
-  "description": "Норы и логова среди костей. Стаи не отпускают добычу, пока не разорвут.",
-  "faction": "Конница — Дикие звери",
+  "faction": "beasts",
   "rarity": "rare",
   "fights": { "min": 5, "max": 5 },
   "mob_pool": [

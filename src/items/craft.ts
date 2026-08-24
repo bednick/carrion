@@ -1,6 +1,7 @@
 import type { ItemInstance, Rarity, EssenceTier, EssencePool } from './types';
 import { NEXT_RARITY, rarityIndex } from './rarity';
 import { essenceSourceZoneIds, FACTION_ROUTES } from '../zones/registry';
+import { t } from '../i18n/t';
 
 // Единый источник правды о крафте — обе сцены (лагерь/экспедиция) считают результат
 // и стоимость (эссенция) через этот модуль, чтобы правила не расходились.
@@ -12,10 +13,6 @@ import { essenceSourceZoneIds, FACTION_ROUTES } from '../zones/registry';
 // Эссенция — ингредиент повышения редкости. Тиров три: обычного (упразднён) и
 // легендарного (снаряжение только находится) нет.
 export const ESSENCE_TIERS: EssenceTier[] = ['uncommon', 'rare', 'epic'];
-
-export const ESSENCE_NAMES: Record<EssenceTier, string> = {
-  uncommon: 'необычная', rare: 'редкая', epic: 'эпическая',
-};
 
 /** Потолок обычного улучшения (craftPreview): выше эпика не поднимает — до legendary доводит только слияние (fuseItems). */
 export const CRAFT_RARITY_CAP: Rarity = 'epic';
@@ -89,13 +86,13 @@ export function craftPreview(
   b: ItemInstance | null,
 ): CraftPreview {
   const single = a ?? b;
-  if (!single) return { ...EMPTY, error: 'Добавьте предмет' };
-  if (a && b) return { ...EMPTY, error: 'Улучшается один предмет' };
+  if (!single) return { ...EMPTY, error: t('craft_error_add_item') };
+  if (a && b) return { ...EMPTY, error: t('craft_error_single_item_only') };
 
   const up = NEXT_RARITY[single.rarity];
-  if (!up) return { ...EMPTY, error: 'Легендарный — выше некуда' };
+  if (!up) return { ...EMPTY, error: t('craft_error_already_legendary') };
   if (rarityIndex(up) > rarityIndex(CRAFT_RARITY_CAP)) {
-    return { ...EMPTY, error: 'Легендарное только находится' };
+    return { ...EMPTY, error: t('craft_error_legendary_find_only') };
   }
   const result: ItemInstance = { item_id: single.item_id, rarity: up };
   return {
@@ -121,11 +118,11 @@ export interface FusePreview {
  */
 export function fusePreview(items: (ItemInstance | null)[]): FusePreview {
   const filled = items.filter((i): i is ItemInstance => !!i);
-  if (filled.length < FUSE_COUNT) return { nextRarity: null, error: `Нужно ${FUSE_COUNT} предмета` };
+  if (filled.length < FUSE_COUNT) return { nextRarity: null, error: t('craft_error_need_n_items', { count: FUSE_COUNT }) };
   const rarity = filled[0].rarity;
-  if (filled.some((i) => i.rarity !== rarity)) return { nextRarity: null, error: 'Редкость должна совпадать' };
+  if (filled.some((i) => i.rarity !== rarity)) return { nextRarity: null, error: t('msg_rarity_must_match') };
   const up = NEXT_RARITY[rarity];
-  if (!up) return { nextRarity: null, error: 'Уже легендарный — выше некуда' };
+  if (!up) return { nextRarity: null, error: t('craft_error_already_legendary_fuse') };
   return { nextRarity: up, error: null };
 }
 

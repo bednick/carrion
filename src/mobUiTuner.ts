@@ -1,5 +1,9 @@
 import { ALL_MOB_IDS, getMobConfig } from './mobs/registry';
 import type { MobUi } from './zones/types';
+import { MOB_NAMES } from './i18n/content/mobs';
+
+// Dev-инструмент — всегда на русском, независимо от языка игры (см. план локализации).
+const mobNameRu = (id: string) => MOB_NAMES[id].ru;
 
 // Геометрия зеркалит src/scenes/ExpeditionScene.ts: линия тени/бой (groundY=287), позиция героя
 // (hx=560, y=219, 100x140, спрайт-лист idle.webp — 6 кадров), позиция моба в слоте 0 (x=700),
@@ -20,7 +24,7 @@ const SLIDER_IDS = ['scale', 'alpha', 'moveUp', 'moveDown', 'moveLeft', 'moveRig
 type SliderId = (typeof SLIDER_IDS)[number];
 
 const sortedMobs = [...ALL_MOB_IDS].sort((a, b) =>
-  getMobConfig(a).name.localeCompare(getMobConfig(b).name, 'ru'));
+  mobNameRu(a).localeCompare(mobNameRu(b), 'ru'));
 
 function readMobIdFromUrl(): string {
   const p = new URLSearchParams(location.search).get('mob');
@@ -194,7 +198,7 @@ function updateStageScale() {
 for (const id of sortedMobs) {
   const opt = document.createElement('option');
   opt.value = id;
-  opt.textContent = `${getMobConfig(id).name} (${id})`;
+  opt.textContent = `${mobNameRu(id)} (${id})`;
   mobSelect.appendChild(opt);
 }
 

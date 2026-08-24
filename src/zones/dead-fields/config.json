@@ -1,8 +1,6 @@
 {
   "id": "dead-fields",
-  "name": "Мёртвые поля",
-  "description": "Выжженная равнина магической фракции. Ритуалы удержали павших на ногах.",
-  "faction": "Магия — Нежить",
+  "faction": "undead",
   "rarity": "uncommon",
   "fights": { "min": 5, "max": 5 },
   "mob_pool": [

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { FloaterType } from '../core/EventBus';
 import { FONT_FAMILY } from './theme';
+import { t } from '../i18n/t';
 
 const COLORS: Record<FloaterType, number> = {
   damage: 0xff4444,
@@ -16,10 +17,10 @@ const LABELS: Record<FloaterType, (v: number) => string> = {
   damage: v => `-${v}`,
   heal: v => `+${v} HP`,
   essence: v => `+${v}`,
-  miss: () => 'промах',
-  block: () => 'Блок',
-  counter: () => 'Контрудар!',
-  invuln: () => 'Неуязвимость!',
+  miss: () => t('floater_miss'),
+  block: () => t('stat_block'),
+  counter: () => t('floater_counter'),
+  invuln: () => t('floater_invuln'),
 };
 
 const FONT_SIZE = 20;
