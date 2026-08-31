@@ -212,8 +212,10 @@ export class NpcDialogBox {
         const rowY = textY + line * RICH_LINE_H;
         const iconCenterY = rowY + BODY_FONT_SIZE / 2;
         const iconLeftX = textX + cursorX;
+        // 16 = 64/4 — целочисленный даунскейл родного пикселя иконки (см. src/ui/itemIcon.ts),
+        // сама плашка (RICH_ICON) остаётся прежней — от неё зависит раскладка строки.
         const icon = addItemIcon(this.scene, iconLeftX + RICH_ICON / 2, iconCenterY, {
-          itemId, rarity, size: RICH_ICON,
+          itemId, rarity, size: RICH_ICON, iconSize: 16,
         }).setAlpha(0);
         label.setPosition(iconLeftX + RICH_ICON + RICH_ICON_GAP, rowY);
         const underline = this.addUnderline(label, RARITY_COLORS[rarity]);

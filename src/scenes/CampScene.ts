@@ -437,9 +437,9 @@ export class CampScene extends Phaser.Scene {
     };
 
     const enBtn = this.add.rectangle(CX - 75, 430, 130, 40, 0x223344).setDepth(91).setStrokeStyle(1, 0x4488cc).setInteractive({ useHandCursor: true });
-    this.add.text(CX - 75, 430, 'English', { fontSize: '15px', fontFamily: FONT_FAMILY, color: '#aaddff' }).setOrigin(0.5).setDepth(92);
+    this.add.text(CX - 75, 430, 'English', { fontSize: '16px', fontFamily: FONT_FAMILY, color: '#aaddff' }).setOrigin(0.5).setDepth(92);
     const ruBtn = this.add.rectangle(CX + 75, 430, 130, 40, 0x223344).setDepth(91).setStrokeStyle(1, 0x4488cc).setInteractive({ useHandCursor: true });
-    this.add.text(CX + 75, 430, 'Русский', { fontSize: '15px', fontFamily: FONT_FAMILY, color: '#aaddff' }).setOrigin(0.5).setDepth(92);
+    this.add.text(CX + 75, 430, 'Русский', { fontSize: '16px', fontFamily: FONT_FAMILY, color: '#aaddff' }).setOrigin(0.5).setDepth(92);
 
     enBtn.on('pointerover', () => enBtn.setFillStyle(0x2a4460));
     enBtn.on('pointerout', () => enBtn.setFillStyle(0x223344));
@@ -941,8 +941,9 @@ export class CampScene extends Phaser.Scene {
       } else {
         this.dragDrop.clearSlots();
       }
-      // Иконка «в руке» живёт в экранных координатах — тянем её за масштабом панели.
-      this.dragDrop.setIconScale(this.panelScale);
+      // Плашка «в руке»/при драге живёт вне panelContainer — синхронизируем её масштаб отдельно,
+      // иначе она выглядит мельче плашек сундука/стойки на той же панели (см. DragDropManager).
+      this.dragDrop.setPlateScale(this.panelScale);
       this.buildPanelFrame();
       this.buildPanelTabs();
       if (this.panelState === 'smith')        this.buildSmithContent();
@@ -1098,17 +1099,24 @@ export class CampScene extends Phaser.Scene {
     const objs: Phaser.GameObjects.GameObject[] = [];
     const si = this.selectedStandIndex;
     const stand = MetaStore.getArmorStand(si);
-    const SIZE = 48;
+    // 64 (не 48) — вмещает иконку предмета в её родном пиксельном размере 64 без дробного scale
+    // на NEAREST-фильтре (SIZE — локальная величина внутри panelContainer, растягивается его
+    // .setScale(panelScale) естественно; ICON_SIZE — заранее поделена на panelScale, чтобы после
+    // того же .setScale(panelScale) вернуться ровно к 64, см. buildSharedChestPane).
+    const SIZE = 64;
+    const ICON_SIZE = 64 / this.panelScale;
     const originY = startY + 16;
 
+    // Крест увеличен пропорционально (×64/48) вместе с плашкой — иначе слоты налезли бы друг
+    // на друга (шаг между колонками/рядами держал старую плашку впритык).
     const ANATOMY: Record<SlotId, { dx: number; dy: number }> = {
-      ring:        { dx: -54, dy:  28 },
+      ring:        { dx: -72, dy:  37 },
       head:        { dx:   0, dy:   0 },
-      amulet:      { dx:  54, dy:  28 },
-      hand_left:   { dx: -54, dy:  84 },
-      body:        { dx:   0, dy:  56 },
-      hand_right:  { dx:  54, dy:  84 },
-      legs:        { dx:   0, dy: 112 },
+      amulet:      { dx:  72, dy:  37 },
+      hand_left:   { dx: -72, dy: 112 },
+      body:        { dx:   0, dy:  75 },
+      hand_right:  { dx:  72, dy: 112 },
+      legs:        { dx:   0, dy: 149 },
     };
 
     for (const [slotId, { dx, dy }] of Object.entries(ANATOMY) as [SlotId, { dx: number; dy: number }][]) {
@@ -1133,6 +1141,7 @@ export class CampScene extends Phaser.Scene {
         rarity: hoverItem?.rarity,
         silhouette: slotSilhouetteKey(slotId),
         size: SIZE,
+        iconSize: ICON_SIZE,
         iconAlpha: inst ? 1 : 0.75,
       });
       if (ghost) view.setAlpha(0.45);
@@ -1252,7 +1261,7 @@ export class CampScene extends Phaser.Scene {
 
   // Кузнец: обмен эссенции между тирами (верхние 2/3), слияние (buildFuseContent, в
   // свободном месте под строками обмена) и улучшение — тот же buildUpgradePanel и на тех
-  // же координатах (cx, 504), что и на вкладке «Экипировка» (см. buildChestStandContent).
+  // же координатах (cx, 506), что и на вкладке «Экипировка» (см. buildChestStandContent).
   // Разбора предметов на эссенцию больше нет — единственный способ утилизировать лишнее
   // снаряжение теперь слияние.
   private buildSmithContent() {
@@ -1260,9 +1269,9 @@ export class CampScene extends Phaser.Scene {
     const toAdd: Phaser.GameObjects.GameObject[] = [];
     const meta = MetaStore.get();
 
-    // Расстояние между строками = зазор между ячейками сундука (SIZE=52, GAP=6 в buildSharedChestPane).
+    // Расстояние между строками = зазор между ячейками сундука (SIZE=64, GAP=6 в buildSharedChestPane).
     const ROW_H = 40, ROW_GAP = 6, ROW_SPACING = ROW_H + ROW_GAP;
-    // Верхние две трети (140-502, до разделителя блока улучшения — buildUpgradePanel, y=502)
+    // Верхние две трети (140-504, до разделителя блока улучшения — buildUpgradePanel, y=504)
     // делятся ещё одной такой же линией пополам: обмен эссенции сверху, слияние — в центре.
     const CONTENT_TOP = 140, MID_DIVIDER_Y = 321;
 
@@ -1337,13 +1346,13 @@ export class CampScene extends Phaser.Scene {
       }
     });
 
-    // Разделитель между обменом и слиянием — та же линия, что и у блока улучшения ниже (y=502).
+    // Разделитель между обменом и слиянием — та же линия, что и у блока улучшения ниже (y=504).
     toAdd.push(this.add.rectangle(cx, MID_DIVIDER_Y, 340, 1, 0x333344));
 
     this.buildFuseContent(cx);
     // Тот же виджет и те же координаты, что у buildChestStandContent на вкладке «Экипировка» —
-    // рисует свой разделитель на y=502 сам.
-    this.buildUpgradePanel(cx, 504);
+    // рисует свой разделитель на y=504 сам.
+    this.buildUpgradePanel(cx, 506);
 
     this.panelContainer.add(toAdd);
   }
@@ -1353,15 +1362,21 @@ export class CampScene extends Phaser.Scene {
    * (в отличие от buildUpgradePanel) — единственный путь скрафтить legendary. Тип результата
    * случаен среди трёх вложенных (см. fuseItems в items/craft.ts), поэтому в ячейку результата
    * до подтверждения кладём только вопросительный знак с рамкой целевой редкости, а не иконку.
-   * Центрируется в средней трети панели (между разделителями обмена и улучшения, 321-502).
+   * Центрируется в средней трети панели (между разделителями обмена и улучшения, 321-504).
    */
   private buildFuseContent(cx: number) {
-    const S = 40;
+    // 64 — тот же размер плашки, что у сундука/стойки (см. buildSharedChestPane/buildArmorStands).
+    // Иконка делится на panelScale по той же причине — родной пиксельный размер 64.
+    const S = 64;
+    const ICON_SIZE = 64 / this.panelScale;
     const labelY = 358;
-    const slotY = 394;
-    const inputXs = [cx - 98, cx - 52, cx - 6];
-    const arrowX = cx + 46;
-    const resultX = cx + 98;
+    // slotY/inputXs/arrowX/resultX раздвинуты под выросшую с 40 до 64 плашку — иначе три входных
+    // слота налезли бы друг на друга (старый шаг между ними был впритык под S=40). slotY — 412,
+    // не с запасом больше: снизу под кнопкой и подсказкой уже впритык до разделителя апгрейда (504).
+    const slotY = 412;
+    const inputXs = [cx - 122, cx - 52, cx + 18];
+    const arrowX = cx + 70;
+    const resultX = cx + 122;
 
     // Открыто только после трёх стартовых зон (docs/meta-progression.md «Реплики НПС», fuse_unlock) —
     // до этого блок затемняется целиком и предметы в него положить нельзя (см. ниже по методу).
@@ -1378,10 +1393,10 @@ export class CampScene extends Phaser.Scene {
     this.fuseInputItems.forEach((item, i) => {
       const x = inputXs[i];
       const bg = this.add.rectangle(x, slotY, S, S, 0x2a2a3a).setStrokeStyle(2, 0x555566);
-      const view = item ? addItemIcon(this, x, slotY, { itemId: item.item_id, rarity: item.rarity, size: S }) : null;
+      const view = item ? addItemIcon(this, x, slotY, { itemId: item.item_id, rarity: item.rarity, size: S, iconSize: ICON_SIZE }) : null;
       inputViews.push(view);
       const content: Phaser.GameObjects.GameObject = view
-        ?? this.add.image(x, slotY, upgradeIconKey('plus')).setDisplaySize(18, 18);
+        ?? this.add.image(x, slotY, upgradeIconKey('plus')).setDisplaySize(29, 29);
       toAdd.push(bg, content);
 
       if (this.dragDrop && unlocked) {
@@ -1422,7 +1437,7 @@ export class CampScene extends Phaser.Scene {
         id: 'fuse_zone',
         placeable: true,
         allowOccupied: true,
-        rect: this.panelRect(cx - 140, slotY - 30, 280, 60),
+        rect: this.panelRect(cx - 160, slotY - 40, 320, 80),
         item: null,
         onRemove: () => null,
         onAccept: (it) => {
@@ -1447,11 +1462,11 @@ export class CampScene extends Phaser.Scene {
     let s3View: ItemIconView | null = null;
     let s3Content: Phaser.GameObjects.GameObject;
     if (resultItem) {
-      s3View = addItemIcon(this, resultX, slotY, { itemId: resultItem.item_id, rarity: resultItem.rarity, size: S });
+      s3View = addItemIcon(this, resultX, slotY, { itemId: resultItem.item_id, rarity: resultItem.rarity, size: S, iconSize: ICON_SIZE });
       s3Content = s3View;
     } else {
       // Тип результата случаен — до подтверждения показываем только «?» в рамке целевой редкости.
-      s3Content = this.add.image(resultX, slotY, upgradeIconKey('question_mark')).setDisplaySize(18, 18)
+      s3Content = this.add.image(resultX, slotY, upgradeIconKey('question_mark')).setDisplaySize(29, 29)
         .setAlpha(preview.nextRarity ? 0.7 : 0.35);
     }
     toAdd.push(s3Bg, s3Content);
@@ -1486,33 +1501,46 @@ export class CampScene extends Phaser.Scene {
       }
     }
 
-    const btnY = 434;
+    // Зазор до слота (20, не 22) — слот вырос с 40 до 64, а половина кнопки (BTN_H/2=14) сама
+    // «съедает» часть отступа: btnY отсчитывается от центра кнопки, а не от её верхнего края.
+    const btnY = slotY + S / 2 + 20;
     const BTN_W = 150, BTN_H = 28;
     const btn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, canFuse ? 0x335533 : 0x222233);
-    if (canFuse) btn.setInteractive({ useHandCursor: true });
     const btnLbl = this.add.text(cx, btnY, t('camp_fuse_button'), {
       fontSize: '14px', fontFamily: FONT_FAMILY, color: canFuse ? '#aaffaa' : '#555566', align: 'center',
     }).setOrigin(0.5);
     toAdd.push(btn, btnLbl);
 
-    if (canFuse) {
+    // Кнопка кликабельна и в «неактивном» виде (пока блок не заблокирован целиком) — по клику
+    // с недостающими/несовпадающими предметами всплывает та же причина, что раньше висела
+    // отдельной строкой под кнопкой (camp_fuse_description и так объясняет условие сверху).
+    if (unlocked) {
+      // useHandCursor всегда true (не только когда canFuse) — кнопка кликабельна и в неактивном
+      // виде, курсор должен на это намекать.
+      btn.setInteractive({ useHandCursor: true });
       btn.on('pointerdown', () => {
         if (this.dragDrop?.isHolding()) return;
-        const filled = this.fuseInputItems.filter((i): i is ItemInstance => !!i);
-        this.fuseResultItem = fuseItems(filled);
-        this.fuseInputItems = [null, null, null];
-        EventBus.emit('item_crafted');
-        EventBus.emit('items_combined');
-        this.refreshHUD();
-        this.rebuildPanel();
+        if (canFuse) {
+          const filled = this.fuseInputItems.filter((i): i is ItemInstance => !!i);
+          this.fuseResultItem = fuseItems(filled);
+          this.fuseInputItems = [null, null, null];
+          EventBus.emit('item_crafted');
+          EventBus.emit('items_combined');
+          this.refreshHUD();
+          this.rebuildPanel();
+        } else if (!this.fuseResultItem && preview.error) {
+          // Пока не забран готовый результат, причина другая (camp_take_result_hint, статичная
+          // подсказка под кнопкой) — всплывающее сообщение не про неё.
+          this.showMessage(preview.error);
+        }
       });
     }
 
     const hintText = !unlocked
       ? t('camp_fuse_locked_hint')
-      : (this.fuseResultItem ? t('camp_take_result_hint') : preview.error);
+      : (this.fuseResultItem ? t('camp_take_result_hint') : null);
     if (hintText) {
-      toAdd.push(this.add.text(cx, btnY + BTN_H / 2 + 14, hintText, {
+      toAdd.push(this.add.text(cx, btnY + BTN_H / 2 + 10, hintText, {
         fontSize: '10px', fontFamily: FONT_FAMILY, color: '#886655', align: 'center', wordWrap: { width: 260 },
       }).setOrigin(0.5));
     }
@@ -1630,9 +1658,15 @@ export class CampScene extends Phaser.Scene {
   // Блок улучшения на вкладке «Экипировка», в нижней трети панели под стойкой брони:
   // вход → выход, кнопка «Улучшить». Логика расчёта — craftPreview() из src/items/craft.ts.
   private buildUpgradePanel(cx: number, top: number) {
-    const S = 44;
+    // 64 — тот же размер плашки, что у сундука/стойки (см. buildSharedChestPane/buildArmorStands).
+    // Иконка делится на panelScale по той же причине — родной пиксельный размер 64.
+    const S = 64;
+    const ICON_SIZE = 64 / this.panelScale;
     const inputX = cx - 54, arrowX = cx, resultX = cx + 54;
-    const slotY = top + 37;
+    // top+36 — зазор от разделителя (top-2) до верхнего края слота; отступы ниже (кнопка,
+    // строки стоимости) сжаты плотнее обычного — блок зажат по высоте между двумя разделителями,
+    // а плашка 64 больше, чем была здесь раньше (44).
+    const slotY = top + 36;
     const item = this.upgradeInputItem;
     const resultItem = this.upgradeResultItem;
 
@@ -1663,10 +1697,10 @@ export class CampScene extends Phaser.Scene {
     const s1Bg = this.add.rectangle(inputX, slotY, S, S, 0x2a2a3a)
       .setStrokeStyle(2, 0x555566);
     const s1View = item
-      ? addItemIcon(this, inputX, slotY, { itemId: item.item_id, rarity: item.rarity, size: S })
+      ? addItemIcon(this, inputX, slotY, { itemId: item.item_id, rarity: item.rarity, size: S, iconSize: ICON_SIZE })
       : null;
     const s1Content: Phaser.GameObjects.GameObject = s1View
-      ?? this.add.image(inputX, slotY, upgradeIconKey('plus')).setDisplaySize(22, 22);
+      ?? this.add.image(inputX, slotY, upgradeIconKey('plus')).setDisplaySize(32, 32);
 
     // "→"
     const arrowActive = !!(previewResult || resultItem);
@@ -1680,15 +1714,15 @@ export class CampScene extends Phaser.Scene {
     let s3View: ItemIconView | null = null;
     let s3Content: Phaser.GameObjects.GameObject | null = null;
     if (resultItem) {
-      s3View = addItemIcon(this, resultX, slotY, { itemId: resultItem.item_id, rarity: resultItem.rarity, size: S });
+      s3View = addItemIcon(this, resultX, slotY, { itemId: resultItem.item_id, rarity: resultItem.rarity, size: S, iconSize: ICON_SIZE });
       s3Content = s3View;
     } else if (previewResult) {
       // Превью следующей ступени — та же плашка, но приглушённая целиком (иконка + фон).
       s3Content = addItemIcon(this, resultX, slotY, {
-        itemId: previewResult.item_id, rarity: previewResult.rarity, size: S,
+        itemId: previewResult.item_id, rarity: previewResult.rarity, size: S, iconSize: ICON_SIZE,
       }).setAlpha(0.3);
     } else {
-      s3Content = this.add.image(resultX, slotY, upgradeIconKey('question_mark')).setDisplaySize(20, 20);
+      s3Content = this.add.image(resultX, slotY, upgradeIconKey('question_mark')).setDisplaySize(29, 29);
     }
 
     // DragDrop: входной слот принимает только перетаскивание (клик по предмету в сундуке
@@ -1779,8 +1813,11 @@ export class CampScene extends Phaser.Scene {
       s3Bg.on('pointerout', () => { this.tooltip.hide(); });
     }
 
-    // Кнопка — всегда «Улучшить», активна только когда хватает ресурсов.
-    const btnY = slotY + S / 2 + 26;
+    // Кнопка — всегда «Улучшить», активна только когда хватает ресурсов. btnY отсчитывается от
+    // центра кнопки, поэтому зазор до слота должен перекрывать половину её высоты (BTN_H/2=16) —
+    // иначе кнопка наезжает на слот сверху. Строки стоимости ниже сжаты плотнее обычного, чтобы
+    // не вылезти за нижний край панели (слот здесь крупнее, чем был раньше, — 64 вместо 44).
+    const btnY = slotY + S / 2 + 22;
     const BTN_W = 170, BTN_H = 32;
     const btnEnabled = canCraft;
     const btnColor = btnEnabled ? 0x335533 : 0x222233;
@@ -1816,16 +1853,16 @@ export class CampScene extends Phaser.Scene {
           if (need > 0) rows.push({ icon: essenceIconKey(tier), need, have: meta.essence[tier] });
         }
       }
-      let ry = btnY + BTN_H / 2 + 16;
+      let ry = btnY + BTN_H / 2 + 8;
       for (const row of rows) {
         const enough = row.have >= row.need;
         costLbls.push(resourceTag(this, row.icon, `${row.have} / ${row.need}`, {
           iconSize: 14, fontSize: 10, originX: 0.5, color: enough ? '#88aa88' : '#dd5555',
         }).setPosition(cx, ry));
-        ry += 16;
+        ry += 12;
       }
     } else if (craftError) {
-      costLbls.push(this.add.text(cx, btnY + BTN_H / 2 + 18, craftError, {
+      costLbls.push(this.add.text(cx, btnY + BTN_H / 2 + 10, craftError, {
         fontSize: '10px', fontFamily: FONT_FAMILY, color: '#886655', align: 'center',
         wordWrap: { width: 220 },
       }).setOrigin(0.5));
@@ -1865,10 +1902,10 @@ export class CampScene extends Phaser.Scene {
       this.rebuildPanel();
     };
 
-    // Крест слотов по центру между табами стоек (y=210) и разделительной линией блока улучшения (y=502).
+    // Крест слотов по центру между табами стоек (y=210) и разделительной линией блока улучшения (y=504).
     const stands = this.buildArmorStands(cx, 290, onStandSlotClick);
     this.panelContainer.add([...tabs, ...stands]);
-    this.buildUpgradePanel(cx, 504);
+    this.buildUpgradePanel(cx, 506);
   }
 
   // Табы выбора активной стойки-пресета (1/2/3): переключают selectedStandIndex.
@@ -1955,7 +1992,14 @@ export class CampScene extends Phaser.Scene {
     const CONTENT_TOP = Math.ceil(FILTER_Y2 + FILTER_CELL / 2 + 6);
     const CONTENT_BOTTOM = 648;
     const CONTENT_H = CONTENT_BOTTOM - CONTENT_TOP;
-    const SIZE = 52;
+    // 64 — тот же размер плашки, что у стойки брони (buildArmorStands): вмещает иконку в её родном
+    // пиксельном размере 64 без дробного scale на NEAREST-фильтре (pixelArt:true, main.ts); см.
+    // src/ui/itemIcon.ts. Плашка (SIZE) — локальная величина внутри panelContainer, его собственный
+    // .setScale(panelScale) её растянет естественно (не пиксель-арт, артефакта нет). А вот саму
+    // иконку нужно заранее поделить на panelScale — иначе тот же .setScale домножит её ещё раз и
+    // вернёт дробный итоговый scale.
+    const SIZE = 64;
+    const ICON_SIZE = 64 / this.panelScale;
     const GAP = 6;
     const ROW_H = SIZE + GAP;
     const COLS = 5;
@@ -2102,7 +2146,7 @@ export class CampScene extends Phaser.Scene {
         itemsCtr.add(slotBg);
 
         if (inst) {
-          const view = addItemIcon(this, x, yc, { itemId: inst.item_id, rarity: inst.rarity, size: SIZE });
+          const view = addItemIcon(this, x, yc, { itemId: inst.item_id, rarity: inst.rarity, size: SIZE, iconSize: ICON_SIZE });
           itemsCtr.add(view);
           if (entry.count > 1) {
             itemsCtr.add(this.add.text(x + SIZE / 2 - 3, yc + SIZE / 2 - 3, `${entry.count}`, {

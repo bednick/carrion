@@ -123,7 +123,7 @@ export class MobMechanicModal {
       fontSize: '22px', fontFamily: FONT_FAMILY, color: def.color,
     }).setOrigin(0.5);
     const desc = this.scene.add.text(CX, BOX_CY + 30, mechanicDescription(id), {
-      fontSize: '15px', fontFamily: FONT_FAMILY, color: '#cccccc', align: 'center',
+      fontSize: '16px', fontFamily: FONT_FAMILY, color: '#cccccc', align: 'center',
       wordWrap: { width: BOX_W - 80 },
     }).setOrigin(0.5);
     // Окно даёт только правило; числа (сколько именно брони, какой шанс блока) — в тултипе

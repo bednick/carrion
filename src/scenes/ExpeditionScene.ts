@@ -1135,7 +1135,10 @@ export class ExpeditionScene extends Phaser.Scene {
     const count = MOB_MECHANIC_NEST_ORDER.length;
     const totalW = count * SIZE + (count - 1) * GAP;
     const startX = col.cx - totalW / 2 + SIZE / 2;
-    const y = ExpeditionScene.PANEL_HEADER_Y + 46;
+    // PANEL_HEADER_Y+24 — тот же отступ под заголовком, что и у рюкзака (backpackGridGeom, top).
+    // SIZE вырос с ~52-66 (старый Math.round(52*panelScale())) до фикс. 80 вместе с BACKPACK_CELL —
+    // без пересчёта верхний край гнезда наезжал на надпись «Механики».
+    const y = ExpeditionScene.PANEL_HEADER_Y + 24 + SIZE / 2;
 
     this.mechanicSlots = MOB_MECHANIC_NEST_ORDER.map((nestIds, i) => {
       const x = startX + i * (SIZE + GAP);
@@ -1213,10 +1216,14 @@ export class ExpeditionScene extends Phaser.Scene {
 
   // ─── Рюкзак (левая колонка нижней панели) ────────────────────────────
 
-  // Ячейка/зазор — те же 52/6, что в сундуке лагеря, помноженные на масштаб панели НПС: предмет
-  // должен быть одного размера в лагере и в бою. Геттеры, а не поля: panelScale() зависит от живой
-  // GAME_W и протухает после ресайза (см. docs/ui.md).
-  private get BACKPACK_CELL() { return Math.round(52 * panelScale()); }
+  // Ячейка/зазор — те же 64/6, что в сундуке лагеря/стойке (buildSharedChestPane/buildArmorStands),
+  // помноженные на масштаб панели НПС: плашка должна «дышать» вместе с панелью лагеря так же, как
+  // в сундуке (иначе рюкзак похода выглядит мельче/крупнее сундука на той же самой панели, только
+  // в другой сцене). Геттеры, а не поля: panelScale() зависит от живой GAME_W и протухает после
+  // ресайза. Иконка внутри плашки — фикс. 64 (BACKPACK_ICON), без scale: родной пиксельный размер
+  // иконки, дробный scale на NEAREST-фильтре даёт лишние пиксели (см. src/ui/itemIcon.ts).
+  private get BACKPACK_CELL() { return Math.round(64 * panelScale()); }
+  private readonly BACKPACK_ICON = 64;
   private get BACKPACK_GAP() { return Math.round(6 * panelScale()); }
   private readonly BACKPACK_COLS = 3;
   private readonly BACKPACK_MIN_ROWS = 3;
@@ -1274,7 +1281,7 @@ export class ExpeditionScene extends Phaser.Scene {
       }
       if (!item) continue;
 
-      const view = addItemIcon(this, x, y, { itemId: item.item_id, rarity: item.rarity, size: SIZE });
+      const view = addItemIcon(this, x, y, { itemId: item.item_id, rarity: item.rarity, size: SIZE, iconSize: this.BACKPACK_ICON });
       this.backpackCellObjs.push(view);
       this.backpackIconViews[i] = view;
       // Единственное взаимодействие — наведение: в походе предмет применить нельзя.
@@ -1347,11 +1354,11 @@ export class ExpeditionScene extends Phaser.Scene {
   // Состав стоек за поход не меняется (находки уходят только в рюкзак), считаем один раз здесь.
   private buildStandTabs(cx: number, y: number) {
     this.standTabs = [];
-    // Ширина таба = ширине ячейки экипировки, шаг = шагу колонок креста (|dx| = 54 в ANATOMY):
-    // при трёх стойках табы встают ровно над колонками ring/head/amulet.
+    // Ширина таба = ширине ячейки экипировки, шаг = шагу колонок креста (|dx| = 72 в ANATOMY,
+    // buildEquipSlots): при трёх стойках табы встают ровно над колонками ring/head/amulet.
     const S = panelScale();
-    const W = Math.round(48 * S), H = Math.round(22 * S);
-    const step = 54 * S;
+    const W = Math.round(64 * S), H = Math.round(22 * S);
+    const step = 72 * S;
     const startX = cx - ((ARMOR_STAND_COUNT - 1) / 2) * step;
     for (let i = 0; i < ARMOR_STAND_COUNT; i++) {
       const x = startX + i * step;
@@ -1431,16 +1438,21 @@ export class ExpeditionScene extends Phaser.Scene {
     // Раскладка и размер ячейки дублируют стойку лагеря (CampScene.buildArmorStands), включая
     // масштаб панели НПС — иначе один и тот же слот в бою выглядел бы мельче, чем в лагере.
     const S = panelScale();
-    const SIZE = Math.round(48 * S);
+    // 64 (не 48) — родной пиксельный размер иконки предмета 64, без дробного scale на
+    // NEAREST-фильтре (иконка внутри addItemIcon ниже держит фикс. 64, plate тянется этим SIZE —
+    // см. src/ui/itemIcon.ts). Крест раздвинут пропорционально (×64/48), иначе слоты налезли бы
+    // друг на друга.
+    const SIZE = Math.round(64 * S);
+    const ICON_SIZE = 64;
 
     const ANATOMY: Record<SlotId, { dx: number; dy: number }> = {
-      ring:        { dx: -54 * S, dy:  28 * S },
+      ring:        { dx: -72 * S, dy:  37 * S },
       head:        { dx:   0,     dy:   0 },
-      amulet:      { dx:  54 * S, dy:  28 * S },
-      hand_left:   { dx: -54 * S, dy:  84 * S },
-      body:        { dx:   0,     dy:  56 * S },
-      hand_right:  { dx:  54 * S, dy:  84 * S },
-      legs:        { dx:   0,     dy: 112 * S },
+      amulet:      { dx:  72 * S, dy:  37 * S },
+      hand_left:   { dx: -72 * S, dy: 112 * S },
+      body:        { dx:   0,     dy:  75 * S },
+      hand_right:  { dx:  72 * S, dy: 112 * S },
+      legs:        { dx:   0,     dy: 149 * S },
     };
 
     // Центр креста (body) выравниваем по центру сетки рюкзака — обе колонки читаются как одна линия.
@@ -1463,6 +1475,7 @@ export class ExpeditionScene extends Phaser.Scene {
         rarity: item?.rarity,
         silhouette: slotSilhouetteKey(slotId),
         size: SIZE,
+        iconSize: ICON_SIZE,
         iconAlpha: item ? 1 : 0.35,
       }).setDepth(4);
 
@@ -1996,7 +2009,9 @@ export class ExpeditionScene extends Phaser.Scene {
         }).setOrigin(0.5, 0));
       } else {
         this.victoryContainer.add(addItemIcon(this, x, cardY - 28, {
-          itemId: opt.item.item_id, rarity: opt.item.rarity, size: 72,
+          // Тот же размер плашки, что у рюкзака/стойки (BACKPACK_CELL) — иконка в родном
+          // пиксельном размере 64, см. src/ui/itemIcon.ts.
+          itemId: opt.item.item_id, rarity: opt.item.rarity, size: Math.round(64 * panelScale()), iconSize: 64,
         }));
         this.victoryContainer.add(this.add.text(x, cardY + 34, itemDisplayName(opt.item.item_id), {
           fontSize: '12px', fontFamily: FONT_FAMILY, color: '#dddddd',

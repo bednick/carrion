@@ -49,13 +49,16 @@ export class LootPopupStack {
       .setStrokeStyle(2, RARITY_COLORS[item.rarity]);
     c.add(bg);
 
-    const iconSize = CARD_H - 10;
-    const iconX = -W / 2 + 6 + iconSize / 2;
+    const plateSize = CARD_H - 10;
+    // 32 = 64/2 — целочисленный даунскейл родного пикселя иконки (см. src/ui/itemIcon.ts),
+    // без него дробный scale на NEAREST-фильтре давал лишние пиксели.
+    const ICON_SIZE = 32;
+    const iconX = -W / 2 + 6 + plateSize / 2;
     c.add(addItemIcon(this.scene, iconX, 0, {
-      itemId: item.item_id, rarity: item.rarity, size: iconSize,
+      itemId: item.item_id, rarity: item.rarity, size: plateSize, iconSize: ICON_SIZE,
     }));
 
-    const textX = iconX + iconSize / 2 + 8;
+    const textX = iconX + plateSize / 2 + 8;
     c.add(this.scene.add.text(textX, 0, itemDisplayName(item.item_id), {
       fontSize: '14px', fontFamily: FONT_FAMILY, color: RARITY_TEXT_COLORS[item.rarity],
       wordWrap: { width: W - (textX + W / 2) - 10 },

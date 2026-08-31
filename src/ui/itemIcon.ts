@@ -9,7 +9,7 @@ const NEUTRAL_COLOR = 0x333344;
 export const NEUTRAL_PLATE_KEY = 'item_plate_neutral';
 const NEUTRAL_KEY = NEUTRAL_PLATE_KEY;
 
-// Сторона canvas-текстуры плашки. Больше, чем любой реальный размер на экране (72px у карточки
+// Сторона canvas-текстуры плашки. Больше, чем любой реальный размер на экране (80px у карточки
 // находки), чтобы градиент не мылился при апскейле.
 const PLATE_SIZE = 128;
 const PLATE_BASE_FILL = '#14161c'; // тот же тон, что был зашит фоном в старых SVG-иконках
@@ -90,7 +90,15 @@ export interface ItemIconOpts {
   silhouette?: string;
   /** Сторона плашки в пикселях (обычно = стороне ячейки). */
   size: number;
-  /** Доля иконки от плашки. */
+  /**
+   * Сторона самой иконки в пикселях — целое число (в идеале делитель/кратное 64, натурального
+   * пиксельного размера большинства PNG-иконок предметов), чтобы NEAREST-фильтр (pixelArt:true,
+   * main.ts) масштабировал текстуру без дробного шага и не давал «лишних» пикселей на апскейле.
+   * Без неё — старое поведение: доля `DEFAULT_ICON_RATIO` от `size` (годится для мест, где точный
+   * пиксельный размер ещё не подобран).
+   */
+  iconSize?: number;
+  /** Доля иконки от плашки — используется только если `iconSize` не задан. */
   iconRatio?: number;
   /** Прозрачность самой иконки (не плашки). */
   iconAlpha?: number;
@@ -112,11 +120,14 @@ export class ItemIconView extends Phaser.GameObjects.Container {
   private readonly hover: Phaser.GameObjects.Rectangle;
   private size: number;
   private readonly iconRatio: number;
+  // Задан → иконка держит этот пиксельный размер всегда, plate/setPlateSize её не трогают.
+  private readonly fixedIconSize?: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number, opts: ItemIconOpts) {
     super(scene, x, y);
     this.size = opts.size;
     this.iconRatio = opts.iconRatio ?? DEFAULT_ICON_RATIO;
+    this.fixedIconSize = opts.iconSize;
 
     this.plate = scene.add
       .image(0, 0, plateKey(opts.rarity))
@@ -130,7 +141,7 @@ export class ItemIconView extends Phaser.GameObjects.Container {
 
     const texture = opts.itemId ? itemIconKey(opts.itemId) : opts.silhouette;
     if (texture) {
-      const inner = this.size * this.iconRatio;
+      const inner = this.fixedIconSize ?? this.size * this.iconRatio;
       this.icon = scene.add
         .image(0, 0, texture)
         .setDisplaySize(inner, inner)
@@ -154,7 +165,9 @@ export class ItemIconView extends Phaser.GameObjects.Container {
     this.size = size;
     this.plate.setDisplaySize(size, size);
     this.hover.setSize(size, size);
-    this.icon?.setDisplaySize(size * this.iconRatio, size * this.iconRatio);
+    if (this.fixedIconSize === undefined) {
+      this.icon?.setDisplaySize(size * this.iconRatio, size * this.iconRatio);
+    }
     return this;
   }
 
@@ -162,7 +175,7 @@ export class ItemIconView extends Phaser.GameObjects.Container {
   setItem(itemId: string, rarity?: Rarity): this {
     this.plate.setTexture(plateKey(rarity)).setDisplaySize(this.size, this.size);
     if (this.icon) {
-      const inner = this.size * this.iconRatio;
+      const inner = this.fixedIconSize ?? this.size * this.iconRatio;
       this.icon.setTexture(itemIconKey(itemId)).setDisplaySize(inner, inner);
     }
     return this;

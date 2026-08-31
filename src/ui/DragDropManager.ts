@@ -14,6 +14,15 @@ const HIGHLIGHT_FILL_ALPHA_DIM = 0.08;
 const HIGHLIGHT_STROKE_ALPHA_DIM = 0.5;
 const HIGHLIGHT_TWEEN_RANGE_DIM: [number, number] = [0.6, 0.25];
 
+// Иконка «в руке»/при драге — тот же плашка/иконка размер, что у сундука/рюкзака/стойки (см.
+// CampScene.buildSharedChestPane/buildArmorStands, ExpeditionScene.BACKPACK_CELL): предмет не
+// должен визуально прыгать в размере, пока его тащат между панелями. Плашка (не иконка)
+// домножается на plateScale — панель меню НПС в лагере сама «дышит» с panelScale (см.
+// CampScene.buildPanel), а спрайты руки/драга живут вне её контейнера, так что без явной
+// синхронизации плашка была другого размера, чем плашки сундука/стойки на той же панели.
+const HELD_PLATE_SIZE = 64;
+const HELD_ICON_SIZE = 64;
+
 export interface SlotZone {
   id: string;
   slotType?: SlotType;
@@ -58,9 +67,8 @@ export class DragDropManager {
   // Подсветка слотов, куда подходит взятый в руку предмет.
   private highlights: Phaser.GameObjects.Rectangle[] = [];
 
-  // Спрайты «руки» и драга живут в экранных координатах, вне контейнера панели, поэтому
-  // масштаб увеличенного меню НПС им передаётся снаружи (CampScene.rebuildPanel).
-  private iconScale = 1;
+  // Масштаб плашки руки/драга — под масштаб текущей панели (см. HELD_PLATE_SIZE выше).
+  private plateScale = 1;
 
   /** Итог завершённого drag&drop — сцена показывает сообщение при отказе. */
   onDropResult?: (result: PlaceResult) => void;
@@ -71,11 +79,12 @@ export class DragDropManager {
     scene.input.on('pointerup', this.onPointerUp, this);
   }
 
-  /** Масштаб иконки предмета в руке/драге — под размер ячеек текущей панели. */
-  setIconScale(s: number) {
-    this.iconScale = s;
-    this.dragSprite?.setPlateSize(48 * s);
-    this.heldSprite?.setPlateSize(48 * s);
+  /** Синхронизирует плашку руки/драга с масштабом панели (CampScene.rebuildPanel). Иконка внутри
+   *  остаётся фиксированной (HELD_ICON_SIZE) — меняется только плашка/рамка. */
+  setPlateScale(s: number) {
+    this.plateScale = s;
+    this.dragSprite?.setPlateSize(HELD_PLATE_SIZE * s);
+    this.heldSprite?.setPlateSize(HELD_PLATE_SIZE * s);
   }
 
   registerSlot(zone: SlotZone) {
@@ -111,7 +120,8 @@ export class DragDropManager {
     this.dragSprite = addItemIcon(this.scene, pointerX, pointerY, {
       itemId: slot.item.item_id,
       rarity: slot.item.rarity,
-      size: 48 * this.iconScale,
+      size: HELD_PLATE_SIZE * this.plateScale,
+      iconSize: HELD_ICON_SIZE,
     }).setDepth(300).setAlpha(0.85);
 
     this.updateHighlights();
@@ -207,7 +217,8 @@ export class DragDropManager {
     this.heldSprite = addItemIcon(this.scene, p.x, p.y, {
       itemId: item.item_id,
       rarity: item.rarity,
-      size: 48 * this.iconScale,
+      size: HELD_PLATE_SIZE * this.plateScale,
+      iconSize: HELD_ICON_SIZE,
     }).setDepth(300).setAlpha(0.95);
     this.updateHighlights();
     return true;
