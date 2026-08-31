@@ -7,7 +7,7 @@ import { QUEST_DEFS } from '../quests/definitions';
 import type { QuestReward } from '../quests/definitions';
 import type { ItemInstance, SlotId } from '../core/MetaStore';
 import { ARMOR_STAND_COUNT } from '../core/MetaStore';
-import { getItemBehavior } from '../items/registry';
+import { getItemBehavior, ITEM_BEHAVIORS } from '../items/registry';
 import {
   craftPreview, ESSENCE_TIERS,
   ESSENCE_EXCHANGE_RATE, ESSENCE_EXCHANGE_TARGET, isEssenceExchangeUnlocked, emptyEssence,
@@ -28,6 +28,7 @@ import { NpcDialogBox } from '../ui/NpcDialogBox';
 import type { ZoneConfig } from '../zones/types';
 import { QuestTracker } from '../ui/QuestTracker';
 import { claimQuestReward } from '../core/QuestSystem';
+import { FontPickerPopup } from '../ui/FontPickerPopup';
 import { ResourceHUD } from '../ui/ResourceHUD';
 import { SoundSettingsButton } from '../ui/SoundSettingsButton';
 import { SoundManager } from '../core/SoundManager';
@@ -397,6 +398,32 @@ export class CampScene extends Phaser.Scene {
       balanceBtn.on('pointerover', () => balanceBtn.setFillStyle(0x143030));
       balanceBtn.on('pointerout',  () => balanceBtn.setFillStyle(0x0a1a1a));
       balanceBtn.on('pointerdown', () => window.open('./balance.html', '_blank'));
+
+      // Дев-инструмент: кладёт в сундук по 1 экземпляру каждого предмета каждой редкости и
+      // добавляет по 999 эссенции каждого тира — быстрый доступ ко всей номенклатуре и крафту
+      // без прохождения зон. Тоже только для дев-сервера.
+      const fillChestBtn = this.add.rectangle(rightX(252), 785, 90, 22, 0x0a1a1a)
+        .setStrokeStyle(1, 0x225555).setInteractive({ useHandCursor: true });
+      this.add.text(rightX(252), 785, t('camp_fill_chest'), { fontSize: '8px', fontFamily: FONT_FAMILY, color: '#337766' }).setOrigin(0.5);
+      fillChestBtn.on('pointerover', () => fillChestBtn.setFillStyle(0x143030));
+      fillChestBtn.on('pointerout',  () => fillChestBtn.setFillStyle(0x0a1a1a));
+      fillChestBtn.on('pointerdown', () => {
+        const items: ItemInstance[] = [];
+        for (const item_id of Object.keys(ITEM_BEHAVIORS)) {
+          for (const rarity of RARITY_ORDER) items.push({ item_id, rarity });
+        }
+        MetaStore.addToChestBatch(items);
+        (['uncommon', 'rare', 'epic'] as EssenceTier[]).forEach((tier) => MetaStore.addEssence(tier, 999));
+        this.scene.restart();
+      });
+
+      // Дев-инструмент: попап сравнения шрифтов (см. src/ui/FontPickerPopup.ts). Только для дев-сервера.
+      const fontBtn = this.add.rectangle(rightX(352), 785, 90, 22, 0x0a1a1a)
+        .setStrokeStyle(1, 0x225555).setInteractive({ useHandCursor: true });
+      this.add.text(rightX(352), 785, t('camp_font_tool'), { fontSize: '8px', fontFamily: FONT_FAMILY, color: '#337766' }).setOrigin(0.5);
+      fontBtn.on('pointerover', () => fontBtn.setFillStyle(0x143030));
+      fontBtn.on('pointerout',  () => fontBtn.setFillStyle(0x0a1a1a));
+      fontBtn.on('pointerdown', () => new FontPickerPopup(this, rightX(352), 700));
     }
   }
 
@@ -1663,10 +1690,10 @@ export class CampScene extends Phaser.Scene {
     const S = 64;
     const ICON_SIZE = 64 / this.panelScale;
     const inputX = cx - 54, arrowX = cx, resultX = cx + 54;
-    // top+36 — зазор от разделителя (top-2) до верхнего края слота; отступы ниже (кнопка,
-    // строки стоимости) сжаты плотнее обычного — блок зажат по высоте между двумя разделителями,
-    // а плашка 64 больше, чем была здесь раньше (44).
-    const slotY = top + 36;
+    // top+50 — центрирует блок (слоты+кнопка+строка стоимости) по высоте между разделителем
+    // (top-2) и нижней границей окна (bg в buildContentPanel): при типичной 1 строке стоимости
+    // отступ сверху и снизу получается ~20px каждый.
+    const slotY = top + 50;
     const item = this.upgradeInputItem;
     const resultItem = this.upgradeResultItem;
 

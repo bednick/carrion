@@ -301,6 +301,14 @@ export const MetaStore = {
     EventBus.emit('item_stored');
   },
 
+  /** Кладёт несколько предметов за один проход + один save() + одно событие. */
+  addToChestBatch(items: ItemInstance[]) {
+    if (!items.length) return;
+    state.chest.push(...items);
+    this.save();
+    EventBus.emit('item_stored');
+  },
+
   removeFromChest(index: number): ItemInstance | null {
     const item = state.chest[index] ?? null;
     if (item) {

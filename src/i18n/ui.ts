@@ -90,6 +90,8 @@ export const UI: Record<string, { ru: string; en: string }> = {
   camp_title: { ru: 'Лагерь', en: 'Camp' },
   camp_reset_data: { ru: 'Сброс данных', en: 'Reset data' },
   camp_balance_tool: { ru: 'Баланс-тул', en: 'Balance tool' },
+  camp_fill_chest: { ru: 'Все предметы', en: 'Fill chest' },
+  camp_font_tool: { ru: 'Шрифты', en: 'Fonts' },
   camp_reset_confirm_text: { ru: '⚠ Сбросить весь прогресс? ⚠\n\n⚠⚠⚠ Действие необратимо! ⚠⚠⚠', en: '⚠ Reset all progress? ⚠\n\n⚠⚠⚠ This cannot be undone! ⚠⚠⚠' },
   camp_reset_confirm_yes: { ru: 'Сбросить', en: 'Reset' },
   camp_reset_confirm_no: { ru: 'Отмена', en: 'Cancel' },
