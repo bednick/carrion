@@ -196,6 +196,17 @@ export class CampScene extends Phaser.Scene {
   private panelContainer!: Phaser.GameObjects.Container;
   /** Текущий масштаб panelContainer: 1 для карты, computePanelScale() для меню НПС. */
   private panelScale = 1;
+  // Весь текст панелей рисуется сюда через panelText() — нескейленно, в экранных координатах
+  // (panelX/panelY), depth 160 (выше panelContainer=150). pixelArt:true + roundPixels:true форсят
+  // NEAREST для всех текстур; Text — тоже растеризованная в текстуру canvas-картинка, и при
+  // дробном panelScale (см. layout.ts:panelScale) NEAREST-ресемплинг делает шрифт неровным. Тултип
+  // (Tooltip.ts) этой стадии не проходит вовсе — рисуется 1:1, поэтому чёткий; тот же приём здесь.
+  private panelTextLayer!: Phaser.GameObjects.Container;
+  /** Бейджи количества стака в сундуке — своя чистка на каждый тик колеса (buildSlots), не только на ребилд. */
+  private chestBadgeTexts: Phaser.GameObjects.Text[] = [];
+  /** Замочки поверх затемнённых блоков (кузница/слияние) — рисуются поверх panelTextLayer (depth 170),
+   *  значит вне panelContainer, вне panelTextLayer — своя чистка вместе с ними. */
+  private panelOverlayImages: Phaser.GameObjects.Image[] = [];
   private hoverLabel!: Phaser.GameObjects.Text;
   /** Предмет во входном слоте улучшения (вкладка «Экипировка»). */
   private upgradeInputItem: ItemInstance | null = null;
@@ -262,6 +273,9 @@ export class CampScene extends Phaser.Scene {
     this.buildFlutist();
     this.buildChestStand();
     this.buildHoverLabel();
+    // Персистентен между rebuildPanel()/closePanel() — в отличие от panelContainer, не имеет
+    // собственного transform (дети уже в экранных координатах через panelX/panelY), пересоздавать незачем.
+    this.panelTextLayer = this.add.container(0, 0).setDepth(160);
     this.buildPanel();
 
     this.questTracker = new QuestTracker(this);
@@ -758,11 +772,10 @@ export class CampScene extends Phaser.Scene {
   // Маркер «?» в углу узла карты — без подсветки и покачивания (маркеров на
   // карте может быть несколько одновременно).
   private buildQuestMarker(x: number, y: number) {
-    const mark = this.add.text(x, y, '?', {
+    this.panelText(x, y, '?', {
       fontSize: '22px', fontFamily: FONT_FAMILY, color: '#ffdd44',
       fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5);
-    this.panelContainer.add(mark);
   }
 
   private addNPCWithSprite(
@@ -899,6 +912,24 @@ export class CampScene extends Phaser.Scene {
     return new Phaser.Geom.Rectangle(this.panelX(x), this.panelY(y), w * S, h * S);
   }
 
+  // Текст панелей НЕ кладём в panelContainer (см. panelTextLayer) — иначе дробный panelScale +
+  // NEAREST-фильтр (pixelArt:true, main.ts) режут шрифт при растяжении текстуры Text. Вместо этого
+  // рисуем сразу в конечном экранном размере (как Tooltip) и вручную домножаем кегль/wordWrap/обводку
+  // на S — тем же приёмом, что HELD_PLATE_SIZE * plateScale в DragDropManager.
+  private panelText(
+    localX: number, localY: number, text: string,
+    style: Phaser.Types.GameObjects.Text.TextStyle,
+  ): Phaser.GameObjects.Text {
+    const S = this.panelScale;
+    const scaled: Phaser.Types.GameObjects.Text.TextStyle = { ...style };
+    if (style.fontSize) scaled.fontSize = `${parseFloat(String(style.fontSize)) * S}px`;
+    if (style.strokeThickness) scaled.strokeThickness = style.strokeThickness * S;
+    if (style.wordWrap?.width) scaled.wordWrap = { ...style.wordWrap, width: style.wordWrap.width * S };
+    const txt = this.add.text(this.panelX(localX), this.panelY(localY), text, scaled);
+    this.panelTextLayer.add(txt);
+    return txt;
+  }
+
   // Меню НПС свёрстано в дизайновых 1280×800 и увеличивается масштабом контейнера вокруг
   // центра рамки (640, 400): панель растёт симметрично, отступ сверху/снизу падает 140 → 70.
   // Масштаб живёт в layout.ts: тем же коэффициентом экспедиция тянет свои ячейки, чтобы предмет
@@ -916,6 +947,10 @@ export class CampScene extends Phaser.Scene {
       this.chestMaskGraphics.destroy();
       this.chestMaskGraphics = null;
     }
+    this.panelTextLayer.removeAll(true);
+    this.chestBadgeTexts = []; // сами Text уже уничтожены — они были детьми panelTextLayer, removeAll(true) их destroy()'нул
+    this.panelOverlayImages.forEach((img) => img.destroy());
+    this.panelOverlayImages = [];
     this.pendingDrag = null;
   }
 
@@ -1005,9 +1040,9 @@ export class CampScene extends Phaser.Scene {
     let y = 218;
 
     if (pending.length > 0) {
-      container.add(this.add.text(379, y, t('quest_ready_to_claim'), {
+      this.panelText(379, y, t('quest_ready_to_claim'), {
         fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44',
-      }).setOrigin(0.5));
+      }).setOrigin(0.5);
       y += 20;
 
       for (const questId of pending) {
@@ -1015,8 +1050,8 @@ export class CampScene extends Phaser.Scene {
         if (!def) continue;
 
         const rowBg = this.add.rectangle(379, y + 19, 320, 38, 0x2a2a10).setStrokeStyle(1, 0x887722);
-        const titleT = this.add.text(225, y + 7, questTitle(questId), { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddaa' });
-        const rowItems: Phaser.GameObjects.GameObject[] = [rowBg, titleT];
+        this.panelText(225, y + 7, questTitle(questId), { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ddddaa' });
+        const rowItems: Phaser.GameObjects.GameObject[] = [rowBg];
 
         const rewardIcon = 16;
         const rewardY = y + 29;
@@ -1026,22 +1061,24 @@ export class CampScene extends Phaser.Scene {
           for (const r of rewards) {
             const icon = this.add.image(rewardX, rewardY, essenceIconKey(r.tier))
               .setOrigin(0, 0.5).setDisplaySize(rewardIcon, rewardIcon);
-            const amountT = this.add.text(rewardX + rewardIcon + 3, rewardY, `${r.amount}`, {
+            const amountT = this.panelText(rewardX + rewardIcon + 3, rewardY, `${r.amount}`, {
               fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44',
             }).setOrigin(0, 0.5);
-            rowItems.push(icon, amountT);
-            rewardX += rewardIcon + 3 + amountT.width + 10;
+            rowItems.push(icon);
+            // amountT.width — экранные (нескейленные) пиксели; делим на panelScale, чтобы вернуться
+            // в локальные координаты ряда, где считается rewardX для следующей иконки.
+            rewardX += rewardIcon + 3 + amountT.width / this.panelScale + 10;
           }
         } else {
-          rowItems.push(this.add.text(rewardX, rewardY, t('quest_done'), {
+          this.panelText(rewardX, rewardY, t('quest_done'), {
             fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffdd44',
-          }).setOrigin(0, 0.5));
+          }).setOrigin(0, 0.5);
         }
 
         const claimBtn = this.add.rectangle(500, y + 18, 58, 26, 0x224422)
           .setStrokeStyle(1, 0x44aa44)
           .setInteractive({ useHandCursor: true });
-        const claimLbl = this.add.text(500, y + 18, t('quest_claim'), {
+        this.panelText(500, y + 18, t('quest_claim'), {
           fontSize: '12px', fontFamily: FONT_FAMILY, color: '#aaffaa',
         }).setOrigin(0.5);
 
@@ -1059,7 +1096,7 @@ export class CampScene extends Phaser.Scene {
           this.rebuildPanel();
         });
 
-        rowItems.push(claimBtn, claimLbl);
+        rowItems.push(claimBtn);
         container.add(rowItems);
         y += 44;
         if (y > 460) break;
@@ -1072,9 +1109,9 @@ export class CampScene extends Phaser.Scene {
     }
 
     if (active.length === 0 && pending.length === 0) {
-      container.add(this.add.text(379, 400, t('quest_none_active'), {
+      this.panelText(379, 400, t('quest_none_active'), {
         fontSize: '14px', fontFamily: FONT_FAMILY, color: '#666666',
-      }).setOrigin(0.5));
+      }).setOrigin(0.5);
       return;
     }
 
@@ -1082,10 +1119,9 @@ export class CampScene extends Phaser.Scene {
       const q = active[i];
       const def = QUEST_DEFS[q.id];
       if (!def) continue;
-      const title = this.add.text(210, y, questTitle(q.id), { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#dddddd' });
-      const desc = this.add.text(210, y + 16, questDescription(q.id), { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#888888' });
-      const progress = this.add.text(210, y + 30, `${q.progress}/${q.target}`, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#88aaff' });
-      container.add([title, desc, progress]);
+      this.panelText(210, y, questTitle(q.id), { fontSize: '14px', fontFamily: FONT_FAMILY, color: '#dddddd' });
+      this.panelText(210, y + 16, questDescription(q.id), { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#888888' });
+      this.panelText(210, y + 30, `${q.progress}/${q.target}`, { fontSize: '12px', fontFamily: FONT_FAMILY, color: '#88aaff' });
       y += 52;
       container.add(this.add.rectangle(379, y - 8, 320, 1, 0x333344));
       if (y > 600) break;
@@ -1261,10 +1297,10 @@ export class CampScene extends Phaser.Scene {
       const bg = this.add.rectangle(x, y, TAB_W, TAB_H, active ? 0x1e1e2e : 0x15151f)
         .setStrokeStyle(2, active ? 0x555577 : 0x33334a)
         .setInteractive({ useHandCursor: true });
-      const lbl = this.add.text(x - 4, y, tab.label, {
+      const lbl = this.panelText(x - 4, y, tab.label, {
         fontSize: '12px', fontFamily: FONT_FAMILY, color: active ? '#ffffff' : '#777788',
       }).setOrigin(0.5);
-      this.panelContainer.add([bg, lbl]);
+      this.panelContainer.add(bg);
 
       if (active) {
         // Накрыть шов между вкладкой и панелью, чтобы активная вкладка сливалась с ней.
@@ -1326,7 +1362,7 @@ export class CampScene extends Phaser.Scene {
 
       const exchangeBtn = this.add.rectangle(cx + 7, rowY, 50, 26, canExchange ? 0x224422 : 0x332222)
         .setStrokeStyle(1, canExchange ? 0x44aa44 : 0x664444);
-      const exchangeLbl = this.add.text(cx + 7, rowY, t('dealer_exchange_button'), {
+      const exchangeLbl = this.panelText(cx + 7, rowY, t('dealer_exchange_button'), {
         fontSize: '10px', fontFamily: FONT_FAMILY, color: canExchange ? '#aaffaa' : '#886666', align: 'center',
       }).setOrigin(0.5);
       if (unlocked) {
@@ -1348,14 +1384,20 @@ export class CampScene extends Phaser.Scene {
         `+${output}`, RARITY_HEX[to], essenceIconKey(to), toLabel, RARITY_HEX[to], rowY, cx + 40, false,
       );
 
-      toAdd.push(rowBg, exchangeBtn, exchangeLbl, ...giveParts, ...getParts);
+      // Текст (exchangeLbl, giveParts/getParts-Text) уже сам себя припарковал в panelTextLayer через
+      // panelText() — в toAdd (panelContainer) кладём только не-текстовые части рядов.
+      toAdd.push(rowBg, exchangeBtn, giveParts[1], getParts[1]);
 
       if (!unlocked) {
-        // Гасим содержимое строки и кладём замочек поверх (добавляем последним — порядок
-        // добавления в контейнер и есть порядок отрисовки).
+        // Гасим содержимое строки и кладём замочек поверх. Замочек рисуется поверх ТЕКСТА
+        // (panelTextLayer, depth 160) — значит и он не может быть ребёнком panelContainer (depth 150,
+        // всегда ниже слоя текста), см. panelText()/панель depth-карту в CampScene.ts.
         [exchangeBtn, exchangeLbl, ...giveParts, ...getParts].forEach(o => o.setAlpha(0.35));
-        const lock = this.add.image(cx + 7, rowY, slotSilhouetteKey('lock')).setDisplaySize(22, 22);
-        toAdd.push(lock);
+        const S = this.panelScale;
+        this.panelOverlayImages.push(
+          this.add.image(this.panelX(cx + 7), this.panelY(rowY), slotSilhouetteKey('lock'))
+            .setDisplaySize(22 * S, 22 * S).setDepth(170),
+        );
 
         rowBg.setInteractive({ useHandCursor: false });
         rowBg.on('pointerover', () => {
@@ -1411,8 +1453,11 @@ export class CampScene extends Phaser.Scene {
     const preview = fusePreview(this.fuseInputItems);
     const canFuse = unlocked && preview.nextRarity !== null && !this.fuseResultItem;
     const toAdd: Phaser.GameObjects.GameObject[] = [];
+    // Текст держим отдельно от toAdd (тот уходит в panelContainer) — но всё равно нужен единым
+    // списком для дименга блока целиком при !unlocked (см. низ метода).
+    const toAddText: Phaser.GameObjects.Text[] = [];
 
-    toAdd.push(this.add.text(cx, labelY, t('camp_fuse_description', { count: FUSE_COUNT }), {
+    toAddText.push(this.panelText(cx, labelY, t('camp_fuse_description', { count: FUSE_COUNT }), {
       fontSize: '12px', fontFamily: FONT_FAMILY, color: '#888888', align: 'center', wordWrap: { width: 320 },
     }).setOrigin(0.5));
 
@@ -1477,7 +1522,7 @@ export class CampScene extends Phaser.Scene {
     }
 
     const arrowActive = !!(preview.nextRarity || this.fuseResultItem);
-    toAdd.push(this.add.text(arrowX, slotY, '→', {
+    toAddText.push(this.panelText(arrowX, slotY, '→', {
       fontSize: '22px', fontFamily: FONT_FAMILY, color: arrowActive ? '#667766' : '#333344',
     }).setOrigin(0.5));
 
@@ -1533,10 +1578,10 @@ export class CampScene extends Phaser.Scene {
     const btnY = slotY + S / 2 + 20;
     const BTN_W = 150, BTN_H = 28;
     const btn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, canFuse ? 0x335533 : 0x222233);
-    const btnLbl = this.add.text(cx, btnY, t('camp_fuse_button'), {
+    toAddText.push(this.panelText(cx, btnY, t('camp_fuse_button'), {
       fontSize: '14px', fontFamily: FONT_FAMILY, color: canFuse ? '#aaffaa' : '#555566', align: 'center',
-    }).setOrigin(0.5);
-    toAdd.push(btn, btnLbl);
+    }).setOrigin(0.5));
+    toAdd.push(btn);
 
     // Кнопка кликабельна и в «неактивном» виде (пока блок не заблокирован целиком) — по клику
     // с недостающими/несовпадающими предметами всплывает та же причина, что раньше висела
@@ -1567,16 +1612,22 @@ export class CampScene extends Phaser.Scene {
       ? t('camp_fuse_locked_hint')
       : (this.fuseResultItem ? t('camp_take_result_hint') : null);
     if (hintText) {
-      toAdd.push(this.add.text(cx, btnY + BTN_H / 2 + 10, hintText, {
+      toAddText.push(this.panelText(cx, btnY + BTN_H / 2 + 10, hintText, {
         fontSize: '10px', fontFamily: FONT_FAMILY, color: '#886655', align: 'center', wordWrap: { width: 260 },
       }).setOrigin(0.5));
     }
 
     if (!unlocked) {
       // Тот же приём, что у заблокированной строки обмена эссенции (buildSmithContent) — гасим
-      // весь собранный блок и кладём замочек поверх (последним, чтобы не погас вместе с остальным).
-      toAdd.forEach((o) => (o as unknown as Phaser.GameObjects.Components.Alpha).setAlpha(0.35));
-      toAdd.push(this.add.image(cx, slotY, slotSilhouetteKey('lock')).setDisplaySize(30, 30));
+      // весь собранный блок (не-текст + текст по отдельности, они в разных слоях) и кладём замочек
+      // поверх. Замочек рисуется поверх panelTextLayer (depth 160) — значит вне panelContainer, см.
+      // panelText()/панель depth-карту в CampScene.ts.
+      [...toAdd, ...toAddText].forEach((o) => (o as unknown as Phaser.GameObjects.Components.Alpha).setAlpha(0.35));
+      const S = this.panelScale;
+      this.panelOverlayImages.push(
+        this.add.image(this.panelX(cx), this.panelY(slotY), slotSilhouetteKey('lock'))
+          .setDisplaySize(30 * S, 30 * S).setDepth(170),
+      );
     }
 
     this.panelContainer.add(toAdd);
@@ -1639,23 +1690,30 @@ export class CampScene extends Phaser.Scene {
     rowY: number, anchorX: number, alignRight: boolean,
   ): [Phaser.GameObjects.Text, Phaser.GameObjects.Image, Phaser.GameObjects.Text] {
     const gap = 4, iconSize = 16;
-    const iconX = alignRight ? anchorX : 0; // при !alignRight досчитаем ниже, после ширины numLbl
-    const numLbl = this.add.text(0, rowY, numText, {
+    // panelText() конвертирует x в экранные координаты уже при создании — в отличие от прежней
+    // версии здесь нельзя переприсвоить .x постфактум, локальный x обеих надписей считаем заранее.
+    const numLblX = alignRight ? anchorX - gap : anchorX;
+    const numLbl = this.panelText(numLblX, rowY, numText, {
       fontSize: '16px', fontFamily: FONT_FAMILY, color: numColor,
     }).setOrigin(alignRight ? 1 : 0, 0.5);
+
+    let iconX: number;
+    let tierLblX: number;
+    if (alignRight) {
+      iconX = anchorX;
+      tierLblX = anchorX + iconSize + gap;
+    } else {
+      // numLbl.width — экранные (нескейленные) пиксели panelText(); делим на panelScale, чтобы
+      // получить локальную ширину для позиционирования иконки (она остаётся ребёнком panelContainer).
+      const localNumWidth = numLbl.width / this.panelScale;
+      iconX = anchorX + localNumWidth + gap;
+      tierLblX = anchorX + localNumWidth + gap + iconSize + gap;
+    }
     const icon = this.add.image(iconX, rowY, iconKey).setDisplaySize(iconSize, iconSize).setOrigin(0, 0.5);
-    const tierLbl = this.add.text(0, rowY, labelText, {
+    const tierLbl = this.panelText(tierLblX, rowY, labelText, {
       fontSize: '12px', fontFamily: FONT_FAMILY, color: labelColor,
     }).setOrigin(0, 0.5);
 
-    if (alignRight) {
-      numLbl.x = anchorX - gap;
-      tierLbl.x = anchorX + iconSize + gap;
-    } else {
-      numLbl.x = anchorX;
-      icon.x = anchorX + numLbl.width + gap;
-      tierLbl.x = anchorX + numLbl.width + gap + iconSize + gap;
-    }
     return [numLbl, icon, tierLbl];
   }
 
@@ -1731,7 +1789,7 @@ export class CampScene extends Phaser.Scene {
 
     // "→"
     const arrowActive = !!(previewResult || resultItem);
-    const arrowLbl = this.add.text(arrowX, slotY, '→', {
+    this.panelText(arrowX, slotY, '→', {
       fontSize: '28px', fontFamily: FONT_FAMILY, color: arrowActive ? '#667766' : '#333344',
     }).setOrigin(0.5);
 
@@ -1850,7 +1908,7 @@ export class CampScene extends Phaser.Scene {
     const btnColor = btnEnabled ? 0x335533 : 0x222233;
     const btn = this.add.rectangle(cx, btnY, BTN_W, BTN_H, btnColor);
     if (btnEnabled) btn.setInteractive({ useHandCursor: true });
-    const btnLbl = this.add.text(cx, btnY, t('camp_upgrade_button'), {
+    this.panelText(cx, btnY, t('camp_upgrade_button'), {
       fontSize: '14px', fontFamily: FONT_FAMILY,
       color: btnEnabled ? '#aaffaa' : '#555566', align: 'center',
     }).setOrigin(0.5);
@@ -1889,14 +1947,14 @@ export class CampScene extends Phaser.Scene {
         ry += 12;
       }
     } else if (craftError) {
-      costLbls.push(this.add.text(cx, btnY + BTN_H / 2 + 10, craftError, {
+      this.panelText(cx, btnY + BTN_H / 2 + 10, craftError, {
         fontSize: '10px', fontFamily: FONT_FAMILY, color: '#886655', align: 'center',
         wordWrap: { width: 220 },
-      }).setOrigin(0.5));
+      }).setOrigin(0.5);
     }
 
     const toAdd: Phaser.GameObjects.GameObject[] = [
-      divider, s1Bg, s1Content, arrowLbl, s3Bg, btn, btnLbl, ...costLbls,
+      divider, s1Bg, s1Content, s3Bg, btn, ...costLbls,
     ];
     if (s3Content) toAdd.push(s3Content);
     this.panelContainer.add(toAdd);
@@ -1947,7 +2005,7 @@ export class CampScene extends Phaser.Scene {
       const bg = this.add.rectangle(x, y, W, H, active ? 0x3a4a6a : 0x222233)
         .setStrokeStyle(1, active ? 0x88aaff : 0x444455)
         .setInteractive({ useHandCursor: true });
-      const lbl = this.add.text(x, y, `${i + 1}`, {
+      this.panelText(x, y, `${i + 1}`, {
         fontSize: '10px', fontFamily: FONT_FAMILY, color: active ? '#cfe0ff' : '#8899aa',
       }).setOrigin(0.5);
       if (!active) {
@@ -1955,7 +2013,7 @@ export class CampScene extends Phaser.Scene {
         bg.on('pointerout',  () => bg.setFillStyle(0x222233));
         bg.on('pointerdown', () => { this.tabClickGuard = true; this.selectedStandIndex = i; this.rebuildPanel(); });
       }
-      objs.push(bg, lbl);
+      objs.push(bg);
     }
     return objs;
   }
@@ -2032,9 +2090,9 @@ export class CampScene extends Phaser.Scene {
     const COLS = 5;
     const ROWS_VIS = Math.floor(CONTENT_H / ROW_H);
 
-    this.panelContainer.add(this.add.text(CHEST_CX, 163, t('camp_chest_title'), {
+    this.panelText(CHEST_CX, 163, t('camp_chest_title'), {
       fontSize: '16px', fontFamily: FONT_FAMILY, color: '#aaaaaa',
-    }).setOrigin(0.5));
+    }).setOrigin(0.5);
 
     if (showFilters) {
       const SLOT_TYPES: SlotType[] = ['head', 'body', 'legs', 'hand_left', 'hand_right', 'ring', 'amulet'];
@@ -2088,13 +2146,13 @@ export class CampScene extends Phaser.Scene {
         const bg = this.add.rectangle(cx, FILTER_Y2, FILTER_CELL, FILTER_CELL, 0x1e1e2e)
           .setStrokeStyle(1, 0x555566)
           .setInteractive({ useHandCursor: true });
-        const lbl = this.add.text(cx, FILTER_Y2, '▲▼', {
+        const lbl = this.panelText(cx, FILTER_Y2, '▲▼', {
           fontSize: '14px', fontFamily: FONT_FAMILY, color: '#666677',
         }).setOrigin(0.5);
         bg.on('pointerover', () => { bg.setFillStyle(0x252530); lbl.setColor('#9999aa'); });
         bg.on('pointerout', () => { bg.setFillStyle(0x1e1e2e); lbl.setColor('#666677'); });
         bg.on('pointerdown', () => { MetaStore.sortChest(); this.rebuildPanel(); });
-        this.panelContainer.add([bg, lbl]);
+        this.panelContainer.add(bg);
       }
     }
 
@@ -2157,6 +2215,10 @@ export class CampScene extends Phaser.Scene {
 
     const buildSlots = () => {
       itemsCtr.removeAll(true);
+      // Бейджи стака — в panelTextLayer (panelText), не в itemsCtr, поэтому их не чистит
+      // itemsCtr.removeAll выше — своя чистка на каждый вызов (полный ребилд панели И тик колеса).
+      this.chestBadgeTexts.forEach((t) => t.destroy());
+      this.chestBadgeTexts = [];
       for (let i = 0; i < totalSlots; i++) {
         const row = Math.floor(i / COLS);
         const col = i % COLS;
@@ -2176,10 +2238,14 @@ export class CampScene extends Phaser.Scene {
           const view = addItemIcon(this, x, yc, { itemId: inst.item_id, rarity: inst.rarity, size: SIZE, iconSize: ICON_SIZE });
           itemsCtr.add(view);
           if (entry.count > 1) {
-            itemsCtr.add(this.add.text(x + SIZE / 2 - 3, yc + SIZE / 2 - 3, `${entry.count}`, {
+            const badge = this.panelText(x + SIZE / 2 - 3, yc + SIZE / 2 - 3, `${entry.count}`, {
               fontSize: '12px', fontFamily: FONT_FAMILY, color: '#ffffff',
               stroke: '#000000', strokeThickness: 3,
-            }).setOrigin(1, 1));
+            }).setOrigin(1, 1);
+            // Тот же mask, что и на itemsCtr — GeometryMask можно переиспользовать на нескольких
+            // объектах, бейдж должен обрезаться той же скроллящейся областью сундука.
+            badge.setMask(mask);
+            this.chestBadgeTexts.push(badge);
           }
           const idx = entry.origIdx;
           const item = inst;
@@ -2241,11 +2307,11 @@ export class CampScene extends Phaser.Scene {
     const meta = MetaStore.get();
     const bg = this.add.image(640, 380, 'map-texture').setDisplaySize(660, 620);
     const border = this.add.rectangle(640, 380, 660, 620, 0x000000, 0).setStrokeStyle(2, 0x7a6040);
-    const title = this.add.text(640, 100, t('camp_map_title'), {
+    this.panelText(640, 100, t('camp_map_title'), {
       fontSize: '22px', fontFamily: FONT_FAMILY, color: '#3a2010',
       stroke: '#c8a86b', strokeThickness: 1,
     }).setOrigin(0.5);
-    this.panelContainer.add([bg, border, title]);
+    this.panelContainer.add([bg, border]);
 
     // Пока обучающая зона не пройдена — карта показывает только её плитку по центру, ни одна
     // из 9 обычных зон и маршрутов не отображается вовсе (см. docs/zones/training-camp.md).
@@ -2272,11 +2338,11 @@ export class CampScene extends Phaser.Scene {
     const x = 640, y = 373;
     const fillColor = 0x224466, borderColor = 0x4488cc;
     const node = this.add.rectangle(x, y, 170, 80, fillColor).setStrokeStyle(2, borderColor);
-    const nameText = this.add.text(x, y - 12, zoneName('training-camp'), {
+    const nameText = this.panelText(x, y - 12, zoneName('training-camp'), {
       fontSize: '16px', fontFamily: FONT_FAMILY, color: '#ddddff',
       align: 'center', wordWrap: { width: 160 },
     }).setOrigin(0.5);
-    this.panelContainer.add([node, nameText]);
+    this.panelContainer.add(node);
 
     node.setInteractive({ useHandCursor: true });
     nameText.setInteractive({ useHandCursor: true });
@@ -2356,16 +2422,16 @@ export class CampScene extends Phaser.Scene {
     }
 
     const node = this.add.rectangle(entry.x, entry.y, 170, 80, fillColor).setStrokeStyle(2, borderColor);
-    const nameText = this.add.text(entry.x, entry.y - 12, zoneName(entry.id), {
+    const nameText = this.panelText(entry.x, entry.y - 12, zoneName(entry.id), {
       fontSize: '16px', fontFamily: FONT_FAMILY, color: labelColor,
       align: 'center', wordWrap: { width: 160 },
     }).setOrigin(0.5);
-    this.panelContainer.add([node, nameText]);
+    this.panelContainer.add(node);
 
     if (isWip) {
-      this.panelContainer.add(this.add.text(entry.x, entry.y + 20, t('camp_zone_wip'), {
+      this.panelText(entry.x, entry.y + 20, t('camp_zone_wip'), {
         fontSize: '14px', fontFamily: FONT_FAMILY, color: '#333344',
-      }).setOrigin(0.5));
+      }).setOrigin(0.5);
       return;
     }
 
@@ -2374,17 +2440,17 @@ export class CampScene extends Phaser.Scene {
     }
 
     if (isFullyLooted) {
-      this.panelContainer.add(this.add.text(entry.x, entry.y + 20, t('camp_zone_cleared'), {
+      this.panelText(entry.x, entry.y + 20, t('camp_zone_cleared'), {
         fontSize: '14px', fontFamily: FONT_FAMILY, color: '#44aa44',
-      }).setOrigin(0.5));
+      }).setOrigin(0.5);
     }
 
     if (!isUnlocked && !isCompleted) {
       // Центр открывается автоматически зачисткой трёх конечных зон — проходку не купить.
       if (isCenter) {
-        this.panelContainer.add(this.add.text(entry.x, entry.y + 20, t('camp_center_locked_need_zones'), {
+        this.panelText(entry.x, entry.y + 20, t('camp_center_locked_need_zones'), {
           fontSize: '14px', fontFamily: FONT_FAMILY, color: '#888888',
-        }).setOrigin(0.5));
+        }).setOrigin(0.5);
         node.setInteractive({ useHandCursor: true });
         nameText.setInteractive({ useHandCursor: true });
         [node, nameText].forEach(obj => {
@@ -2404,9 +2470,9 @@ export class CampScene extends Phaser.Scene {
       // Проходку можно купить только после прохождения предыдущей зоны маршрута.
       if (!zonePrereqMet(entry.id, completed)) {
         const prevLabel = zoneLabel(ZONE_PREREQ[entry.id]);
-        this.panelContainer.add(this.add.text(entry.x, entry.y + 20, t('camp_zone_locked_prev'), {
+        this.panelText(entry.x, entry.y + 20, t('camp_zone_locked_prev'), {
           fontSize: '14px', fontFamily: FONT_FAMILY, color: '#886666',
-        }).setOrigin(0.5));
+        }).setOrigin(0.5);
         node.setInteractive({ useHandCursor: true });
         nameText.setInteractive({ useHandCursor: true });
         [node, nameText].forEach(obj => {
@@ -2434,9 +2500,9 @@ export class CampScene extends Phaser.Scene {
       const prevLabel = zoneLabel(ZONE_PREREQ[entry.id]);
 
       const lockLabel = isPendingClaim ? t('camp_zone_locked_claim') : t('camp_zone_locked_collect', { progress, target });
-      this.panelContainer.add(this.add.text(entry.x, entry.y + 20, lockLabel, {
+      this.panelText(entry.x, entry.y + 20, lockLabel, {
         fontSize: '14px', fontFamily: FONT_FAMILY, color: '#886666', align: 'center', wordWrap: { width: 160 },
-      }).setOrigin(0.5));
+      }).setOrigin(0.5);
 
       node.setInteractive({ useHandCursor: true });
       nameText.setInteractive({ useHandCursor: true });
