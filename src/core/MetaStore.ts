@@ -148,7 +148,10 @@ function createDefault(): MetaState {
     chest: [],
     armor_stands: defaultStands(),
     active_stand: 0,
-    armor_stand_locks: {},
+    // Стартовый меч (defaultStands()) кладётся напрямую в массив стоек, минуя
+    // setArmorStandSlot, поэтому авто-фиксацию (см. setArmorStandSlot) нужно проставить
+    // здесь явно — иначе новый сейв стартовал бы с разлоченным дефолтом.
+    armor_stand_locks: { hand_right: 0 },
     run_speed: 1,
     battlefield_best_depth: 0,
     stats: emptyStats(),
@@ -371,6 +374,12 @@ export const MetaStore = {
       delete state.armor_stand_locks[slot];
     }
     state.armor_stands[standIndex][slot] = item;
+    // Новый предмет по умолчанию фиксируется между стойками, если это возможно (см.
+    // docs/ui.md «Фиксация предмета между стойками») — раньше фиксацию нужно было
+    // включать вручную кликом по замочку.
+    if (item && this.canLockStandSlot(standIndex, slot)) {
+      state.armor_stand_locks[slot] = standIndex;
+    }
     this.save();
   },
 
