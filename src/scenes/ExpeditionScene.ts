@@ -1100,7 +1100,12 @@ export class ExpeditionScene extends Phaser.Scene {
     this.add.image(this.panelColumn(0).cx, 600, zoneDecorKey('backpack')).setTint(0xa06030).setAlpha(0.16);
     this.add.image(CX, 600, zoneDecorKey('warrior')).setTint(0xa06030).setAlpha(0.16);
 
-    this.buildStandTabs(CX, 434);
+    // Верх табов стоек выравниваем по верхней границе гнёзд механик в правой колонке:
+    // PANEL_HEADER_Y + 24 — общая линия старта контента под заголовком (см. buildMechanicNests,
+    // backpackGridGeom). H таба — те же round(22*panelScale()), что внутри buildStandTabs.
+    const standTabTop = ExpeditionScene.PANEL_HEADER_Y + 24;
+    const standTabH = Math.round(22 * panelScale());
+    this.buildStandTabs(CX, standTabTop + standTabH / 2);
     this.buildEquipSlots();
     this.buildBackpackGrid();
     this.buildMechanicNests();
