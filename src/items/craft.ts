@@ -107,23 +107,30 @@ export const FUSE_COUNT = 3;
 export interface FusePreview {
   /** Целевая редкость, если слияние возможно прямо сейчас; иначе null. */
   nextRarity: Rarity | null;
+  /**
+   * Предсказуемый предмет-результат — заполнен, только когда все три входа одного типа (item_id):
+   * тогда fuseItems() гарантированно вернёт именно его, и превью можно показать иконкой, как в
+   * улучшении. При разных типах результат случаен — тут null, в ячейке остаётся «?».
+   */
+  result: ItemInstance | null;
   error: string | null;
 }
 
 /**
  * Проверка готовности слияния: 3 предмета одной редкости → следующая редкость.
  * В отличие от craftPreview — без эссенции и без CRAFT_RARITY_CAP (единственный путь
- * скрафтить legendary). Сам предмет-результат здесь не выбирается — это делает fuseItems()
- * в момент подтверждения, а не превью, потому что результат случаен.
+ * скрафтить legendary). Тип предмета-результата выбирает fuseItems() в момент подтверждения
+ * (он случаен среди входов), но при трёх одинаковых входах он предопределён — см. `result`.
  */
 export function fusePreview(items: (ItemInstance | null)[]): FusePreview {
   const filled = items.filter((i): i is ItemInstance => !!i);
-  if (filled.length < FUSE_COUNT) return { nextRarity: null, error: t('craft_error_need_n_items', { count: FUSE_COUNT }) };
+  if (filled.length < FUSE_COUNT) return { nextRarity: null, result: null, error: t('craft_error_need_n_items', { count: FUSE_COUNT }) };
   const rarity = filled[0].rarity;
-  if (filled.some((i) => i.rarity !== rarity)) return { nextRarity: null, error: t('msg_rarity_must_match') };
+  if (filled.some((i) => i.rarity !== rarity)) return { nextRarity: null, result: null, error: t('msg_rarity_must_match') };
   const up = NEXT_RARITY[rarity];
-  if (!up) return { nextRarity: null, error: t('craft_error_already_legendary_fuse') };
-  return { nextRarity: up, error: null };
+  if (!up) return { nextRarity: null, result: null, error: t('craft_error_already_legendary_fuse') };
+  const sameType = filled.every((i) => i.item_id === filled[0].item_id);
+  return { nextRarity: up, result: sameType ? { item_id: filled[0].item_id, rarity: up } : null, error: null };
 }
 
 /**

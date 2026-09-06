@@ -1447,8 +1447,10 @@ export class CampScene extends Phaser.Scene {
   /**
    * Слияние: 3 предмета одной редкости → 1 следующей, без эссенции и без потолка редкости
    * (в отличие от buildUpgradePanel) — единственный путь скрафтить legendary. Тип результата
-   * случаен среди трёх вложенных (см. fuseItems в items/craft.ts), поэтому в ячейку результата
-   * до подтверждения кладём только вопросительный знак с рамкой целевой редкости, а не иконку.
+   * случаен среди трёх вложенных (см. fuseItems в items/craft.ts), поэтому при разнотипных
+   * входах в ячейку результата до подтверждения кладём вопросительный знак. Если же все три
+   * входа одного типа — результат предопределён (fusePreview().result), и показываем его
+   * иконкой-превью, как в улучшении.
    * Центрируется в средней трети панели (между разделителями обмена и улучшения, 321-504).
    */
   private buildFuseContent(cx: number) {
@@ -1545,6 +1547,9 @@ export class CampScene extends Phaser.Scene {
     }).setOrigin(0.5));
 
     const resultItem = this.fuseResultItem;
+    // Предсказуемый результат (три входа одного типа) показываем иконкой-превью, как в улучшении;
+    // при разнотипных входах он null — в ячейке остаётся «?».
+    const previewResult = preview.result;
     const resultBorder = resultItem
       ? RARITY_COLORS[resultItem.rarity]
       : (preview.nextRarity ? RARITY_COLORS[preview.nextRarity] : 0x333344);
@@ -1554,6 +1559,11 @@ export class CampScene extends Phaser.Scene {
     if (resultItem) {
       s3View = addItemIcon(this, resultX, slotY, { itemId: resultItem.item_id, rarity: resultItem.rarity, size: S, iconSize: ICON_SIZE });
       s3Content = s3View;
+    } else if (previewResult) {
+      // Превью следующей ступени — та же плашка, но приглушённая целиком (иконка + фон).
+      s3Content = addItemIcon(this, resultX, slotY, {
+        itemId: previewResult.item_id, rarity: previewResult.rarity, size: S, iconSize: ICON_SIZE,
+      }).setAlpha(0.3);
     } else {
       // Тип результата случаен — до подтверждения показываем только «?» в рамке целевой редкости.
       s3Content = this.add.image(resultX, slotY, upgradeIconKey('question_mark')).setDisplaySize(29, 29)
@@ -1589,6 +1599,13 @@ export class CampScene extends Phaser.Scene {
       } else {
         s3Bg.on('pointerdown', () => this.takeFuseItem('result'));
       }
+    } else if (previewResult) {
+      // Только превью будущего предмета — без взаимодействия, кроме тултипа.
+      s3Bg.setInteractive({ useHandCursor: false });
+      s3Bg.on('pointerover', () => {
+        this.tooltip.showItem(previewResult, this.panelX(resultX + S / 2 + 8), this.panelY(slotY - S / 2 - 8));
+      });
+      s3Bg.on('pointerout', () => this.tooltip.hide());
     }
 
     // Зазор до слота (20, не 22) — слот вырос с 40 до 64, а половина кнопки (BTN_H/2=14) сама
