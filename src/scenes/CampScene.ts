@@ -1447,10 +1447,10 @@ export class CampScene extends Phaser.Scene {
   /**
    * Слияние: 3 предмета одной редкости → 1 следующей, без эссенции и без потолка редкости
    * (в отличие от buildUpgradePanel) — единственный путь скрафтить legendary. Тип результата
-   * случаен среди трёх вложенных (см. fuseItems в items/craft.ts), поэтому при разнотипных
-   * входах в ячейку результата до подтверждения кладём вопросительный знак. Если же все три
-   * входа одного типа — результат предопределён (fusePreview().result), и показываем его
-   * иконкой-превью, как в улучшении.
+   * случаен среди трёх вложенных (см. fuseItems в items/craft.ts). Если все три входа одного типа —
+   * результат предопределён (fusePreview().result), показываем его иконкой-превью, как в улучшении.
+   * При разнотипных входах ячейку результата делим на 3 вертикальные полосы: полоса i — i-я треть
+   * иконки i-го входа в целевой редкости, у каждой свой тултип. Пока набор неполный — «?».
    * Центрируется в средней трети панели (между разделителями обмена и улучшения, 321-504).
    */
   private buildFuseContent(cx: number) {
@@ -1564,6 +1564,37 @@ export class CampScene extends Phaser.Scene {
       s3Content = addItemIcon(this, resultX, slotY, {
         itemId: previewResult.item_id, rarity: previewResult.rarity, size: S, iconSize: ICON_SIZE,
       }).setAlpha(0.3);
+    } else if (preview.results.length === FUSE_COUNT) {
+      // Разнотипные входы: тип результата случаен — показываем все три возможных предмета плиткой
+      // из 3 вертикальных полос (полоса i = i-я треть иконки i-го входа, редкость целевая).
+      const cont = this.add.container(resultX, slotY);
+      const DIM = 0.5, LIT = 0.95;
+      const stripes: Phaser.GameObjects.Image[] = [];
+      preview.results.forEach((r, i) => {
+        const img = this.add.image(0, 0, itemIconKey(r.item_id));
+        const fw = img.frame.realWidth, fh = img.frame.realHeight; // до setDisplaySize
+        img.setDisplaySize(ICON_SIZE, ICON_SIZE).setAlpha(DIM)
+          .setCrop((fw / FUSE_COUNT) * i, 0, fw / FUSE_COUNT, fh);
+        cont.add(img);
+        stripes.push(img);
+      });
+      // Тонкие разделители между полосами.
+      for (let k = 1; k < FUSE_COUNT; k++) {
+        cont.add(this.add.rectangle(-ICON_SIZE / 2 + (ICON_SIZE / FUSE_COUNT) * k, 0, 1, ICON_SIZE, 0x000000, 0.35));
+      }
+      s3Content = cont;
+
+      // Свой хит-прямоугольник и тултип на каждую полосу (координаты — как у s3Bg, в системе панели).
+      preview.results.forEach((r, i) => {
+        const zx = resultX - S / 2 + (S / FUSE_COUNT) * (i + 0.5);
+        const hit = this.add.rectangle(zx, slotY, S / FUSE_COUNT, S, 0x000000, 0).setInteractive({ useHandCursor: false });
+        hit.on('pointerover', () => {
+          stripes[i].setAlpha(LIT);
+          this.tooltip.showItem(r, this.panelX(resultX + S / 2 + 8), this.panelY(slotY - S / 2 - 8));
+        });
+        hit.on('pointerout', () => { stripes[i].setAlpha(DIM); this.tooltip.hide(); });
+        toAdd.push(hit);
+      });
     } else {
       // Тип результата случаен — до подтверждения показываем только «?» в рамке целевой редкости.
       s3Content = this.add.image(resultX, slotY, upgradeIconKey('question_mark')).setDisplaySize(29, 29)

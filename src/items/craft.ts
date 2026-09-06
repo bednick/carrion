@@ -113,6 +113,11 @@ export interface FusePreview {
    * улучшении. При разных типах результат случаен — тут null, в ячейке остаётся «?».
    */
   result: ItemInstance | null;
+  /**
+   * Все возможные исходы — по одному на каждый вход, в порядке ячеек, редкость целевая.
+   * Пусто, если слияние сейчас невозможно. При трёх одинаковых входах — три равных элемента.
+   */
+  results: ItemInstance[];
   error: string | null;
 }
 
@@ -124,13 +129,14 @@ export interface FusePreview {
  */
 export function fusePreview(items: (ItemInstance | null)[]): FusePreview {
   const filled = items.filter((i): i is ItemInstance => !!i);
-  if (filled.length < FUSE_COUNT) return { nextRarity: null, result: null, error: t('craft_error_need_n_items', { count: FUSE_COUNT }) };
+  if (filled.length < FUSE_COUNT) return { nextRarity: null, result: null, results: [], error: t('craft_error_need_n_items', { count: FUSE_COUNT }) };
   const rarity = filled[0].rarity;
-  if (filled.some((i) => i.rarity !== rarity)) return { nextRarity: null, result: null, error: t('msg_rarity_must_match') };
+  if (filled.some((i) => i.rarity !== rarity)) return { nextRarity: null, result: null, results: [], error: t('msg_rarity_must_match') };
   const up = NEXT_RARITY[rarity];
-  if (!up) return { nextRarity: null, result: null, error: t('craft_error_already_legendary_fuse') };
+  if (!up) return { nextRarity: null, result: null, results: [], error: t('craft_error_already_legendary_fuse') };
+  const results = filled.map((i) => ({ item_id: i.item_id, rarity: up }));
   const sameType = filled.every((i) => i.item_id === filled[0].item_id);
-  return { nextRarity: up, result: sameType ? { item_id: filled[0].item_id, rarity: up } : null, error: null };
+  return { nextRarity: up, result: sameType ? results[0] : null, results, error: null };
 }
 
 /**
