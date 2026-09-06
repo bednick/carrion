@@ -81,9 +81,7 @@
 {
   "essence": { "uncommon": 0, "rare": 0, "epic": 0 },
   "completed_areas": [],
-  "unlocked_areas": [
-    "dead-fields"
-  ],
+  "unlocked_areas": [],
   "chest": [],
   "battlefield_best_depth": 0,
   "armor_stands": [
@@ -102,13 +100,16 @@
     "zones_returned": {}
   },
   "quests": {
-    "active": [],
+    "active": [
+      { "id": "tutorial_training_camp", "progress": 0, "target": 1 }
+    ],
     "pending_reward": [],
     "completed": []
   },
   "seen_npc_dialogs": [],
   "seen_mob_mechanics": [],
-  "tutorial_completed": false
+  "tutorial_completed": false,
+  "chest_hint_pending": false
 }
 ```
 
@@ -208,6 +209,16 @@
 откатываться назад в обучение. Только по-настоящему новые сейвы (ключ `carrion.meta.v1` в `localStorage` вовсе
 отсутствует) получают `false` через `createDefault()`.
 
+### Подсветка сундука (`chest_hint_pending`)
+
+`boolean` — косметический флаг. Взводится (`MetaStore.markChestHintPending()`), когда одноразовая
+реплика НПС кладёт предмет в сундук и заканчивается словами «Загляни в сундук» (подарок ветки
+`faction_hint_*` и `tutorial_reward` — см. `src/core/DialogSystem.ts`). Пока `true`, `CampScene`
+рисует мигающий белый силуэт сундука (`refreshChestHint()`, тот же приём, что подсказка «В поход»
+на старте — `firstExpeditionHint`). Снимается (`clearChestHint()`) при первом открытии вкладки
+сундука/экипировки (`openChestPanel()` / `switchTab('chest')`). У старых сейвов поля нет —
+`parsed.chest_hint_pending ?? false`. Сброс прогресса не нужен.
+
 ### Что сохраняется при гибели vs при победе над боссом
 
 Экспедиция идёт до боя с боссом или до гибели; досрочно выйти можно кнопкой «В лагерь» (зона тогда не
@@ -226,7 +237,8 @@
 ### Инициализация
 
 При первом запуске (ключ отсутствует) — создаётся структура с нулями, тремя пустыми стойками для брони (в первой
-— короткий меч `short_sword` `common`, дефолт `defaultStands()`), пустым `unlocked_areas` и пустым списком активных квестов.
+— короткий меч `short_sword` `common`, дефолт `defaultStands()`), пустым `unlocked_areas` и единственным активным
+квестом-галочкой `tutorial_training_camp` (см. `docs/quests.md`).
 Гарантия оружия держится и дальше: на входе в зону `MetaStore.ensureStarterWeapon()` проверяет, есть ли
 предмет со слотом `hand_right` хоть в одном слоте любой стойки или в сундуке; если нет (например, всё
 оружие ушло в слияние) — снова кладёт `short_sword` `common` в правую руку первой стойки и сообщает об

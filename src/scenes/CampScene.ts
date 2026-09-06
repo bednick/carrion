@@ -232,6 +232,9 @@ export class CampScene extends Phaser.Scene {
   private fluteSlider: SliderPopup | null = null;
   private dealerAlert: Phaser.GameObjects.Container | null = null;
   private dealerBlinkHint: Phaser.GameObjects.Image | null = null;
+  // Мигающий силуэт сундука — включается, когда диалог-подарок НПС просит «Загляни в сундук»
+  // (MetaStore.chest_hint_pending), гаснет при первом открытии сундука/экипировки.
+  private chestBlinkHint: Phaser.GameObjects.Image | null = null;
   private firstExpeditionHint: Phaser.GameObjects.Image | null = null;
   private npcDialogBox!: NpcDialogBox;
 
@@ -315,6 +318,9 @@ export class CampScene extends Phaser.Scene {
     // НПС на этом же заходе всё равно пустые (нет ни diedInZone, ни tutorial_completed).
     if (!hasExplicitLocale()) this.showLanguageChooser();
     else this.showPendingNpcDialogs();
+    // Реплики выше могли синхронно проставить chest_hint_pending — подсвечиваем сундук уже
+    // под модалкой (buildChestStand() отработал раньше показа диалогов).
+    this.refreshChestHint();
 
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
       if (!this.pendingDrag || !this.dragDrop || !ptr.isDown) return;
@@ -868,12 +874,18 @@ export class CampScene extends Phaser.Scene {
   }
 
   private buildChestStand() {
-    this.addNPCWithSprite(
+    this.chestBlinkHint = this.addNPCWithSprite(
       855 + DX, 490, 96, 96, 'chest-stand',
       855 + DX, 490, 120, 100,
       t('camp_chest_hover'), () => this.openChestPanel(),
-      false, campScale('chest'),
-    );
+      true, campScale('chest'),
+    ) ?? null;
+    this.refreshChestHint();
+  }
+
+  /** Подсветка сундука видна, пока не открыт сундук после диалога-подарка (см. chest_hint_pending). */
+  private refreshChestHint() {
+    this.chestBlinkHint?.setVisible(MetaStore.get().chest_hint_pending);
   }
 
   private buildPanel() {
@@ -1151,6 +1163,8 @@ export class CampScene extends Phaser.Scene {
   }
 
   private openChestPanel() {
+    MetaStore.clearChestHint();
+    this.refreshChestHint();
     if (this.panelState !== 'chest') { this.closePanel(); this.panelState = 'chest'; }
     this.rebuildPanel();
   }
@@ -1318,6 +1332,10 @@ export class CampScene extends Phaser.Scene {
     if (this.panelState === state) return;
     this.tabClickGuard = true; // pointerup этого клика не должен уронить предмет из руки
     this.tooltip.hide();
+    if (state === 'chest') {
+      MetaStore.clearChestHint();
+      this.refreshChestHint();
+    }
     this.panelState = state;
     this.rebuildPanel();
   }

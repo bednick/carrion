@@ -30,6 +30,7 @@ export function checkFactionDeathDialogs(zoneId: string | undefined): DialogEntr
   const gift = factionGift(faction);
   if (!MetaStore.hasItemAnywhere(gift.itemId)) {
     MetaStore.addToChest({ item_id: gift.itemId, rarity: gift.rarity });
+    MetaStore.markChestHintPending(); // реплика заканчивается «Загляни в сундук»
     queue.push(gift.dialog);
   } else {
     queue.push(factionRecommend(faction));
@@ -50,6 +51,7 @@ export function checkTutorialRewardDialog(): DialogEntry[] | null {
 
   MetaStore.markDialogSeen(dialogId);
   MetaStore.addToChest({ item_id: 'desperate_plate', rarity: 'common' });
+  MetaStore.markChestHintPending(); // реплика заканчивается «Загляни в сундук»
   return tutorialRewardDialog();
 }
 

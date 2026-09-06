@@ -76,6 +76,11 @@ export interface MetaState {
   // их квесты не посажены (см. QuestSystem.grantTutorialUnlock). У сейвов до этого поля (создан
   // раньше правки) при загрузке трактуется как true — см. MetaStore.init().
   tutorial_completed: boolean;
+  // Диалог-подарок НПС («…Загляни в сундук», src/i18n/content/dialogs.ts) положил предмет в
+  // сундук — CampScene подсвечивает сундук мигающим силуэтом (refreshChestHint), пока игрок
+  // хоть раз не откроет вкладку сундука/экипировки (clearChestHint). У старых сейвов поля нет —
+  // трактуется как false (см. init()).
+  chest_hint_pending: boolean;
 }
 
 function emptyStand(): ArmorStand {
@@ -165,6 +170,7 @@ function createDefault(): MetaState {
       completed: [],
     },
     tutorial_completed: false,
+    chest_hint_pending: false,
   };
 }
 
@@ -208,6 +214,8 @@ export const MetaStore = {
       // false — иначе игрока с прогрессом откинуло бы обратно в обучение. Только у по-настоящему
       // новых сейвов (нет raw вовсе, см. ветку выше) поле явно false.
       tutorial_completed: parsed.tutorial_completed ?? true,
+      // Косметическая подсказка — у старых сейвов поля нет, начинаем без подсветки.
+      chest_hint_pending: parsed.chest_hint_pending ?? false,
     };
     this.purgeUnknownItems();
   },
@@ -284,6 +292,20 @@ export const MetaStore = {
   completeTutorial() {
     if (state.tutorial_completed) return;
     state.tutorial_completed = true;
+    this.save();
+  },
+
+  /** Диалог-подарок НПС («…Загляни в сундук») положил предмет — подсветить сундук в лагере. */
+  markChestHintPending() {
+    if (state.chest_hint_pending) return;
+    state.chest_hint_pending = true;
+    this.save();
+  },
+
+  /** Игрок открыл сундук/экипировку — гасим подсветку. */
+  clearChestHint() {
+    if (!state.chest_hint_pending) return;
+    state.chest_hint_pending = false;
     this.save();
   },
 
