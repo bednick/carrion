@@ -34,11 +34,21 @@ export function claimQuestReward(questId: string) {
 
 function tryComplete(questId: string, amount = 1) {
   if (!MetaStore.isQuestActive(questId)) return;
-  const done = MetaStore.progressQuest(questId, amount);
-  if (done) {
+  if (!MetaStore.progressQuest(questId, amount)) return;
+
+  const def = QUEST_DEFS[questId];
+  // Обучающая галочка (без награды и без next) закрывается молча: минуя pending_reward, без
+  // события 'quest_completed' (значит, без тоста «Задание выполнено» и кнопки «Забрать» у
+  // Информатора). claimQuestReward требует, чтобы квест был в pending_reward, поэтому сначала
+  // moveToPendingReward; applyInstantEffects при пустых rewards/next — no-op.
+  if (def && def.rewards.length === 0 && !def.next?.length) {
     MetaStore.moveToPendingReward(questId);
-    EventBus.emit('quest_completed', questId);
+    claimQuestReward(questId);
+    return;
   }
+
+  MetaStore.moveToPendingReward(questId);
+  EventBus.emit('quest_completed', questId);
 }
 
 /**
@@ -86,12 +96,24 @@ function grantTutorialUnlock() {
 }
 
 /**
+ * Стартовая галочка обучения tutorial_training_camp (сидится в MetaStore.createDefault) не имеет
+ * QuestCondition — засчитываем её здесь по флагу tutorial_completed, как только обучающая зона
+ * пройдена. tryComplete идемпотентен (no-op, если квест уже не активен), так что безопасно звать
+ * на каждый evaluateQuests(), как grantTutorialUnlock() / grantBattlefieldChain().
+ */
+function completeTutorialTrainingCamp() {
+  if (!MetaStore.get().tutorial_completed) return;
+  tryComplete('tutorial_training_camp');
+}
+
+/**
  * Сверяет все активные квесты (stat-, zone_items- и battlefield_depth-условия) против
  * текущей статистики и засчитывает выполненные. Срабатывает и задним числом — при выдаче
  * квеста ('quest_granted') и при любом изменении статов ('stats_changed').
  */
 function evaluateQuests() {
   grantTutorialUnlock();
+  completeTutorialTrainingCamp();
   grantBattlefieldChain();
 
   const meta = MetaStore.get();

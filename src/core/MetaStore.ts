@@ -158,7 +158,9 @@ function createDefault(): MetaState {
     seen_npc_dialogs: [],
     seen_mob_mechanics: [],
     quests: {
-      active: [],
+      // Стартовая галочка обучения — чтобы игрок с первого захода в лагерь видел цель.
+      // Закрывается сама после прохождения training-camp (QuestSystem.completeTutorialTrainingCamp).
+      active: [{ id: 'tutorial_training_camp', progress: 0, target: 1 }],
       pending_reward: [],
       completed: [],
     },

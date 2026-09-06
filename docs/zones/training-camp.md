@@ -23,6 +23,12 @@ registry.ts`) и никогда не появляется в общем спис
 отчаяния** (`desperate_plate`, common) диалогом (`DialogSystem.checkTutorialRewardDialog`). Это же прохождение
 навсегда закрывает саму зону — плитка больше нигде не показывается.
 
+С начала игры в `MetaStore.createDefault().quests.active` сидит стартовая галочка-квест
+`tutorial_training_camp` («Пройти тренировочный лагерь», без награды) — чтобы новичок с первого
+захода в лагерь видел цель. Она закрывается молча (без тоста и кнопки «Забрать») хелпером
+`QuestSystem.completeTutorialTrainingCamp()`, как только `tutorial_completed` стал `true`.
+Сам квест живёт в `QuestSystem`, награду зоны он не выдаёт — см. `docs/quests.md` §«Обучающие квесты».
+
 Стартовое оружие героя — короткий меч (`short_sword`, common), выдаётся по умолчанию каждой новой игре
 (`MetaStore.defaultStands`), так что зона проходится именно им.
 

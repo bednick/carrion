@@ -52,6 +52,18 @@ export const QUEST_DEFS: Record<string, QuestDef> = {
     rewards: [],
   },
 
+  // Стартовая галочка обучения: сидится в MetaStore.createDefault().quests.active, чтобы игрок
+  // с первого захода в лагерь видел цель «пройти тренировочный лагерь». Условия (QuestCondition)
+  // нет — засчитывается хелпером QuestSystem.completeTutorialTrainingCamp() по флагу
+  // MetaStore.tutorial_completed. Награды нет и next нет ⇒ tryComplete закрывает его молча,
+  // минуя pending_reward (без тоста и клика «Забрать»). Награда за зону («Латы отчаяния») —
+  // отдельно, диалогом Информатора (DialogSystem.checkTutorialRewardDialog).
+  tutorial_training_camp: {
+    id: 'tutorial_training_camp',
+    target: 1,
+    rewards: [],
+  },
+
   // ── Зональные квесты: по одному на каждую из 9 областей ──────────────
   // Цель боевого квеста (<zone>_clear) — добить босса локации. Условие завязано
   // на zones_returned (растёт только при полном зачёте зоны = добивании босса;

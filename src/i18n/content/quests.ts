@@ -5,6 +5,10 @@ export const QUEST_TEXT: Record<string, { title: { ru: string; en: string }; des
     title: { ru: 'Снаряжение', en: 'Gear Up' },
     description: { ru: 'Наденьте любой предмет', en: 'Equip any item' },
   },
+  tutorial_training_camp: {
+    title: { ru: 'Пройти тренировочный лагерь', en: 'Complete the Training Camp' },
+    description: { ru: 'Вернитесь в лагерь, пройдя обучение', en: 'Return to camp after finishing the training' },
+  },
   dead_fields_clear: {
     title: { ru: 'Исследовать: Мёртвые поля', en: 'Explore: Dead Fields' },
     description: { ru: 'Победите босса локации', en: "Defeat the area's boss" },
