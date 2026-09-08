@@ -171,7 +171,7 @@ type EnemyGraphic = {
 
 // Число кадров боевых анимаций (docs/art-spec.md). Ширина кадра считается как width / count.
 const CHAR_ANIM_FRAMES: Record<string, number> = {
-  idle: 6, walk: 8, attack: 6, block: 3, death: 6,
+  idle: 6, walk: 4, attack: 6, block: 3, death: 6,
 };
 
 export class ExpeditionScene extends Phaser.Scene {
