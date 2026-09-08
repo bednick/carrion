@@ -102,7 +102,6 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('char-strongman-idle',   'sprites/characters/strongman/idle.png');
     this.load.image('char-strongman-walk',   'sprites/characters/strongman/walk.png');
     this.load.image('char-strongman-attack', 'sprites/characters/strongman/attack.png');
-    this.load.image('char-strongman-hit',    'sprites/characters/strongman/hit.png');
     this.load.image('char-strongman-death',  'sprites/characters/strongman/dead.png');
 
     // Спрайты-заглушки мобов (одиночный base.png на моба)

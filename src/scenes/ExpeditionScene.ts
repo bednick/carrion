@@ -171,7 +171,7 @@ type EnemyGraphic = {
 
 // Число кадров боевых анимаций (docs/art-spec.md). Ширина кадра считается как width / count.
 const CHAR_ANIM_FRAMES: Record<string, number> = {
-  idle: 6, walk: 8, attack: 6, hit: 3, block: 3, death: 6,
+  idle: 6, walk: 8, attack: 6, block: 3, death: 6,
 };
 
 export class ExpeditionScene extends Phaser.Scene {
@@ -596,7 +596,6 @@ export class ExpeditionScene extends Phaser.Scene {
         // укороченных интервалов оружия (см. src/combat/CombatEngine.ts), иначе быстрое оружие на
         // высокой редкости перезапускает анимацию на середине свинга.
         this.anims.create({ key: `${animPrefix}-attack`, frames: this.anims.generateFrameNumbers(`${animPrefix}-attack`, {}), frameRate: 24, repeat: 0 });
-        this.anims.create({ key: `${animPrefix}-hit`,    frames: this.anims.generateFrameNumbers(`${animPrefix}-hit`,    {}), frameRate: 10, repeat: 0 });
         if (this.textures.exists(`${animPrefix}-death`))
           this.anims.create({ key: `${animPrefix}-death`, frames: this.anims.generateFrameNumbers(`${animPrefix}-death`, {}), frameRate: 9, repeat: 0 });
       }
@@ -1711,8 +1710,8 @@ export class ExpeditionScene extends Phaser.Scene {
             spawnFloater(this, 'damage', amount, p.x, p.y, { crit });
           }
           this.updateHeroHpBar();
-          if (this.heroAnimPrefix) this.playHeroAnim(`${this.heroAnimPrefix}-hit`, true);
-          else this.flashSprite(this.heroSprite, 0xff0000);
+          // Реакция на удар — только покраснение спрайта (отдельной hit-анимации нет).
+          this.flashSprite(this.heroSprite, 0xff0000);
         } else {
           // Анимацию замаха запускает onHeroWindup (с упреждением). Здесь — момент
           // контакта: звук, цифра урона, вспышка и отскок врага.
