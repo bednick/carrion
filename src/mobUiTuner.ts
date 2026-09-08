@@ -6,7 +6,7 @@ import { MOB_NAMES } from './i18n/content/mobs';
 const mobNameRu = (id: string) => MOB_NAMES[id].ru;
 
 // Геометрия зеркалит src/scenes/ExpeditionScene.ts: линия тени/бой (groundY=287), позиция героя
-// (hx=560, y=219, 100x140, спрайт-лист idle.webp — 6 кадров), позиция моба в слоте 0 (x=700),
+// (hx=560, y=219, 100x140, спрайт-лист idle.png — 6 кадров), позиция моба в слоте 0 (x=700),
 // бокс вписывания 150x130 / 210x165 для босса, формула ui.scale/ui.move — addEnemyGraphic (~843-882).
 const GROUND_Y = 287;
 const HERO_X = 560;
@@ -92,7 +92,7 @@ heroEl.style.height = `${HERO_H}px`;
 heroEl.style.left = `${HERO_X - HERO_W / 2}px`;
 heroEl.style.top = `${HERO_Y_CENTER - HERO_H / 2}px`;
 heroEl.style.overflow = 'hidden';
-heroEl.style.backgroundImage = "url('/sprites/characters/strongman/idle.webp')";
+heroEl.style.backgroundImage = "url('/sprites/characters/strongman/idle.png')";
 heroEl.style.backgroundSize = `${HERO_FRAME_COUNT * HERO_W}px ${HERO_H}px`;
 heroEl.style.backgroundPosition = '0 0';
 stage.appendChild(heroEl);
@@ -140,7 +140,7 @@ function loadMobSprite(id: string) {
     if (gen !== loadGen) return;
     renderMob();
   };
-  mobImg.src = `/sprites/mobs/${id}/base.webp`;
+  mobImg.src = `/sprites/mobs/${id}/base.png`;
 }
 
 function loadUiIntoSliders(id: string) {

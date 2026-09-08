@@ -89,31 +89,31 @@ export class PreloadScene extends Phaser.Scene {
     this.load.svg(zoneDecorKey('anvil'), ZONE_DECOR_URLS.anvil, { width: 432, height: 360 });
     this.load.svg(zoneDecorKey('belt'), ZONE_DECOR_URLS.belt, { width: 360, height: 104 });
     this.load.svg('hammer', 'hammer.svg', { width: 32, height: 32 });
-    this.load.image('map-texture', 'backgrounds/map-texture.webp');
-    this.load.image('bg-camp', 'backgrounds/camp.webp');
-    this.load.image('camp-fire', 'sprites/camp/campfire.2.webp');
-    this.load.image('npc-smith', 'sprites/npc/smith.webp');
-    this.load.image('npc-dealer', 'sprites/npc/dealer.webp');
-    this.load.image('npc-flutist', 'sprites/npc/flutist.webp');
-    this.load.image('chest-stand', 'sprites/npc/chest-stand.webp');
-    this.load.image('char-strongman', 'sprites/characters/strongman/camp.webp');
+    this.load.image('map-texture', 'backgrounds/map-texture.png');
+    this.load.image('bg-camp', 'backgrounds/camp.png');
+    this.load.image('camp-fire', 'sprites/camp/campfire.2.png');
+    this.load.image('npc-smith', 'sprites/npc/smith.png');
+    this.load.image('npc-dealer', 'sprites/npc/dealer.png');
+    this.load.image('npc-flutist', 'sprites/npc/flutist.png');
+    this.load.image('chest-stand', 'sprites/npc/chest-stand.png');
+    this.load.image('char-strongman', 'sprites/characters/strongman/camp.png');
     // Боевые листы грузим как изображения — нарезаются по числу кадров в сцене
     // (frameWidth = width / count), чтобы переэкспорт из Aseprite не ломал нарезку.
-    this.load.image('char-strongman-idle',   'sprites/characters/strongman/idle.webp');
-    this.load.image('char-strongman-walk',   'sprites/characters/strongman/walk.webp');
-    this.load.image('char-strongman-attack', 'sprites/characters/strongman/attack.webp');
-    this.load.image('char-strongman-hit',    'sprites/characters/strongman/hit.webp');
-    this.load.image('char-strongman-death',  'sprites/characters/strongman/dead.webp');
+    this.load.image('char-strongman-idle',   'sprites/characters/strongman/idle.png');
+    this.load.image('char-strongman-walk',   'sprites/characters/strongman/walk.png');
+    this.load.image('char-strongman-attack', 'sprites/characters/strongman/attack.png');
+    this.load.image('char-strongman-hit',    'sprites/characters/strongman/hit.png');
+    this.load.image('char-strongman-death',  'sprites/characters/strongman/dead.png');
 
-    // Спрайты-заглушки мобов (одиночный base.webp на моба)
+    // Спрайты-заглушки мобов (одиночный base.png на моба)
     for (const id of ALL_MOB_IDS) {
-      this.load.image(`mob-${id}`, `sprites/mobs/${id}/base.webp`);
+      this.load.image(`mob-${id}`, `sprites/mobs/${id}/base.png`);
     }
 
     for (const [folder, layers] of Object.entries(ZONE_BG_VARIANTS)) {
       for (const [layer, count] of Object.entries(layers)) {
         for (let n = 1; n <= (count ?? 0); n++) {
-          this.load.image(zoneBgKey(folder, layer as BgLayer, n), `backgrounds/zones/${folder}/${layer}.${n}.webp`);
+          this.load.image(zoneBgKey(folder, layer as BgLayer, n), `backgrounds/zones/${folder}/${layer}.${n}.png`);
         }
       }
     }
@@ -127,7 +127,7 @@ export class PreloadScene extends Phaser.Scene {
           const key = zoneObjKey(layer as ScatterLayer, slug);
           if (loadedObjKeys.has(key)) continue;
           loadedObjKeys.add(key);
-          this.load.image(key, `backgrounds/objects/${layer}/${slug}.webp`);
+          this.load.image(key, `backgrounds/objects/${layer}/${slug}.png`);
         }
       }
     }

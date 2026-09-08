@@ -48,19 +48,19 @@ description: Используй при создании, перегенерац�
 ```
 public/
   backgrounds/
-    camp.webp                     # лагерь
-    map-texture.webp              # карта
+    camp.png                      # лагерь
+    map-texture.png               # карта
     zones/<zone-folder>/          # фоны зон боя — far/near (baked, по вариантам)
-      far.1.webp  far.2.webp  near.1.webp  near.2.webp
-    objects/<layer>/<slug>.webp   # mid/fore — общий плоский пул одиночных объектов (layer = mid|fore)
+      far.1.png  far.2.png  near.1.png  near.2.png
+    objects/<layer>/<slug>.png    # mid/fore — общий плоский пул одиночных объектов (layer = mid|fore)
   sprites/
     characters/<char>/            # char ∈ strongman | vagabond | apprentice
-      camp.webp                   # стоп-кадр для CampScene (300×600)
-      idle.webp walk.webp attack.webp hit.webp block.webp death.webp   # боевые спрайт-листы
-    mobs/<mob-id>/                # idle.webp attack.webp hit.webp death.webp
+      camp.png                    # стоп-кадр для CampScene (300×600)
+      idle.png walk.png attack.png hit.png block.png death.png   # боевые спрайт-листы
+    mobs/<mob-id>/                # idle.png attack.png hit.png death.png
     bosses/<boss-id>/             # как мобы, + фазы при необходимости
     equipment/<slot>/<item-id>/   # оверлеи (общие для всех персонажей), листы по анимациям
-    npc/                          # smith.webp dealer.webp chest-stand.webp
+    npc/                          # smith.png dealer.png chest-stand.png
 ```
 
 **Правила нейминга:**
@@ -72,15 +72,15 @@ public/
 
 | Ассет                       | Путь                                       | Ключ текстуры                           |
 |-----------------------------|--------------------------------------------|-----------------------------------------|
-| Фон зоны (far/near)         | `backgrounds/zones/<f>/<layer>.<n>.webp`   | `zonebg-<f>-<layer>-<n>` (`zoneBgKey`)  |
-| Объект mid/fore (общий пул) | `backgrounds/objects/<layer>/<slug>.webp`  | `zoneobj-<layer>-<slug>` (`zoneObjKey`) |
-| Лагерь/карта                | `backgrounds/camp.webp`, `map-texture.webp`| `bg-camp`, `map-texture`                |
-| Стоп-кадр персонажа         | `sprites/characters/<c>/camp.webp`         | `char-<c>`                              |
-| Боевая анимация             | `sprites/characters/<c>/<anim>.webp`       | `char-<c>-<anim>`                       |
-| Моб                         | `sprites/mobs/<id>/<anim>.webp`            | `mob-<id>-<anim>`                       |
-| Босс                        | `sprites/bosses/<id>/<anim>.webp`          | `boss-<id>-<anim>`                      |
-| Оверлей экипировки          | `sprites/equipment/<slot>/<id>/<anim>.webp`| `equip-<slot>-<id>-<anim>`              |
-| NPC                         | `sprites/npc/<name>.webp`                  | `npc-<name>` (искл.: `chest-stand`)     |
+| Фон зоны (far/near)         | `backgrounds/zones/<f>/<layer>.<n>.png`    | `zonebg-<f>-<layer>-<n>` (`zoneBgKey`)  |
+| Объект mid/fore (общий пул) | `backgrounds/objects/<layer>/<slug>.png`   | `zoneobj-<layer>-<slug>` (`zoneObjKey`) |
+| Лагерь/карта                | `backgrounds/camp.png`, `map-texture.png`  | `bg-camp`, `map-texture`                |
+| Стоп-кадр персонажа         | `sprites/characters/<c>/camp.png`          | `char-<c>`                              |
+| Боевая анимация             | `sprites/characters/<c>/<anim>.png`        | `char-<c>-<anim>`                       |
+| Моб                         | `sprites/mobs/<id>/<anim>.png`             | `mob-<id>-<anim>`                       |
+| Босс                        | `sprites/bosses/<id>/<anim>.png`           | `boss-<id>-<anim>`                      |
+| Оверлей экипировки          | `sprites/equipment/<slot>/<id>/<anim>.png` | `equip-<slot>-<id>-<anim>`              |
+| NPC                         | `sprites/npc/<name>.png`                   | `npc-<name>` (искл.: `chest-stand`)     |
 | Иконка предмета (инвентарь) | `src/items/<id>/icon.svg` (НЕ в public)    | `item_icon_<id>`                        |
 
 > Боевые листы грузятся как обычные `image` и нарезаются в сцене **по числу кадров** (frameWidth = width / count) —
@@ -97,13 +97,13 @@ public/
 Папка зоны = её id (`src/zones/<id>/config.json`), никакого отдельного `"background"`-ключа нет.
 
 - **`far`/`near`** — непрозрачные, цельные картинки, **baked-варианты**: путь
-  `public/backgrounds/zones/<folder>/{far,near}.<n>.webp`. Подключение: счётчик вариантов в `ZONE_BG_VARIANTS`
+  `public/backgrounds/zones/<folder>/{far,near}.<n>.png`. Подключение: счётчик вариантов в `ZONE_BG_VARIANTS`
   (`src/zones/registry.ts`) → грузится в `PreloadScene` (ключи `zoneBgKey`) → рендер в
   `ExpeditionScene.buildParallaxBackground` как `TileSprite` (таблица `LAYER_RENDER`: `cy`/`h`/`depth`/`scroll`).
   На старте экспедиции случайно выбирается один вариант на слой.
 - **`mid`/`fore`** — альфа-оверлеи (силуэты объектов, прозрачный фон, без неба и без сплошной земли), но **НЕ**
   цельная картинка с несколькими объектами — это **общий плоский пул одиночных объектов**: один объект = один
-  файл в `public/backgrounds/objects/<layer>/<slug>.webp` (может переиспользоваться несколькими зонами).
+  файл в `public/backgrounds/objects/<layer>/<slug>.png` (может переиспользоваться несколькими зонами).
   Подключение: список slug'ов на зону в `ZONE_BG_OBJECTS` (`src/zones/registry.ts`) → грузится в `PreloadScene`
   (ключи `zoneObjKey`) → на старте экспедиции движок тасует пул и раскладывает объекты со случайным размером и
   промежутком в `ExpeditionScene.buildScatterLayer` (тоже по геометрии из `LAYER_RENDER`).
@@ -132,30 +132,31 @@ public/
 3. Проверить фактические размеры/альфу файла; при необходимости нарезать/выровнять.
 4. **Сжать перед подключением** (см. «Сжатие ассетов» ниже) — не класть в `public/` несжатый PNG прямиком из
    Aseprite/Nano Banana.
-5. Подключить в код: путь по конвенции (с итоговым расширением) → загрузка в `PreloadScene` → рендер/анимация в сцене.
+5. Подключить в код: путь по конвенции (`.png`) → загрузка в `PreloadScene` → рендер/анимация в сцене.
 6. `npx tsc --noEmit` — типы.
 7. Запустить dev-сервер (`npm run dev`) и **перечислить, что проверить** — пользователь тестирует вручную в браузере (
    `http://localhost:5173`).
 
 ## Сжатие ассетов
 
-Все ассеты в `public/` попадают в скачиваемую игроком сборку 1:1 — несжатые PNG были главной причиной раздутого
-`dist/` (см. `docs/roadmap.md`/историю — фоны занимали 19M из 40M). Проверено на всём наборе фонов: `cwebp -q 85`
-даёт 80–95% экономии **без видимой потери качества** (пиксель-арт со сплошными заливками сжимается особенно хорошо).
+Все ассеты в `public/` попадают в скачиваемую игроком сборку 1:1, поэтому несжатый PNG прямо из Aseprite/Nano
+Banana в `public/` **не кладём**. Формат хранения — обычный `.png` (webp в проекте больше не используется:
+неудобно смотреть/править), но перед коммитом каждый файл прогоняем через **`pngquant`** (`brew install pngquant`).
 
-- **Фоны (`backgrounds/`: zones far/near, objects mid/fore, camp, map-texture)** — обязательно конвертировать
-  PNG → WebP перед коммитом: `cwebp -q 85 in.png -o out.webp`, расширение файла и путь в `PreloadScene`/таблицах
-  `zones/registry.ts` — `.webp`. Это заменило `.png` в конвенции путей выше — новые фоны кладутся сразу как
-  `.webp`, отдельный PNG-оригинал в `public/` не оставлять (хранить его вне репозитория, если нужен для повторной
-  доработки).
-- **Спрайты персонажей/мобов/NPC (`sprites/`)** — конвертировать PNG → **lossless WebP** перед коммитом:
-  `cwebp -lossless -z 9 in.png -o out.webp`, расширение и путь в `PreloadScene` — `.webp`. Lossy WebP тут не
-  применять: движок грузит спрайты с `pixelArt: true` (NEAREST-фильтр), и lossy-сжатие даёт видимый дизеринг на
-  резких пиксельных краях — а lossless по определению попиксельно идентичен исходнику, дизеринга не даёт. Проверено
-  на всём наборе (`idle`/`walk`/`attack`/NPC/мобы): экономия в среднем ~24%, на части файлов до 60%+, без потери
-  качества. Отдельный PNG-оригинал в `public/` не оставлять (как и для фонов).
+- **Команда** (все ассеты, фоны и спрайты одинаково):
+  `pngquant --quality=75-98 --strip --skip-if-larger --force --ext .png <файл>` — квантование в палитру ≤256
+  цветов + Floyd–Steinberg дизеринг. Перезаписывает файл на месте; `--skip-if-larger` не трогает то, что уже
+  компактнее. Пакетно: `find public -name '*.png' -print0 | xargs -0 -P8 -I{} pngquant --quality=75-98 --strip --skip-if-larger --force --ext .png {}`.
+- **Почему это безопасно для пиксель-арта.** Арт проекта — холодная десатурированная палитра со сплошными
+  заливками, реальных цветов немного, так что квантование в ≤256 обычно визуально без потерь. FS-дизеринг на
+  плавном небе far-слоя проверен — бандинга/шума не даёт. На резких краях спрайтов (движок грузит с
+  `pixelArt: true`, NEAREST) артефактов не возникает: палитра точная, а дизеринг ложится по площадям, не по
+  контуру. Экономия на наборе — примерно вдвое (35M → 15M на полной миграции).
 - Перед пакетной конвертацией новой партии — прогнать 2–3 образца и свериться визуально (Read-инструмент умеет
-  показывать картинки) прежде чем гнать всё пачкой; при заметной деградации поднять `-q`.
+  показывать картинки) прежде чем гнать всё пачкой; при заметной деградации поднять нижнюю границу `--quality`
+  (например `--quality=90-100`).
+- Отдельный «жирный» PNG-оригинал в `public/` не оставлять — если нужен для повторной доработки, хранить его вне
+  репозитория.
 - **Аудио** (`public/audio/`, регистрируется в `src/core/SoundRegistry.ts`) — та же логика: не класть эмбиенты/музыку
   с избыточным битрейтом. Для фоновых зацикленных дорожек достаточно ~96kbps (`ffmpeg -c:a libmp3lame -b:a 96k` для
   `.mp3` — в проекте новые звуки сознательно кладут как `.mp3`, не `.ogg`, ради Safari, эту конвенцию не ломать).

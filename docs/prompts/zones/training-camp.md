@@ -17,9 +17,9 @@
 
 ## FAR — небо/дальний план (непрозрачный, медленный)
 
-**Заменяемый файл:** `public/backgrounds/zones/training-camp/far.1.webp` (генерить в PNG, класть как WebP `-q 85`)
-**Референсы:** `public/backgrounds/zones/abandoned-camp/far.1.webp` (стиль far-слоя, пропорции, горизонт),
-`public/backgrounds/zones/dead-fields/far.1.webp` (небо/градиент)
+**Заменяемый файл:** `public/backgrounds/zones/training-camp/far.1.png` (генерить в PNG, прогнать `pngquant` перед коммитом)
+**Референсы:** `public/backgrounds/zones/abandoned-camp/far.1.png` (стиль far-слоя, пропорции, горизонт),
+`public/backgrounds/zones/dead-fields/far.1.png` (небо/градиент)
 
 Сгенерирован (2928×352):
 ```
@@ -49,9 +49,9 @@ Palette approximately: #1a1a2e sky, #3a3a4a cold grey-blue, #c88a44 torch light,
 
 ## NEAR — земля (непрозрачный, скорость героя)
 
-**Заменяемый файл:** `public/backgrounds/zones/training-camp/near.1.webp`
-**Референсы:** `public/backgrounds/zones/trampled-meadows/near.1.webp` (угол камеры, плотность деталей,
-бесшовность), `public/backgrounds/zones/abandoned-camp/near.1.webp` (земля обитаемого лагеря)
+**Заменяемый файл:** `public/backgrounds/zones/training-camp/near.1.png`
+**Референсы:** `public/backgrounds/zones/trampled-meadows/near.1.png` (угол камеры, плотность деталей,
+бесшовность), `public/backgrounds/zones/abandoned-camp/near.1.png` (земля обитаемого лагеря)
 
 Сгенерирован (2544×416):
 ```

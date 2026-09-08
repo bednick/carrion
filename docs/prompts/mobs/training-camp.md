@@ -10,7 +10,7 @@
 - Прозрачный фон, без земли/тени/текста.
 - **Заглушка = одиночный кадр.** Полные листы (`idle/attack/hit/death` по `docs/art-spec.md`) — позже тем же
   описанием.
-- Путь спрайтов: `public/sprites/mobs/<id>/base.webp` (генерить PNG с альфой, класть lossless WebP). Размеры
+- Путь спрайтов: `public/sprites/mobs/<id>/base.png` (генерить PNG с альфой, прогнать `pngquant` перед коммитом). Размеры
   относительные (рядовой ≈ кадр героя, босс/пленник крупнее); точные px не важны — отмасштабируем.
 
 ---
@@ -19,9 +19,9 @@
 
 > Учебная мишень на деревянной палке — не бьёт, стоит смирно, пока по нему упражняются новички.
 
-**Заменяемый файл:** `public/sprites/mobs/straw_dummy/base.webp`
-**Референсы:** `public/sprites/mobs/bone_stub/base.webp` (масштаб/подача рядового моба, альфа),
-`public/sprites/mobs/skeleton/base.webp` (толщина контура, пиксель-плотность)
+**Заменяемый файл:** `public/sprites/mobs/straw_dummy/base.png`
+**Референсы:** `public/sprites/mobs/bone_stub/base.png` (масштаб/подача рядового моба, альфа),
+`public/sprites/mobs/skeleton/base.png` (толщина контура, пиксель-плотность)
 
 Сгенерирован (256×332):
 ```
@@ -49,9 +49,9 @@ under it, no background scenery, no text, no border, no frame.
 
 > Пленная нежить, которую камп держит на цепи как живую учебную цель — уже слабо огрызается.
 
-**Заменяемый файл:** `public/sprites/mobs/bound_corpse/base.webp`
-**Референсы:** `public/sprites/mobs/ghoul/base.webp` (пропорции нежити, сгорбленность, палитра),
-`public/sprites/mobs/skeleton/base.webp` (толщина контура, пиксель-плотность)
+**Заменяемый файл:** `public/sprites/mobs/bound_corpse/base.png`
+**Референсы:** `public/sprites/mobs/ghoul/base.png` (пропорции нежити, сгорбленность, палитра),
+`public/sprites/mobs/skeleton/base.png` (толщина контура, пиксель-плотность)
 
 Сгенерирован (256×341):
 ```
