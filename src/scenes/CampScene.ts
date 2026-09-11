@@ -169,8 +169,9 @@ function campScale(o: CampObject): number {
   return CAMP_SCALE.all * CAMP_SCALE[o];
 }
 
-// Базовая (при масштабе 1) геометрия силача: исходник 300×600, рисуется в 80×120, как у НПС.
-const HERO_BASE_W = 80, HERO_BASE_H = 120;
+// Базовая (при масштабе 1) геометрия силача: исходник 300×600 (aspect 0.5) — высота 120,
+// как у НПС, ширина пересчитана под реальную пропорцию арта (было 80 — расплющивало спрайт).
+const HERO_BASE_W = 60, HERO_BASE_H = 120;
 /** Линия ног силача — инвариант: не зависит от масштаба, спрайт растёт вверх от неё. */
 const HERO_FOOT_Y = 540 + HERO_BASE_H / 2;
 
@@ -725,15 +726,17 @@ export class CampScene extends Phaser.Scene {
 
   private buildNPCs() {
     // Позиции выверены по фону в дизайновых 1280 — едут вместе с фоном на DX (src/ui/layout.ts).
+    // Ширина спрайтов кузнеца/информатора пересчитана под реальную пропорцию арта (300×600 и
+    // 299×600, aspect ~0.5) при высоте 120 — раньше 80 расплющивало обоих по горизонтали.
     this.addNPCWithSprite(
-      224 + DX, 604, 80, 120, 'npc-smith',
+      224 + DX, 604, 60, 120, 'npc-smith',
       200 + DX, 522, 340, 285,
       t('npc_smith'), () => this.openSmithPanel(),
       false, campScale('smith'),
     );
     const sDealer = campScale('dealer');
     this.dealerBlinkHint = this.addNPCWithSprite(
-      1090 + DX, 604, 80, 120, 'npc-dealer',
+      1090 + DX, 604, 59.8, 120, 'npc-dealer',
       1125 + DX, 540, 250, 240,
       t('npc_dealer'), () => this.openDealerPanel(),
       true, sDealer,
@@ -849,11 +852,11 @@ export class CampScene extends Phaser.Scene {
   }
 
   // НПС-флейтист. По клику открывает ползунок громкости слоя флейты.
-  // Спрайт 353×600 — рисуем с сохранением пропорций (~0.59).
+  // Спрайт 330×600 (aspect ~0.55) — рисуем с сохранением пропорций.
   private buildFlutist() {
     // (960, 740) — нижняя центральная точка; addNPCWithSprite ждёт центр при масштабе 1,
     // дальше он сам якорит спрайт по этой же линии ног.
-    const x = 960 + DX, bottomY = 740, w = 72, h = 122;
+    const x = 960 + DX, bottomY = 740, w = 67.1, h = 122;
     const y = bottomY - h / 2;
     this.addNPCWithSprite(
       x, y, w, h, 'npc-flutist',
@@ -874,8 +877,10 @@ export class CampScene extends Phaser.Scene {
   }
 
   private buildChestStand() {
+    // Спрайт 439×386 (aspect ~1.14, шире, чем выше) — ширина пересчитана под высоту 96
+    // (раньше квадратный бокс 96×96 сплющивал сундук по горизонтали).
     this.chestBlinkHint = this.addNPCWithSprite(
-      855 + DX, 490, 96, 96, 'chest-stand',
+      855 + DX, 490, 109.2, 96, 'chest-stand',
       855 + DX, 490, 120, 100,
       t('camp_chest_hover'), () => this.openChestPanel(),
       true, campScale('chest'),
